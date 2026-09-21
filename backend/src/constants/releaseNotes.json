@@ -1,0 +1,18 @@
+[
+  {
+    "version": "1.0.0",
+    "releaseDate": "2026-09-21",
+    "title": "Release v1.0.0",
+    "tagline": "Platform enhancements and continuous improvements.",
+    "isLatest": true,
+    "type": "Feature & Maintenance Release",
+    "categories": {
+      "features": [],
+      "improvements": [
+        "Release increment to v1.0.0"
+      ],
+      "security": [],
+      "fixes": []
+    }
+  }
+]

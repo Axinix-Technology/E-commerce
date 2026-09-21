@@ -1,0 +1,8 @@
+{
+  "name": "central-ecommerce-platform",
+  "version": "1.0.0",
+  "description": "Centralized E-commerce Platform",
+  "updatedAt": "2026-09-21T10:55:00.000Z",
+  "minSupportedClientVersion": "1.0.0",
+  "forceDeploy": false
+}
