@@ -11,6 +11,7 @@
     "version:bump:minor": "node scripts/version-tool.mjs bump minor",
     "version:bump:major": "node scripts/version-tool.mjs bump major",
     "verify:backend": "node scripts/verify-deploy-version.mjs --target=backend",
-    "verify:frontend": "node scripts/verify-deploy-version.mjs --target=frontend"
+    "verify:frontend": "node scripts/verify-deploy-version.mjs --target=frontend",
+    "check:backend": "node --check backend/src/index.js"
   }
 }
