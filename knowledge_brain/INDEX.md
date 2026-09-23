@@ -20,5 +20,7 @@ This index is maintained in strict alphabetical order to satisfy Core Rule #2 an
   - Documents the platform settings schema (`general_settings`), store branding, localization, currency preferences, inventory rules, and maintenance controls manageable directly via UI.
 - [POLICY_ENGINE - Lightweight Authorization & CRUD Resolution](./POLICY_ENGINE.md)
   - Documents the streamlined Policy Engine logic: Super Admin bypass, in-memory cache policy verification, and dynamic CRUD resolution.
+- [POPULATE_ENGINE_LIMITATIONS - Engine Constraints, Exceptions & Bug Recipes](./POPULATE_ENGINE_LIMITATIONS.md)
+  - Documents MySQL InnoDB lock windows, soft-delete composite indexing directives, prefetch memory limits, and pipeline caching recipes.
 - [VERSIONING - Centralized Single-Source-of-Truth Versioning](./VERSIONING.md)
   - Documents the single source of truth versioning system (`version.json`), semver automation (`version-tool.mjs`), multi-target synchronization, and deployment gates (`verify-deploy-version.mjs`).

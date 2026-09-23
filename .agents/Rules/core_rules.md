@@ -39,3 +39,10 @@ These rules are non-negotiable and apply to every agent action in this workspace
 - Controllers and routers must **ONLY** be created when a capability **cannot** physically be handled via `populateHelper` (e.g., binary stream piping/downloads like compressed backup archives, stateful session handshakes in Auth, or external webhook signature verification) or would cause a verified, critical **performance bottleneck**.
 - If anything can be handled via `models/` + `Collection.js` + `populateHelper` + `services/<model>.js`, creating a new router or controller is **STRICTLY PROHIBITED**.
 
+## 9. Adherence to Populate Engine Known Limitations & Bug Recipes
+- Every developer and AI agent working on backend models, services, or queries must strictly adhere to the bug recipes in [.agents/Rules/known_limitations_and_recipes.md](file:///e:/Loigmax/E-commerce/.agents/Rules/known_limitations_and_recipes.md):
+  1. **Minimal Lock Windows**: Never execute network I/O or heavy non-DB compute inside `transaction.atomic()` or while holding row locks (`select_for_update`). Keep DB locks strictly under 10ms.
+  2. **Composite Indexes for Soft-Delete**: Never rely on a single-column index on `status`. Always create compound indexes pairing `status` with query keys (e.g. `INDEX(status, tenant_id, created_at)`) to prevent MySQL full table scans.
+  3. **Prefetch Memory Safeguards**: Enforce a hard maximum populate depth of 3 levels and a 50-item child pagination ceiling to prevent `prefetch_related` OOM memory crashes.
+  4. **Pipeline Caching**: Cache parsed DSL plans and authorization policies in-memory to eliminate pipeline CPU overhead on hot paths.
+
