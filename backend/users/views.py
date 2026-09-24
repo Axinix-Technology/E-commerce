@@ -66,6 +66,9 @@ class LoginView(APIView):
         token, _ = Token.objects.get_or_create(user=user)
 
         # 3. Response payload
+        is_super = bool(user.is_superuser or (user.role and user.role.is_superadmin))
+        role_name = user.role.name if user.role else ("Super Admin" if user.is_superuser else None)
+
         return Response({
             "success": True,
             "message": "Login successful",
@@ -78,7 +81,10 @@ class LoginView(APIView):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "name": f"{user.first_name} {user.last_name}".strip() or user.username,
-                "role": user.role,
+                "role": role_name,
+                "role_id": user.role_id,
+                "is_superadmin": is_super,
+                "isSuperAdmin": is_super,
                 "status": user.status,
             }
         }, status=status.HTTP_200_OK)
@@ -92,6 +98,9 @@ class MeView(APIView):
 
     def get(self, request):
         user = request.user
+        is_super = bool(user.is_superuser or (user.role and user.role.is_superadmin))
+        role_name = user.role.name if user.role else ("Super Admin" if user.is_superuser else None)
+
         return Response({
             "success": True,
             "data": {
@@ -101,7 +110,10 @@ class MeView(APIView):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "name": f"{user.first_name} {user.last_name}".strip() or user.username,
-                "role": user.role,
+                "role": role_name,
+                "role_id": user.role_id,
+                "is_superadmin": is_super,
+                "isSuperAdmin": is_super,
                 "status": user.status,
             }
         }, status=status.HTTP_200_OK)

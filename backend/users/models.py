@@ -3,17 +3,47 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
+class Role(models.Model):
+    """
+    Role Master.
+    Stores role name, description, and superadmin flag.
+    """
+    STATUS_CHOICES = [
+        (1, 'Active'),
+        (0, 'Inactive'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True, help_text="Role name (e.g. Super Admin, Store Manager, Staff, Customer)")
+    description = models.TextField(blank=True, null=True, help_text="Role description")
+
+    # Superadmin flag (Yes/No)
+    is_superadmin = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name="Is Superadmin",
+        help_text="Designates whether this role is Super Admin"
+    )
+
+    # Populate Engine mandatory status field (Rule K: 1=Active, 0=Inactive)
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'roles'
+        verbose_name = 'Role'
+        verbose_name_plural = 'Roles'
+        ordering = ['id']
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     """
     Custom User Model matching project requirements and Populate Engine status rules.
     """
-    ROLE_CHOICES = [
-        ('ADMIN', 'Super Admin'),
-        ('MANAGER', 'Store Manager'),
-        ('STAFF', 'Staff / Operator'),
-        ('CUSTOMER', 'Customer'),
-    ]
-
     STATUS_CHOICES = [
         (1, 'Active'),
         (0, 'Inactive'),
@@ -32,8 +62,16 @@ class User(AbstractUser):
     state = models.CharField(max_length=100, blank=True, null=True)
     country = models.CharField(max_length=100, default='India')
 
-    # Security & Role
-    role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='CUSTOMER', db_index=True)
+    # Security & Role (Foreign Key to Role master)
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        db_column='role_id',
+        verbose_name="User Role"
+    )
 
     # Populate Engine mandatory status field (Rule K: 1=Active, 0=Inactive)
     status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
@@ -46,6 +84,18 @@ class User(AbstractUser):
         verbose_name = 'User'
         verbose_name_plural = 'Users'
 
+    @property
+    def is_superadmin_user(self):
+        return bool(self.is_superuser or (self.role and self.role.is_superadmin))
+
+    @property
+    def isSuperAdmin(self):
+        return self.is_superadmin_user
+
+    @property
+    def role_name(self):
+        return self.role.name if self.role else ('Super Admin' if self.is_superuser else None)
+
     def save(self, *args, **kwargs):
         # Auto-compute age if DOB is provided and age is empty
         if self.dob and not self.age:
@@ -54,7 +104,8 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.username} ({self.get_full_name() or self.role})"
+        role_label = self.role.name if self.role else ('Super Admin' if self.is_superuser else 'No Role')
+        return f"{self.username} ({self.get_full_name() or role_label})"
 
 
 class UserSession(models.Model):

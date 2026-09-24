@@ -1,6 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, UserSession, Notification, NotificationPreference, NotificationRecipient
+from .models import Role, User, UserSession, Notification, NotificationPreference, NotificationRecipient
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'is_superadmin', 'status', 'created_at')
+    list_filter = ('is_superadmin', 'status')
+    search_fields = ('name', 'description')
+    ordering = ('id',)
 
 
 @admin.register(User)
