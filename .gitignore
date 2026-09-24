@@ -1,13 +1,42 @@
-# Root Git Ignore
-node_modules/
+# Environment & Secrets
 .env
-.env.local
+.env.*
+!.env.example
+
+# Python & Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Virtual Environments
+venv/
+.venv/
+myvenv/
+env/
+ENV/
+
+# Node & Frontend
+node_modules/
 dist/
 build/
 .next/
-database/backups/
+out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Database & Backups
+database/backups/
+*.sql
+*.dump
+
+# IDE & OS Files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db

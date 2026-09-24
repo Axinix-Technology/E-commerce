@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const res = await axiosInstance.get("/auth/me");
+        const res = await axiosInstance.get("/auth/me/");
         if (res.data?.success && res.data?.data) {
           const userData = res.data.data;
           setUser(userData);
@@ -47,9 +47,13 @@ export const AuthProvider = ({ children }) => {
     hydrateUser();
   }, []);
 
-  const login = useCallback(async (username, password) => {
-    const res = await axiosInstance.post("/auth/login", { username, password });
-    if (res.data?.success && res.data?.token) {
+  const login = useCallback(async (username, password, sessionData = {}) => {
+    const res = await axiosInstance.post("/auth/login/", { 
+      username, 
+      password,
+      ...sessionData 
+    });
+    if ((res.data?.success || res.status === 200) && res.data?.token) {
       const receivedToken = res.data.token;
       const receivedUser = res.data.user;
 
@@ -60,7 +64,7 @@ export const AuthProvider = ({ children }) => {
       setUser(receivedUser);
       return receivedUser;
     }
-    throw new Error(res.data?.message || "Login failed");
+    throw new Error(res.data?.message || res.data?.detail || "Login failed");
   }, []);
 
   const logout = useCallback(async () => {
