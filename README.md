@@ -51,41 +51,26 @@ Engineered to streamline operations for manufacturers, brands, and multi-channel
 
 ```mermaid
 flowchart TD
-    subgraph Frontend ["🖥️ Frontend Interface (React 19 + Vite 6)"]
+    subgraph Frontend ["🖥️ Frontend (React 19 + Vite 6)"]
         UI["Admin Console & Dashboard"]
-        ROUTER["File-Based Router (~react-pages)"]
-        AXIOS["Axios Interceptor (Auth Token Injection)"]
-        PROXY["Vite Dev Reverse-Proxy (/api -> 8000)"]
+        PROXY["Vite Proxy (/api -> :8000)"]
+        UI --> PROXY
     end
 
     subgraph Backend ["⚙️ Core Backend (Django 6.1 + DRF)"]
-        AUTH_BACKEND["DualPasswordBackend (SHA-256 + Raw)"]
-        AUTH_TOKEN["DRF Token Authentication"]
-        ROLES_ENGINE["RBAC Roles Master (Role FK)"]
-        
-        subgraph Apps ["Domain Apps"]
-            USERS["users (Auth, Profiles, Sessions, Notifications)"]
-            COMPANY["company (Company Master & Multi-Tenant Branding)"]
-            CATALOGUE["catalogue (Categories, Products, Variants)"]
-            INVENTORY["inventory (Stock & Warehouses)"]
-            INWARD["inward (Inward Batches & POs)"]
-            ORDERS["orders (POS & E-Commerce Orders)"]
-            CHANNELS["channels (Marketplace Sync)"]
-        end
+        API_GATEWAY["API Endpoints & Dual Auth Backend"]
+        CORE_LOGIC["Domain Apps & RBAC Roles Engine"]
+        API_GATEWAY --> CORE_LOGIC
     end
 
     subgraph Database ["🗄️ Database Layer (MySQL)"]
         LOCAL_DB[("Local MySQL (DEBUG=True)")]
-        LIVE_DB[("Live Aiven MySQL SSL (DEBUG=False)")]
+        LIVE_DB[("Live Cloud MySQL SSL (DEBUG=False)")]
     end
 
-    UI --> ROUTER --> AXIOS --> PROXY
-    PROXY -->|HTTP /api/v1/*| AUTH_BACKEND
-    AUTH_BACKEND --> AUTH_TOKEN --> ROLES_ENGINE
-    ROLES_ENGINE --> Apps
-
-    Apps -->|DEBUG=True| LOCAL_DB
-    Apps -->|DEBUG=False| LIVE_DB
+    PROXY -->|HTTP /api/v1/*| API_GATEWAY
+    CORE_LOGIC -->|Local Dev| LOCAL_DB
+    CORE_LOGIC -->|Production SSL| LIVE_DB
 ```
 
 ---
