@@ -3,19 +3,19 @@ import { Menu, Shield, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "../context/authProvider";
 import { useTheme } from "../context/themeProvider";
 
-export default function TopNavBar({ onToggleSidebar }) {
+export default function TopNavBar({ onToggleSidebar, isSidebarCollapsed }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="h-16 glass-panel border-b border-token px-6 flex items-center justify-between sticky top-0 z-30">
-      <div className="flex items-center gap-4">
+    <header className="h-16 glass-panel border-b border-token px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           onClick={onToggleSidebar}
-          className="lg:hidden p-2 rounded-xl text-secondary-token hover:text-primary-token hover:bg-surface-elevated transition-colors cursor-pointer"
-          title="Toggle Navigation"
+          className="p-2 rounded-xl text-secondary-token hover:text-primary-token hover:bg-surface-elevated transition-colors cursor-pointer flex items-center justify-center border border-transparent hover:border-token"
+          title={isSidebarCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-5 h-5 text-brand-token" />
         </button>
 
         <div className="flex items-center gap-2">

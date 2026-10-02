@@ -1,18 +1,69 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
+  Tags,
+  FolderKanban,
   ShieldCheck,
-  LogOut
+  LogOut,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  CircleDot,
+  Truck,
+  Boxes,
+  BarChart3,
+  FolderTree,
+  Package,
+  Building2,
+  Users,
+  Receipt,
+  PackageCheck,
+  QrCode,
+  ArrowRightLeft,
+  Network,
+  FileSpreadsheet,
+  Barcode
 } from "lucide-react";
 import { useAuth } from "../context/authProvider";
+import populateApi from "../api/populate.api";
 
-export default function Sidebar({ isOpen, onClose }) {
+// Icon dictionary for dynamic database navigation nodes
+const ICON_MAP = {
+  LayoutDashboard,
+  Tags,
+  FolderKanban,
+  Layers,
+  Truck,
+  Boxes,
+  BarChart3,
+  FolderTree,
+  Package,
+  Building2,
+  Users,
+  Receipt,
+  ReceiptPercent: Receipt,
+  PackageCheck,
+  QrCode,
+  ArrowRightLeft,
+  Network,
+  FileSpreadsheet,
+  Barcode,
+};
+
+export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse }) {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [appVersion, setAppVersion] = React.useState("1.0.0");
+  const [appVersion, setAppVersion] = useState("1.0.0");
+  const [navItems, setNavItems] = useState([]);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [isHovered, setIsHovered] = useState(false);
 
-  React.useEffect(() => {
+  // When sidebar is collapsed on desktop, hover temporarily expands it cleanly
+  const isEffectiveCollapsed = isCollapsed && !isHovered;
+
+  useEffect(() => {
     fetch("/version.json")
       .then((r) => r.json())
       .then((d) => {
@@ -21,107 +72,284 @@ export default function Sidebar({ isOpen, onClose }) {
       .catch(() => {});
   }, []);
 
-  const navGroups = [
-    {
-      group: "Core Platform",
-      items: [
-        {
-          name: "Dashboard",
-          path: "/dashboard",
-          icon: LayoutDashboard,
-          badge: null
+  // Fetch dynamic sidebars from Populate Engine
+  useEffect(() => {
+    let isMounted = true;
+    populateApi
+      .read("sidebar", {
+        filter: { parent__isnull: true },
+        populate: { children: ["id", "title", "main_route", "icon", "badge", "order"] },
+        sort: ["order", "id"],
+      })
+      .then((res) => {
+        if (isMounted && res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          setNavItems(res.data);
         }
-      ]
+      })
+      .catch(() => {
+        // Fallback default navigation if network error
+        if (isMounted) {
+          setNavItems([
+            {
+              id: 1,
+              title: "Dashboard",
+              main_route: "/dashboard",
+              icon: "LayoutDashboard",
+              has_children: false,
+            },
+            {
+              id: 2,
+              title: "Catalogue",
+              main_route: "/catalogue",
+              icon: "FolderKanban",
+              has_children: true,
+              children: [
+                { id: 11, title: "Categories", main_route: "/catalogue/categories", icon: "FolderTree" },
+                { id: 12, title: "Products", main_route: "/catalogue/products", icon: "Package" },
+                { id: 13, title: "Product Variants", main_route: "/catalogue/variants", icon: "Boxes" },
+                { id: 14, title: "GST Tax Slabs", main_route: "/catalogue/gst-slabs", icon: "ReceiptPercent" },
+              ],
+            },
+          ]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Accordion Auto-expand: Open ONLY the active parent menu matching the current URL route
+  useEffect(() => {
+    if (!navItems || navItems.length === 0) return;
+    const activeParent = navItems.find((item) =>
+      item.children?.some(
+        (child) =>
+          child.main_route &&
+          (location.pathname === child.main_route || location.pathname.startsWith(child.main_route))
+      )
+    );
+    if (activeParent) {
+      setOpenMenuId(activeParent.id);
     }
-  ];
+  }, [location.pathname, navItems]);
+
+  // Accordion toggle: Only the clicked parent opens, all others collapse like a toggle
+  const toggleSubmenu = (menuId) => {
+    setOpenMenuId((prev) => (prev === menuId ? null : menuId));
+  };
+
+  const renderIcon = (iconName, className) => {
+    const Component = ICON_MAP[iconName] || CircleDot;
+    return <Component className={className} />;
+  };
 
   return (
     <aside
-      className={`fixed lg:static inset-y-0 left-0 z-40 w-64 glass-panel border-r border-token flex flex-col justify-between transition-transform duration-300 ${
+      onMouseEnter={() => {
+        if (isCollapsed) setIsHovered(true);
+      }}
+      onMouseLeave={() => {
+        if (isCollapsed) setIsHovered(false);
+      }}
+      className={`fixed lg:static inset-y-0 left-0 z-40 glass-panel border-r border-token flex flex-col justify-between transition-all duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      } ${
+        isEffectiveCollapsed ? "w-[72px]" : "w-64"
+      } ${
+        isHovered && isCollapsed ? "lg:absolute lg:shadow-2xl z-50 bg-surface/98 backdrop-blur-md" : ""
       }`}
     >
       {/* Brand Header */}
       <div>
-        <div className="h-16 px-5 flex items-center justify-between border-b border-token">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[var(--brand-primary)] to-[var(--brand-secondary)] flex items-center justify-center text-white shadow-lg shadow-[rgba(0,210,210,0.25)] border border-[rgba(0,210,210,0.3)]">
+        <div className={`h-16 px-4 flex items-center ${isEffectiveCollapsed ? "justify-center" : "justify-between"} border-b border-token transition-all`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-tr from-[var(--brand-primary)] to-[var(--brand-secondary)] flex items-center justify-center text-white shadow-lg shadow-[rgba(0,210,210,0.25)] border border-[rgba(0,210,210,0.3)]">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-sm font-bold tracking-tight text-primary-token">Central Platform</h1>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[rgba(0,210,210,0.12)] text-brand-token border border-[rgba(0,210,210,0.25)]">
-                  v{appVersion}
-                </span>
+            {!isEffectiveCollapsed && (
+              <div className="min-w-0 transition-opacity duration-200">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-sm font-bold tracking-tight text-primary-token truncate">Central Platform</h1>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[rgba(0,210,210,0.12)] text-brand-token border border-[rgba(0,210,210,0.25)] shrink-0">
+                    v{appVersion}
+                  </span>
+                </div>
+                <p className="text-[10px] text-secondary-token font-semibold tracking-wider uppercase truncate">
+                  Admin Console
+                </p>
               </div>
-              <p className="text-[10px] text-secondary-token font-semibold tracking-wider uppercase">
-                Admin Console
-              </p>
-            </div>
+            )}
           </div>
+          {!isEffectiveCollapsed && onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="hidden lg:flex p-1.5 rounded-lg text-muted-token hover:text-primary-token hover:bg-surface-elevated transition-colors cursor-pointer"
+              title="Collapse Sidebar"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* Navigation Sections */}
-        <nav className="p-3.5 space-y-6 overflow-y-auto max-h-[calc(100vh-10rem)]">
-          {navGroups.map((grp) => (
-            <div key={grp.group} className="space-y-1">
-              <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-token">
-                {grp.group}
-              </p>
-              {grp.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path || (item.path === "/dashboard" && location.pathname === "/");
+        {/* Dynamic Navigation */}
+        <nav className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
+          {!isEffectiveCollapsed ? (
+            <p className="px-3 pt-1 text-[10px] font-bold uppercase tracking-wider text-muted-token">
+              Navigation Menu
+            </p>
+          ) : (
+            <div className="h-2" />
+          )}
 
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
+          {navItems.map((item) => {
+            const hasChildren = (item.children && item.children.length > 0) || item.has_children;
+            const isSubmenuOpen = openMenuId === item.id;
+            const isDirectActive = item.main_route && location.pathname === item.main_route;
+            const isChildActive = item.children?.some(
+              (c) => c.main_route && (location.pathname === c.main_route || location.pathname.startsWith(c.main_route))
+            );
+
+            if (hasChildren) {
+              return (
+                <div key={item.id} className="space-y-1">
+                  {/* Parent Accordion Header */}
+                  <button
+                    type="button"
                     onClick={() => {
-                      if (window.innerWidth < 1024 && onClose) onClose();
+                      if (isEffectiveCollapsed && onToggleCollapse) {
+                        onToggleCollapse();
+                      }
+                      toggleSubmenu(item.id);
                     }}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      isActive
-                        ? "bg-[rgba(0,210,210,0.12)] text-brand-token border border-[var(--brand-secondary)] shadow-sm"
+                    title={isEffectiveCollapsed ? item.title : undefined}
+                    className={`w-full flex items-center ${isEffectiveCollapsed ? "justify-center px-2.5" : "justify-between px-3"} py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      isChildActive || isDirectActive
+                        ? "bg-[rgba(0,210,210,0.08)] text-brand-token border border-[rgba(0,210,210,0.2)]"
                         : "text-secondary-token hover:text-primary-token hover:bg-surface-elevated"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`w-4 h-4 ${isActive ? "text-[var(--brand-secondary)]" : "text-muted-token"}`} />
-                      <span>{item.name}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {renderIcon(
+                        item.icon,
+                        `w-4 h-4 shrink-0 ${isChildActive || isDirectActive ? "text-[var(--brand-secondary)]" : "text-muted-token"}`
+                      )}
+                      {!isEffectiveCollapsed && <span className="truncate">{item.title}</span>}
                     </div>
-                    {item.badge && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-[rgba(0,210,210,0.15)] text-brand-token border border-[var(--brand-secondary)] rounded-md">
-                        {item.badge}
-                      </span>
+                    {!isEffectiveCollapsed && (
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-muted-token shrink-0 transition-transform duration-300 ease-in-out ${
+                          isSubmenuOpen ? "rotate-180 text-[var(--brand-secondary)]" : ""
+                        }`}
+                      />
                     )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          ))}
+                  </button>
+
+                  {/* Submenu Children Links with Smooth Height & Opacity Animation */}
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                      isSubmenuOpen && !isEffectiveCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="pl-4 pr-1 py-1 space-y-1 border-l-2 border-[rgba(0,210,210,0.15)] ml-4">
+                        {item.children?.map((child) => {
+                          const isSubActive = location.pathname === child.main_route;
+                          return (
+                            <NavLink
+                              key={child.id || child.main_route}
+                              to={child.main_route}
+                              onClick={() => {
+                                if (window.innerWidth < 1024 && onClose) onClose();
+                              }}
+                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                isSubActive
+                                  ? "bg-[rgba(0,210,210,0.15)] text-brand-token font-semibold shadow-xs"
+                                  : "text-secondary-token hover:text-primary-token hover:bg-surface-elevated"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all ${
+                                    isSubActive
+                                      ? "bg-[var(--brand-secondary)] ring-2 ring-[var(--brand-secondary)]/30 scale-125"
+                                      : "bg-muted-token/50"
+                                  }`}
+                                />
+                                <span className="truncate">{child.title}</span>
+                              </div>
+                              {child.badge && (
+                                <span className="px-1.5 py-0.5 text-[8px] font-bold bg-[rgba(0,210,210,0.15)] text-brand-token rounded shrink-0">
+                                  {child.badge}
+                                </span>
+                              )}
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Standalone Link (e.g. Dashboard)
+            return (
+              <NavLink
+                key={item.id || item.main_route}
+                to={item.main_route}
+                title={isEffectiveCollapsed ? item.title : undefined}
+                onClick={() => {
+                  if (window.innerWidth < 1024 && onClose) onClose();
+                }}
+                className={`flex items-center ${isEffectiveCollapsed ? "justify-center px-2.5" : "justify-between px-3"} py-2 rounded-xl text-xs font-semibold transition-all ${
+                  isDirectActive
+                    ? "bg-[rgba(0,210,210,0.12)] text-brand-token border border-[var(--brand-secondary)] shadow-sm"
+                    : "text-secondary-token hover:text-primary-token hover:bg-surface-elevated"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {renderIcon(
+                    item.icon,
+                    `w-4 h-4 shrink-0 ${isDirectActive ? "text-[var(--brand-secondary)]" : "text-muted-token"}`
+                  )}
+                  {!isEffectiveCollapsed && <span className="truncate">{item.title}</span>}
+                </div>
+                {!isEffectiveCollapsed && item.badge && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-[rgba(0,210,210,0.15)] text-brand-token border border-[var(--brand-secondary)] rounded-md shrink-0">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 
       {/* User Footer Profile */}
-      <div className="p-3.5 border-t border-token bg-surface">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[rgba(0,210,210,0.12)] border border-[rgba(0,210,210,0.3)] flex items-center justify-center text-brand-token text-xs font-bold">
+      <div className="p-3 border-t border-token bg-surface">
+        <div className={`flex items-center ${isEffectiveCollapsed ? "justify-center" : "justify-between"}`}>
+          <div className="flex items-center gap-2.5 min-w-0" title={isEffectiveCollapsed ? (user?.name || "Admin") : undefined}>
+            <div className="w-8 h-8 shrink-0 rounded-lg bg-[rgba(0,210,210,0.12)] border border-[rgba(0,210,210,0.3)] flex items-center justify-center text-brand-token text-xs font-bold">
               {user?.name ? user.name[0].toUpperCase() : "A"}
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-primary-token truncate">{user?.name || "Admin"}</p>
-              <p className="text-[10px] text-muted-token truncate">{user?.role || "Super Admin"}</p>
-            </div>
+            {!isEffectiveCollapsed && (
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-primary-token truncate">{user?.name || "Admin"}</p>
+                <p className="text-[10px] text-muted-token truncate">{user?.role || "Super Admin"}</p>
+              </div>
+            )}
           </div>
-          <button
-            onClick={logout}
-            title="Log Out"
-            className="p-1.5 rounded-lg text-muted-token hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          {!isEffectiveCollapsed && (
+            <button
+              onClick={logout}
+              title="Log Out"
+              className="p-1.5 rounded-lg text-muted-token hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </aside>

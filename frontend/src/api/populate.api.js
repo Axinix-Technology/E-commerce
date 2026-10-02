@@ -8,14 +8,15 @@ export const populateApi = {
   /**
    * Reads documents with optional filtering, pagination, and field selection.
    */
-  read: async (model, { filter = {}, page = 1, limit = 20, sort = { createdAt: -1 }, fields, populateFields } = {}) => {
+  read: async (model, { filter = {}, page = 1, limit = 20, sort = ["-id"], fields, populateFields, populate } = {}) => {
     const response = await axiosInstance.post(`/populate/read/${model}`, {
       filter,
       page,
       limit,
       sort,
       fields,
-      populateFields,
+      populate: populate || populateFields,
+      populateFields: populateFields || populate,
     });
     return response.data;
   },
@@ -23,10 +24,11 @@ export const populateApi = {
   /**
    * Reads a single document by ID.
    */
-  readOne: async (model, id, { fields, populateFields } = {}) => {
+  readOne: async (model, id, { fields, populateFields, populate } = {}) => {
     const response = await axiosInstance.post(`/populate/read/${model}/${id}`, {
       fields,
-      populateFields,
+      populate: populate || populateFields,
+      populateFields: populateFields || populate,
     });
     return response.data?.data;
   },

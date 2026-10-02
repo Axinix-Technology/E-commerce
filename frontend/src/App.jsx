@@ -1,10 +1,11 @@
 import React from "react";
 import BaseLayout from "./layouts/baseLayouts";
 import { Toaster } from "react-hot-toast";
+import { SettingsProvider } from "./context/settingsProvider";
 
 export default function App() {
   return (
-    <>
+    <SettingsProvider>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -18,6 +19,6 @@ export default function App() {
         }}
       />
       <BaseLayout />
-    </>
+    </SettingsProvider>
   );
 }
