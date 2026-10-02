@@ -18,9 +18,19 @@ This index is maintained in strict alphabetical order to satisfy Core Rule #2 an
   - Documents the frontend setup, Tailwind CSS v4, dynamic file-based routing (`~react-pages`), ThemeProvider, and pure page routing integrity.
 - [GENERAL_SETTINGS - Centralized Platform Configuration](./GENERAL_SETTINGS.md)
   - Documents the platform settings schema (`general_settings`), store branding, localization, currency preferences, inventory rules, and maintenance controls manageable directly via UI.
+- [GST_AND_BILLING_ARCHITECTURE - Geography Masters, Customer Master & Tax Reporting](./GST_AND_BILLING_ARCHITECTURE.md)
+  - Details the State Master (36 statutory GST codes), B2B/B2C Customer Master, Place of Supply (POS) engine, and GSTR-1/GSTR-3B compliance reporting.
 - [POLICY_ENGINE - Lightweight Authorization & CRUD Resolution](./POLICY_ENGINE.md)
   - Documents the streamlined Policy Engine logic: Super Admin bypass, in-memory cache policy verification, and dynamic CRUD resolution.
+- [POPULATE_ENGINE_DJANGO - 10-Stage Pipeline Architecture & Core Implementation](./POPULATE_ENGINE_DJANGO.md)
+  - Details the immutable 10-stage Django/MySQL execution pipeline, ModelRegistry, RelationRegistry, security guards, LRU caching, and dynamic navigation system.
 - [POPULATE_ENGINE_LIMITATIONS - Engine Constraints, Exceptions & Bug Recipes](./POPULATE_ENGINE_LIMITATIONS.md)
   - Documents MySQL InnoDB lock windows, soft-delete composite indexing directives, prefetch memory limits, and pipeline caching recipes.
+- [STOCK_AND_MARKETPLACE_INTEGRATION - Stock Reports & Amazon/Flipkart Sync](./STOCK_AND_MARKETPLACE_INTEGRATION.md)
+  - Details the double-entry stock ledger, Available to Promise (ATP) calculations, and real-time inventory feed integration with Amazon SP-API and Flipkart.
+- [STOCK_LEDGER_ARCHITECTURE - Inward/Outward Dynamic Report & Stock Buckets](./STOCK_LEDGER_ARCHITECTURE.md)
+  - Details the Opening-Inward-Outward-Closing dynamic aggregation formula, multi-bucket state segregation (Sellable, Approval/Memo, Quarantine, Repair), and Service Layer architecture.
+- [VENDOR_MASTER - Supplier Registration & Trade Credentials](./VENDOR_MASTER.md)
+  - Details the VendorMaster entity, GSTIN/PAN compliance, banking attributes, and linkage to Inwarding/GRN.
 - [VERSIONING - Centralized Single-Source-of-Truth Versioning](./VERSIONING.md)
   - Documents the single source of truth versioning system (`version.json`), semver automation (`version-tool.mjs`), multi-target synchronization, and deployment gates (`verify-deploy-version.mjs`).

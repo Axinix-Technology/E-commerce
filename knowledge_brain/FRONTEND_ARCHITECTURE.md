@@ -39,4 +39,14 @@ The Frontend application is structured to follow the **Tracker-v2 Architecture**
 
 ## Sidebar Navigation Governance
 
-Sidebar navigation is designed to support dynamic role-filtered menus loaded from MongoDB collections (e.g. `sidebars` via `/api/populate/read/sidebars`). In the current initial phase, the active route is restricted to the **Dashboard**, with future modules documented in code comments for subsequent phases.
+Sidebar navigation is dynamically loaded from the MySQL database (`sidebar` model via `/api/populate/read/sidebar`), supporting parent accordion categories (such as `Catalogue Master`) with unified indicator dots for submenus.
+
+---
+
+## Enterprise UX Rule: Dedicated Full-Page Routes (No Popups / Modals)
+
+To deliver a true enterprise production product experience:
+- **Never create popup modals or dialogs for Add / Edit forms.**
+- All form interactions must reside on dedicated full-page routes (e.g. `/catalogue/categories/create`, `/catalogue/products/create`, `/catalogue/variants/create`, `/catalogue/gst-slabs/create`).
+- Edit flows reuse the dedicated page via query parameter (e.g. `/create?id=123`), with breadcrumbs and back links leading directly back to the listing.
+
