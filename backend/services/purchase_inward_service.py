@@ -30,9 +30,29 @@ class PurchaseInwardService(BaseService):
         if not invoice_number:
             raise ValidationError("Supplier invoice / bill number is required.")
 
+        # Check for duplicate vendor invoice submission
+        if PurchaseInward.objects.filter(vendor=vendor, invoice_number__iexact=invoice_number, status=1).exists():
+            raise ValidationError(
+                f"An active purchase inward already exists for vendor '{vendor.name}' with invoice #{invoice_number}."
+            )
+
         today_str = timezone.now().strftime("%Y%m%d")
-        inward_count = PurchaseInward.objects.filter(inward_number__startswith=f"INW-{today_str}").count() + 1
-        data["inward_number"] = f"INW-{today_str}-{inward_count:04d}"
+        last_inw = (
+            PurchaseInward.objects
+            .filter(inward_number__startswith=f"INW-{today_str}")
+            .order_by("-inward_number")
+            .first()
+        )
+        if last_inw and last_inw.inward_number:
+            try:
+                last_seq = int(last_inw.inward_number.split("-")[-1])
+                next_seq = last_seq + 1
+            except (ValueError, IndexError):
+                next_seq = 1
+        else:
+            next_seq = 1
+
+        data["inward_number"] = f"INW-{today_str}-{next_seq:04d}"
         data["inward_status"] = "received"
         data["inward_date"] = timezone.now().date().isoformat()
         data["received_by"] = context.user if context.user and context.user.is_authenticated else None
@@ -54,6 +74,8 @@ class PurchaseInwardService(BaseService):
 
             if quantity <= 0:
                 raise ValidationError(f"Item #{idx}: Quantity must be greater than zero.")
+            if quantity > 5000:
+                raise ValidationError(f"Item #{idx}: Quantity ({quantity}) exceeds maximum unit-tagging limit of 5,000 per line.")
             if unit_cost < 0:
                 raise ValidationError(f"Item #{idx}: Unit cost cannot be negative.")
             if not ProductType.objects.filter(id=product_id, status=1).exists():
@@ -79,73 +101,141 @@ class PurchaseInwardService(BaseService):
         items = context.metadata.get("inward_items_raw", [])
         today_str = timezone.now().strftime("%Y%m%d")
 
-        with transaction.atomic():
-            for idx, item_data in enumerate(items, start=1):
-                product = ProductType.objects.get(id=item_data["product_id"])
-                quantity = int(item_data["quantity"])
-                unit_cost = Decimal(str(item_data["unit_cost"]))
-                tax_rate = Decimal(str(item_data.get("tax_rate", "0.00")))
-                line_taxable = unit_cost * quantity
-                line_tax = (line_taxable * tax_rate) / Decimal("100.00")
-                line_total = line_taxable + line_tax
+        # Deadlock prevention: Lock stock rows in deterministic sorted order
+        unique_product_ids = sorted(list({int(item["product_id"]) for item in items}))
+        stock_map = {}
+        for pid in unique_product_ids:
+            stock, _ = InventoryStock.objects.select_for_update().get_or_create(
+                product_id=pid,
+                defaults={"status": 1, "reorder_level": 10}
+            )
+            stock_map[pid] = stock
 
-                lot_number = f"LOT-{today_str}-{instance.id:04d}-{idx:02d}"
+        tagged_units_to_create = []
 
-                inward_item = InwardItem.objects.create(
-                    inward=instance,
-                    product=product,
-                    quantity=quantity,
-                    unit_cost=unit_cost,
-                    tax_rate=tax_rate,
-                    tax_amount=line_tax,
-                    total_cost=line_total,
-                    lot_number=lot_number,
-                    status=1,
-                )
+        for idx, item_data in enumerate(items, start=1):
+            product = ProductType.objects.get(id=item_data["product_id"])
+            quantity = int(item_data["quantity"])
+            unit_cost = Decimal(str(item_data["unit_cost"]))
+            tax_rate = Decimal(str(item_data.get("tax_rate", "0.00")))
+            line_taxable = unit_cost * quantity
+            line_tax = (line_taxable * tax_rate) / Decimal("100.00")
+            line_total = line_taxable + line_tax
 
-                # Physical item barcode stickers
-                tagged_units = [
+            lot_number = f"LOT-{today_str}-{instance.id:04d}-{idx:02d}"
+
+            inward_item = InwardItem.objects.create(
+                inward=instance,
+                product=product,
+                quantity=quantity,
+                unit_cost=unit_cost,
+                tax_rate=tax_rate,
+                tax_amount=line_tax,
+                total_cost=line_total,
+                lot_number=lot_number,
+                status=1,
+            )
+
+            # Barcodes include line idx and 4-digit piece index to guarantee global uniqueness
+            for p in range(1, quantity + 1):
+                tagged_units_to_create.append(
                     TaggedInventoryUnit(
                         inward_item=inward_item,
                         product=product,
-                        item_barcode=f"ITM-{today_str}-{product.id:04d}-{instance.id:03d}-{p:03d}",
+                        item_barcode=f"{product.id:06d}-{p:06d}",
                         lot_number=lot_number,
                         current_bucket="sellable",
                         unit_cost=unit_cost,
                         is_sold=False,
                         status=1,
                     )
-                    for p in range(1, quantity + 1)
-                ]
-                TaggedInventoryUnit.objects.bulk_create(tagged_units)
-
-                # Update live stock level
-                stock, _ = InventoryStock.objects.select_for_update().get_or_create(
-                    product=product,
-                    defaults={"status": 1, "reorder_level": 10}
                 )
-                stock.quantity_on_hand += quantity
-                stock.sellable_stock += quantity
-                stock.save(update_fields=["quantity_on_hand", "sellable_stock", "updated_at"])
 
-                # Immutable double-entry movement ledger record
-                StockMovementLedger.objects.create(
-                    product=product,
-                    movement_type="purchase_inward",
-                    from_bucket="vendor",
-                    to_bucket="sellable",
-                    inward_qty=quantity,
-                    outward_qty=0,
-                    lot_number=lot_number,
-                    unit_cost=unit_cost,
-                    reference_type="GRN",
-                    reference_id=instance.inward_number,
-                    notes=f"Inward from {instance.vendor.name} (Bill #{instance.invoice_number})",
-                    status=1,
-                    created_by=instance.received_by,
-                )
+            # Update live stock counters
+            stock = stock_map[product.id]
+            stock.quantity_on_hand += quantity
+            stock.sellable_stock += quantity
+
+            # Record immutable double-entry movement ledger record
+            StockMovementLedger.objects.create(
+                product=product,
+                movement_type="purchase_inward",
+                from_bucket="vendor",
+                to_bucket="sellable",
+                inward_qty=quantity,
+                outward_qty=0,
+                lot_number=lot_number,
+                unit_cost=unit_cost,
+                reference_type="GRN",
+                reference_id=instance.inward_number,
+                notes=f"Inward from {instance.vendor.name} (Bill #{instance.invoice_number})",
+                status=1,
+                created_by=instance.received_by,
+            )
+
+        # Batch insert tagged barcode units
+        if tagged_units_to_create:
+            TaggedInventoryUnit.objects.bulk_create(tagged_units_to_create, batch_size=500)
+
+        # Save all updated stocks
+        for stock in stock_map.values():
+            stock.save(update_fields=["quantity_on_hand", "sellable_stock", "updated_at"])
 
         return instance
+
+    def before_delete(self, context, instance: PurchaseInward) -> None:
+        """
+        Reversal Path:
+        Soft-deleting or cancelling a PurchaseInward reverses live stock,
+        deactivates tagged units, and writes a reversal ledger entry.
+        """
+        inward_items = instance.items.filter(status=1)
+        if not inward_items.exists():
+            return
+
+        # Sort product IDs to prevent deadlocks
+        product_ids = sorted(list({item.product_id for item in inward_items}))
+        stocks = {
+            pid: InventoryStock.objects.select_for_update().get(product_id=pid)
+            for pid in product_ids
+        }
+
+        # Check sufficiency before deducting
+        for item in inward_items:
+            stock = stocks[item.product_id]
+            if stock.sellable_stock < item.quantity:
+                raise ValidationError(
+                    f"Cannot cancel inward #{instance.inward_number}: {item.quantity} units of '{item.product.name}' were received, but only {stock.sellable_stock} sellable units remain."
+                )
+
+        today_str = timezone.now().strftime("%Y%m%d")
+        for item in inward_items:
+            stock = stocks[item.product_id]
+            stock.sellable_stock -= item.quantity
+            stock.quantity_on_hand -= item.quantity
+            stock.save(update_fields=["sellable_stock", "quantity_on_hand", "updated_at"])
+
+            # Deactivate tagged units
+            item.tagged_units.filter(status=1).update(status=0)
+            item.status = 0
+            item.save(update_fields=["status"])
+
+            # Create reversal ledger entry
+            StockMovementLedger.objects.create(
+                product=item.product,
+                movement_type="vendor_return",
+                from_bucket="sellable",
+                to_bucket="vendor",
+                inward_qty=0,
+                outward_qty=item.quantity,
+                lot_number=item.lot_number,
+                unit_cost=item.unit_cost,
+                reference_type="GRN_REVERSAL",
+                reference_id=f"REV-{instance.inward_number}",
+                notes=f"Reversal of GRN #{instance.inward_number} upon deletion",
+                status=1,
+                created_by=context.user if context.user and context.user.is_authenticated else None,
+            )
 
 
 # Register with Populate Engine Service Registry

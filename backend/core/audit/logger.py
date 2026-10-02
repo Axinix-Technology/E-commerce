@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime
-from typing import Any
-from core.pipeline.context import RequestContext
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.pipeline.context import RequestContext
 
 logger = logging.getLogger("core.audit")
 
@@ -13,7 +15,7 @@ class AuditLogger:
     """
 
     @classmethod
-    def log(cls, context: RequestContext, result: dict[str, Any]) -> None:
+    def log(cls, context: Any, result: dict[str, Any]) -> None:
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
             "request_id": context.request_id,

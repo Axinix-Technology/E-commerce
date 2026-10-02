@@ -17,19 +17,28 @@ class BaseCRUDExecutor:
 
     @classmethod
     def find_target_instance(cls, context: RequestContext, queryset: Any) -> models.Model:
-        """Finds target instance in active scope or raises NotFoundError."""
-        try:
-            if context.object_id is not None:
+        """Finds target instance in active scope or raises NotFoundError / ValidationError."""
+        if context.object_id is not None:
+            try:
                 return queryset.get(pk=context.object_id)
-            obj = queryset.first()
-            if not obj:
+            except (models.ObjectDoesNotExist, ValueError):
                 raise NotFoundError(
                     f"Record '{context.model_name}' with ID '{context.object_id}' not found.",
                     details={"model": context.model_name, "id": context.object_id}
                 )
-            return obj
-        except (models.ObjectDoesNotExist, ValueError):
+
+        count = queryset.count()
+        if count == 0:
             raise NotFoundError(
-                f"Record '{context.model_name}' with ID '{context.object_id}' not found.",
-                details={"model": context.model_name, "id": context.object_id}
+                f"No active record found for '{context.model_name}' matching filter criteria.",
+                details={"model": context.model_name, "filters": context.filters}
             )
+        if count > 1:
+            from core.response.exceptions import ValidationError
+            raise ValidationError(
+                f"Filter matched {count} records. Single mutation requires an explicit object_id. Use bulk actions instead.",
+                code="AMBIGUOUS_TARGET",
+                details={"model": context.model_name, "match_count": count}
+            )
+
+        return queryset.first()

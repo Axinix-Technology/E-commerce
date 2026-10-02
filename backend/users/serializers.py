@@ -36,13 +36,12 @@ class LoginSerializer(serializers.Serializer):
         username = attrs.get('username')
         password = attrs.get('password')
 
-        # 1. Primary check: Authenticate with incoming password (e.g. SHA-256 pre-hashed payload from UI)
-        user = authenticate(username=username, password=password)
-
-        # 2. Dual-fallback check: If raw password was sent (e.g. from API/Postman), check against SHA-256 digest
-        if not user and len(password) != 64:
-            sha256_digest = hashlib.sha256(password.encode('utf-8')).hexdigest()
-            user = authenticate(username=username, password=sha256_digest)
+        # Authenticate via configured backends (handles direct and SHA-256 pre-hashes cleanly)
+        user = authenticate(
+            request=self.context.get('request'),
+            username=username,
+            password=password
+        )
 
         if not user:
             # Generic message prevents account enumeration

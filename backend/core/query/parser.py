@@ -36,9 +36,10 @@ class DeveloperDSLParser:
 
     @classmethod
     def _make_cache_key(cls, model_name: str, action: str, filters: dict, populate: Any, fields: Any, ordering: list) -> str:
+        import hashlib
         try:
             raw = f"{model_name}:{action}:{json.dumps(filters, sort_keys=True)}:{json.dumps(populate, sort_keys=True)}:{json.dumps(fields, sort_keys=True)}:{json.dumps(ordering)}"
-            return str(hash(raw))
+            return hashlib.sha256(raw.encode('utf-8')).hexdigest()
         except Exception:
             return ""
 
@@ -102,6 +103,15 @@ class DeveloperDSLParser:
             except Exception:
                 # Custom report or service parameter that is not a direct model column
                 continue
+
+            # Guard against sensitive field filtering (prevents blind character-by-character hash extraction)
+            SENSITIVE_FILTER_FIELDS = frozenset({"password", "token", "secret_key"})
+            if any(seg.lower() in SENSITIVE_FILTER_FIELDS for seg in field_segments):
+                from core.response.exceptions import SecuritySanitizationError
+                raise SecuritySanitizationError(
+                    f"Filtering on sensitive credential fields is prohibited.",
+                    code="SENSITIVE_FIELD_FILTER_BLOCKED"
+                )
 
             lookup_field = "__".join(field_segments)
             if op != "exact":

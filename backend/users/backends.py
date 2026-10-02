@@ -33,10 +33,12 @@ class DualPasswordBackend(ModelBackend):
         if user.check_password(password) and self.user_can_authenticate(user):
             return user
 
-        # Check 2: If incoming is raw text and user password was stored as SHA-256 hex
-        if len(password) != 64:
+        # Check 2: If incoming password was plain text and DB stored SHA-256 hex
+        try:
             sha256_digest = hashlib.sha256(password.encode('utf-8')).hexdigest()
             if user.check_password(sha256_digest) and self.user_can_authenticate(user):
                 return user
+        except Exception:
+            pass
 
         return None

@@ -80,13 +80,17 @@ class StockMovementLedger(models.Model):
         # Inward (+)
         ("purchase_inward", "Purchase / GRN Inward"),
         ("return_restock", "Return Restocked after QC"),
+        ("return_quarantine", "Customer Return Quarantine"),
+        ("qc_restock", "QC Pass & Restock Return"),
         ("approval_return", "Returned from Approval / Photoshoot"),
         ("repair_return", "Returned from Repair / Alteration"),
+        ("branch_transfer_inward", "Branch Transfer Inward"),
         ("audit_plus", "Stock Audit Plus Adjustment"),
         
         # Outward (-)
         ("pos_sale", "POS Billing Sale"),
         ("marketplace_sale", "Marketplace Sale (Amazon/Flipkart)"),
+        ("branch_transfer_outward", "Branch Transfer Outward"),
         ("approval_outward", "Sent to Photoshoot / Approval Memo"),
         ("repair_outward", "Sent to Repair / Alteration Workshop"),
         ("vendor_return", "Returned to Vendor (RTV)"),

@@ -89,5 +89,13 @@ class RequestValidator:
         elif context.action == Action.BULK_UPDATE.value:
             if not isinstance(context.body, list) and not isinstance(context.body, dict):
                 raise ValidationError("Bulk update requires a list of items or an update body with filters.")
+            if isinstance(context.body, dict) and not context.filters:
+                raise ValidationError("Bulk update with an object body requires non-empty filter criteria.")
+            if isinstance(context.body, list) and len(context.body) == 0:
+                raise ValidationError("Bulk update list payload cannot be empty.")
+
+        elif context.action == Action.BULK_DELETE.value:
+            if not context.filters and not (isinstance(context.body, list) and len(context.body) > 0):
+                raise ValidationError("Bulk delete requires explicit filter criteria or a list of target IDs to prevent wiping the table.")
 
         return context

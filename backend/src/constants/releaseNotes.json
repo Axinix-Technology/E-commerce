@@ -1,0 +1,34 @@
+[
+  {
+    "version": "1.1.0",
+    "releaseDate": "2026-10-02",
+    "title": "Release v1.1.0",
+    "tagline": "Platform enhancements and continuous improvements.",
+    "isLatest": true,
+    "type": "Feature & Maintenance Release",
+    "categories": {
+      "features": [],
+      "improvements": [
+        "Release increment to v1.1.0"
+      ],
+      "security": [],
+      "fixes": []
+    }
+  },
+  {
+    "version": "1.0.0",
+    "releaseDate": "2026-10-02",
+    "title": "Release v1.0.0",
+    "tagline": "Platform enhancements and continuous improvements.",
+    "isLatest": false,
+    "type": "Feature & Maintenance Release",
+    "categories": {
+      "features": [],
+      "improvements": [
+        "Release increment to v1.0.0"
+      ],
+      "security": [],
+      "fixes": []
+    }
+  }
+]

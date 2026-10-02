@@ -1,21 +1,37 @@
 from typing import Any
 from django.db import transaction, models
 from core.pipeline.context import RequestContext
-from core.response.exceptions import NotFoundError
+from core.response.exceptions import NotFoundError, AuthorizationError, ValidationError
 from .base import BaseCRUDExecutor
+
+FORBIDDEN_MUTATION_FIELDS = frozenset({"password", "is_superuser", "is_staff", "token", "secret_key"})
+RESTRICTED_UPDATE_MODELS = frozenset({"stock_ledger", "inventory_stock", "user_session"})
 
 
 class UpdateExecutor(BaseCRUDExecutor):
     """
     Stage 08 — Generic Update Executor.
     Adheres strictly to Recipe 01:
-    - Service before_update and external checks run OUTSIDE the lock.
+    - Enforces fail-closed access controls and forbidden mutation fields.
     - Minimal DB lock window (<10ms) using select_for_update().
     - Service after_update runs post-commit.
     """
 
     @classmethod
     def execute(cls, queryset: Any, context: RequestContext) -> dict[str, Any]:
+        # 0. Model-level update restrictions
+        if context.model_name in RESTRICTED_UPDATE_MODELS:
+            raise AuthorizationError(
+                f"Direct modification of '{context.model_name}' records is not permitted via generic API.",
+                code="RESTRICTED_MODEL"
+            )
+
+        if context.model_name in ("user", "role") and not getattr(context.user, "is_superuser", False):
+            raise AuthorizationError(
+                f"Modifying '{context.model_name}' records requires administrative privileges.",
+                code="ADMIN_REQUIRED"
+            )
+
         service = cls.get_service(context)
         model_cls = context.model_cls
 
@@ -28,6 +44,15 @@ class UpdateExecutor(BaseCRUDExecutor):
 
         # 2. Service Hook: before_update (runs OUTSIDE lock window)
         update_data = dict(context.body) if isinstance(context.body, dict) else {}
+
+        # Guard against forbidden field injection
+        for forbidden_key in FORBIDDEN_MUTATION_FIELDS:
+            if forbidden_key in update_data:
+                raise AuthorizationError(
+                    f"Direct mutation of '{forbidden_key}' is not allowed via generic API.",
+                    code="FORBIDDEN_FIELD"
+                )
+
         update_data = service.before_update(context, target_instance, update_data)
 
         # 3. Minimal DB lock window (Recipe 01: keep lock duration < 10ms)

@@ -10,11 +10,9 @@ from .serializers import LoginSerializer
 
 
 def get_client_ip(request):
-    """Utility to extract client IP address."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR')
+    """Utility to safely extract client IP address without spoofable header vulnerability."""
+    remote_addr = request.META.get('REMOTE_ADDR')
+    return remote_addr or "127.0.0.1"
 
 
 class LoginView(APIView):
@@ -116,4 +114,22 @@ class MeView(APIView):
                 "isSuperAdmin": is_super,
                 "status": user.status,
             }
+        }, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    """
+    Logout Endpoint:
+    - Revokes and deletes auth token
+    - Deactivates UserSession (status = 0)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        Token.objects.filter(user=user).delete()
+        UserSession.objects.filter(user=user, status=1).update(status=0)
+        return Response({
+            "success": True,
+            "message": "Successfully logged out."
         }, status=status.HTTP_200_OK)

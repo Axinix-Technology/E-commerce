@@ -1,6 +1,6 @@
 {
   "name": "central-ecommerce-platform-root",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,6 @@
     "version:bump:major": "node scripts/version-tool.mjs bump major",
     "verify:backend": "node scripts/verify-deploy-version.mjs --target=backend",
     "verify:frontend": "node scripts/verify-deploy-version.mjs --target=frontend",
-    "check:backend": "node --check backend/src/index.js"
+    "check:backend": "python backend/manage.py check"
   }
 }

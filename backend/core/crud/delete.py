@@ -1,8 +1,10 @@
 from typing import Any
 from django.db import transaction, models
 from core.pipeline.context import RequestContext
-from core.response.exceptions import NotFoundError, ExecutionError
+from core.response.exceptions import NotFoundError, ExecutionError, AuthorizationError, ValidationError
 from .base import BaseCRUDExecutor
+
+RESTRICTED_DELETE_MODELS = frozenset({"stock_ledger", "inventory_stock", "user_session"})
 
 
 class DeleteExecutor(BaseCRUDExecutor):
@@ -16,12 +18,30 @@ class DeleteExecutor(BaseCRUDExecutor):
 
     @classmethod
     def execute(cls, queryset: Any, context: RequestContext) -> dict[str, Any]:
+        # 0. Model-level delete restrictions
+        if context.model_name in RESTRICTED_DELETE_MODELS:
+            raise AuthorizationError(
+                f"Deletion of '{context.model_name}' records is strictly forbidden.",
+                code="IMMUTABLE_TABLE"
+            )
+
+        if context.model_name in ("user", "role") and not getattr(context.user, "is_superuser", False):
+            raise AuthorizationError(
+                f"Deleting '{context.model_name}' records requires administrative privileges.",
+                code="ADMIN_REQUIRED"
+            )
+
         service = cls.get_service(context)
         model_cls = context.model_cls
         model_meta = context.model_metadata
         status_field = getattr(model_meta, "status_field", "status") if model_meta else "status"
 
         if context.is_bulk:
+            if not context.filters:
+                raise ValidationError(
+                    "Bulk deletion requires explicit filter criteria to prevent wiping the entire table.",
+                    code="MISSING_BULK_FILTER"
+                )
             return cls._execute_bulk(queryset, context, service, status_field)
 
         # 1. Lookup target object in active scope

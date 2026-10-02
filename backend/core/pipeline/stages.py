@@ -31,7 +31,7 @@ class IngressStage:
         model_name: str,
         object_id: Any | None = None
     ) -> RequestContext:
-        action_clean = action.lower().strip()
+        action_clean = action.lower().strip().replace("_", "-")
         model_clean = model_name.lower().strip()
 
         # Ingress parses source parameters:
@@ -74,6 +74,21 @@ class IngressStage:
             page = query_params.get("page", 1)
             limit = query_params.get("limit", 20)
             mutation_body = body_data
+
+        # If filters or populate are passed as serialized JSON strings in query params, deserialize them
+        if isinstance(filters, str):
+            import json
+            try:
+                filters = json.loads(filters)
+            except Exception:
+                filters = {}
+
+        if isinstance(populate, str):
+            import json
+            try:
+                populate = json.loads(populate)
+            except Exception:
+                pass
 
         if isinstance(ordering_raw, str):
             ordering = [s.strip() for s in ordering_raw.split(",") if s.strip()]

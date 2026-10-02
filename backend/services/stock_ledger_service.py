@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Max
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -60,7 +60,7 @@ class StockLedgerService(BaseService):
                     else:
                         issue_type = StockIssueType.objects.get(code=str(issue_type_id).upper(), status=1)
                 except StockIssueType.DoesNotExist:
-                    pass
+                    raise ValidationError(f"Invalid or inactive Stock Issue Type: '{issue_type_id}'.")
 
             deduct_available = issue_type.deduct_from_available_stock if issue_type else True
 
@@ -77,7 +77,6 @@ class StockLedgerService(BaseService):
                 outward_qty = quantity
 
             elif movement_type == "approval_outward":
-                # Only deduct from sellable stock if issue type dictates removal
                 if deduct_available:
                     if stock.sellable_stock < quantity:
                         raise ValidationError(
@@ -98,6 +97,18 @@ class StockLedgerService(BaseService):
                         f"Return quantity ({quantity}) exceeds stock currently on approval ({stock.approval_stock})."
                     )
                 stock.approval_stock -= quantity
+
+                # If reference_id is provided, check if outward deducted sellable stock
+                ref_id = data.get("reference_id")
+                if ref_id:
+                    outward_mvt = StockMovementLedger.objects.filter(
+                        reference_id=ref_id,
+                        movement_type="approval_outward",
+                        status=1
+                    ).first()
+                    if outward_mvt and outward_mvt.from_bucket == "sellable_display":
+                        deduct_available = False
+
                 if deduct_available:
                     stock.sellable_stock += quantity
                     to_bucket = "sellable"
@@ -136,7 +147,7 @@ class StockLedgerService(BaseService):
                 to_bucket = "quarantine"
                 inward_qty = quantity
 
-            elif movement_type == "qc_restock":
+            elif movement_type in ("qc_restock", "return_restock"):
                 if stock.quarantine_stock < quantity:
                     raise ValidationError(
                         f"Restock quantity ({quantity}) exceeds quarantine stock ({stock.quarantine_stock})."
@@ -148,17 +159,26 @@ class StockLedgerService(BaseService):
                 inward_qty = quantity
 
             elif movement_type == "scrap_writeoff":
-                if stock.quarantine_stock >= quantity:
+                specified_bucket = data.get("from_bucket")
+                if specified_bucket == "quarantine" or (not specified_bucket and stock.quarantine_stock >= quantity):
+                    if stock.quarantine_stock < quantity:
+                        raise ValidationError(f"Insufficient quarantine stock ({stock.quarantine_stock}) for write-off.")
                     stock.quarantine_stock -= quantity
                     from_bucket = "quarantine"
-                elif stock.repair_stock >= quantity:
+                elif specified_bucket == "repair" or (not specified_bucket and stock.repair_stock >= quantity):
+                    if stock.repair_stock < quantity:
+                        raise ValidationError(f"Insufficient repair stock ({stock.repair_stock}) for write-off.")
                     stock.repair_stock -= quantity
                     from_bucket = "repair"
-                elif stock.sellable_stock >= quantity:
+                elif specified_bucket == "sellable":
+                    if stock.sellable_stock < quantity:
+                        raise ValidationError(f"Insufficient sellable stock ({stock.sellable_stock}) for write-off.")
                     stock.sellable_stock -= quantity
                     from_bucket = "sellable"
                 else:
-                    raise ValidationError(f"Insufficient stock to write-off {quantity} units.")
+                    raise ValidationError(
+                        f"Insufficient stock in quarantine ({stock.quarantine_stock}) or repair ({stock.repair_stock}) to write-off {quantity} units."
+                    )
                 stock.quantity_on_hand -= quantity
                 stock.damaged_stock += quantity
                 to_bucket = "damaged"
@@ -175,19 +195,65 @@ class StockLedgerService(BaseService):
                 to_bucket = "in_transit"
                 outward_qty = quantity
 
+            elif movement_type == "branch_transfer_inward":
+                stock.sellable_stock += quantity
+                stock.quantity_on_hand += quantity
+                from_bucket = "in_transit"
+                to_bucket = "sellable"
+                inward_qty = quantity
+
+            elif movement_type == "audit_plus":
+                stock.sellable_stock += quantity
+                stock.quantity_on_hand += quantity
+                from_bucket = "audit_adjustment"
+                to_bucket = "sellable"
+                inward_qty = quantity
+
+            elif movement_type == "audit_minus":
+                if stock.sellable_stock < quantity:
+                    raise ValidationError(
+                        f"Insufficient sellable stock for downward audit adjustment. Available: {stock.sellable_stock}, Requested: {quantity}."
+                    )
+                stock.sellable_stock -= quantity
+                stock.quantity_on_hand -= quantity
+                from_bucket = "sellable"
+                to_bucket = "audit_adjustment"
+                outward_qty = quantity
+
+            elif movement_type == "vendor_return":
+                if stock.sellable_stock < quantity:
+                    raise ValidationError(
+                        f"Insufficient stock for vendor return. Available: {stock.sellable_stock}, Requested: {quantity}."
+                    )
+                stock.sellable_stock -= quantity
+                stock.quantity_on_hand -= quantity
+                from_bucket = "sellable"
+                to_bucket = "vendor"
+                outward_qty = quantity
+
             else:
                 raise ValidationError(f"Unsupported movement type: '{movement_type}'.")
 
             stock.save()
+
+        # Calculate landed unit cost from latest GRN
+        latest_grn_item = (
+            StockMovementLedger.objects
+            .filter(product=product, movement_type="purchase_inward", status=1)
+            .order_by("-id")
+            .first()
+        )
+        landed_cost = latest_grn_item.unit_cost if latest_grn_item else (product.selling_price or Decimal("0.00"))
 
         data["product_id"] = product.id
         data["from_bucket"] = from_bucket
         data["to_bucket"] = to_bucket
         data["inward_qty"] = inward_qty
         data["outward_qty"] = outward_qty
-        data["unit_cost"] = product.selling_price or 0.00
+        data["unit_cost"] = data.get("unit_cost") or landed_cost
         data["reference_type"] = data.get("reference_type") or movement_type.upper()
         data["reference_id"] = data.get("reference_id") or f"MVT-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        data["notes"] = data.get("notes") or data.get("remarks")
         if issue_type:
             data["issue_type_id"] = issue_type.id
         data["created_by"] = context.user if context.user and context.user.is_authenticated else None
@@ -195,8 +261,9 @@ class StockLedgerService(BaseService):
 
     def execute_report(self, context, queryset) -> dict:
         """
-        Dynamic Stock In/Out Accounting Report:
+        Dynamic Stock In/Out Accounting Report (Optimized):
         Opening -> Inward -> Outward -> Closing
+        Executes in O(1) bulk aggregation queries instead of O(N) loops.
         """
         filters = context.filters or {}
         today_str = timezone.now().date().isoformat()
@@ -219,18 +286,7 @@ class StockLedgerService(BaseService):
         if product_id:
             products_qs = products_qs.filter(id=product_id)
 
-        report_rows = []
-        total_opening = 0
-        total_inward = 0
-        total_outward = 0
-        total_closing = 0
-        total_valuation = Decimal("0.00")
-
-        stock_map = {
-            s.product_id: s for s in InventoryStock.objects.filter(product__in=products_qs)
-        }
-
-        # Only count transactions that actually affect available stock
+        # Filters for movements affecting physical on-hand stock
         outward_filter = Q(outward_qty__gt=0) & (
             Q(issue_type__isnull=True) | Q(issue_type__deduct_from_available_stock=True)
         )
@@ -238,33 +294,69 @@ class StockLedgerService(BaseService):
             Q(issue_type__isnull=True) | Q(issue_type__deduct_from_available_stock=True)
         )
 
-        for prod in products_qs:
-            # 1. Opening Balance: strictly before start_date
-            prior_agg = StockMovementLedger.objects.filter(
-                product=prod,
-                created_at__lt=start_dt,
-                status=1
-            ).aggregate(
+        # 1. Bulk Aggregate: Prior Opening Balance per product (single SQL query)
+        prior_aggregates = (
+            StockMovementLedger.objects
+            .filter(product__in=products_qs, created_at__lt=start_dt, status=1)
+            .values("product_id")
+            .annotate(
                 prior_in=Sum("inward_qty", filter=inward_filter),
                 prior_out=Sum("outward_qty", filter=outward_filter)
             )
-            opening = max(0, (prior_agg["prior_in"] or 0) - (prior_agg["prior_out"] or 0))
+        )
+        prior_map = {
+            item["product_id"]: ((item["prior_in"] or 0) - (item["prior_out"] or 0))
+            for item in prior_aggregates
+        }
 
-            # 2. Period Inward & Outward: [start_dt, end_dt]
-            period_agg = StockMovementLedger.objects.filter(
-                product=prod,
-                created_at__gte=start_dt,
-                created_at__lte=end_dt,
-                status=1
-            ).aggregate(
+        # 2. Bulk Aggregate: Period Inward & Outward per product (single SQL query)
+        period_aggregates = (
+            StockMovementLedger.objects
+            .filter(product__in=products_qs, created_at__gte=start_dt, created_at__lte=end_dt, status=1)
+            .values("product_id")
+            .annotate(
                 p_in=Sum("inward_qty", filter=inward_filter),
                 p_out=Sum("outward_qty", filter=outward_filter)
             )
-            inward = period_agg["p_in"] or 0
-            outward = period_agg["p_out"] or 0
+        )
+        period_map = {
+            item["product_id"]: (item["p_in"] or 0, item["p_out"] or 0)
+            for item in period_aggregates
+        }
+
+        # 3. Live Stock Map
+        stock_map = {
+            s.product_id: s for s in InventoryStock.objects.filter(product__in=products_qs)
+        }
+
+        # 4. Bulk Query: Latest Landed Purchase Cost per Product from GRN
+        latest_grns = (
+            StockMovementLedger.objects
+            .filter(product__in=products_qs, movement_type="purchase_inward", status=1)
+            .values("product_id")
+            .annotate(latest_id=Max("id"))
+        )
+        latest_ids = [item["latest_id"] for item in latest_grns if item["latest_id"]]
+        cost_map = {
+            mvt.product_id: mvt.unit_cost
+            for mvt in StockMovementLedger.objects.filter(id__in=latest_ids)
+        }
+
+        report_rows = []
+        total_opening = 0
+        total_inward = 0
+        total_outward = 0
+        total_closing = 0
+        total_valuation = Decimal("0.00")
+        total_retail_valuation = Decimal("0.00")
+
+        for prod in products_qs:
+            opening = prior_map.get(prod.id, 0)
+            p_in, p_out = period_map.get(prod.id, (0, 0))
+            inward = p_in
+            outward = p_out
             closing = opening + inward - outward
 
-            # Live bucket breakdown
             curr_stock = stock_map.get(prod.id)
             sellable = curr_stock.sellable_stock if curr_stock else 0
             approval = curr_stock.approval_stock if curr_stock else 0
@@ -273,13 +365,16 @@ class StockLedgerService(BaseService):
             qoh = curr_stock.quantity_on_hand if curr_stock else 0
 
             unit_price = prod.selling_price or Decimal("0.00")
-            row_valuation = Decimal(str(closing)) * unit_price
+            unit_cost = cost_map.get(prod.id, unit_price)
+            row_valuation = Decimal(str(max(0, closing))) * unit_cost
+            retail_valuation = Decimal(str(max(0, closing))) * unit_price
 
             total_opening += opening
             total_inward += inward
             total_outward += outward
             total_closing += closing
             total_valuation += row_valuation
+            total_retail_valuation += retail_valuation
 
             report_rows.append({
                 "product_id": prod.id,
@@ -297,8 +392,11 @@ class StockLedgerService(BaseService):
                 "quarantine": quarantine,
                 "repair": repair,
                 "qoh": qoh,
+                "unit_cost": float(unit_cost),
                 "unit_price": float(unit_price),
                 "valuation": float(row_valuation),
+                "cost_valuation": float(row_valuation),
+                "retail_valuation": float(retail_valuation),
             })
 
         return {
@@ -316,6 +414,7 @@ class StockLedgerService(BaseService):
                 "total_outward": total_outward,
                 "total_closing": total_closing,
                 "total_valuation": float(total_valuation),
+                "total_retail_valuation": float(total_retail_valuation),
             },
             "data": report_rows,
         }

@@ -2,7 +2,7 @@ from typing import Any
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from core.pipeline.executor import PopulatePipeline
 
 
@@ -10,8 +10,9 @@ class PopulateAPIView(APIView):
     """
     Universal Entry Point for the Django Populate Engine.
     Dispatches every request directly into the 10-stage execution pipeline.
+    Fails closed: requires authenticated session or token.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)

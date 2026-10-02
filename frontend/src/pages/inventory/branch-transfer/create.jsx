@@ -33,6 +33,7 @@ export default function CreateBranchTransferPage() {
   const [vehicleNo, setVehicleNo] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState(null);
 
   // DC Challan preview after dispatch
   const [challan, setChallan] = useState(null);
@@ -44,6 +45,11 @@ export default function CreateBranchTransferPage() {
         if (res.data.length > 0) setSelectedProduct(res.data[0].id.toString());
       }
     });
+
+    populateApi.read("company", { limit: 1 }).then((res) => {
+      const comp = res?.data?.[0] || res?.items?.[0];
+      if (comp) setCompanyInfo(comp);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -82,13 +88,15 @@ export default function CreateBranchTransferPage() {
     setSubmitting(true);
     try {
       const dcNumber = `DC-TR-${Date.now().toString().slice(-6)}`;
+      const transferNotes = `${sourceBranch} → ${destBranch} | Vehicle: ${vehicleNo || "N/A"} | Ph: ${driverContact || "N/A"}`;
       const payload = {
         product_id: parseInt(selectedProduct, 10),
         movement_type: "branch_transfer_outward",
         quantity: qty,
         reference_type: "branch_transfer",
         reference_id: dcNumber,
-        remarks: `${sourceBranch} → ${destBranch} | Vehicle: ${vehicleNo || "N/A"} | Ph: ${driverContact || "N/A"}`
+        notes: transferNotes,
+        remarks: transferNotes
       };
 
       const res = await populateApi.create("stock_ledger", payload);
@@ -324,9 +332,9 @@ export default function CreateBranchTransferPage() {
           <div className="p-6 rounded-xl bg-white text-black font-sans text-xs space-y-4 border border-slate-300">
             <div className="flex justify-between items-start border-b border-black/20 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-black tracking-tight">AXINIX COMMERCE LTD.</h3>
-                <p className="text-[11px] text-gray-700">Central Logistics & Distribution</p>
-                <p className="text-[10px] text-gray-600">GSTIN: 33AAAAA0000A1Z5</p>
+                <h3 className="text-lg font-bold text-black tracking-tight">{companyInfo?.legal_name || companyInfo?.name || "AXINIX COMMERCE LTD."}</h3>
+                <p className="text-[11px] text-gray-700">{companyInfo?.address_line_1 ? `${companyInfo.address_line_1}, ${companyInfo.city || ""}` : "Central Logistics & Distribution"}</p>
+                <p className="text-[10px] text-gray-600">GSTIN: {companyInfo?.gst_no || "33AAAAA0000A1Z5"}</p>
               </div>
               <div className="text-right">
                 <span className="inline-block px-2 py-1 rounded bg-black text-white font-bold text-[10px] uppercase">
