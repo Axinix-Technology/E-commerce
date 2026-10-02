@@ -1,6 +1,8 @@
 from django.db import models
+from core.registry import register_model
 
 
+@register_model("company", table_type="master", status_field="status")
 class Company(models.Model):
     """
     Company / Organization Master Profile.
@@ -52,6 +54,7 @@ class Company(models.Model):
         return f"{self.name} ({self.short_name or self.city})"
 
 
+@register_model("general_setting", table_type="master", status_field="status")
 class GeneralSetting(models.Model):
     """
     General System & Store Configuration Settings.

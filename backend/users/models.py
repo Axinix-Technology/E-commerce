@@ -1,8 +1,10 @@
 from datetime import date
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from core.registry import register_model
 
 
+@register_model("role", table_type="master", status_field="status")
 class Role(models.Model):
     """
     Role Master.
@@ -40,6 +42,7 @@ class Role(models.Model):
         return self.name
 
 
+@register_model("user", table_type="master", status_field="status")
 class User(AbstractUser):
     """
     Custom User Model matching project requirements and Populate Engine status rules.
@@ -108,6 +111,7 @@ class User(AbstractUser):
         return f"{self.username} ({self.get_full_name() or role_label})"
 
 
+@register_model("user_session", table_type="transaction", status_field="status")
 class UserSession(models.Model):
     """
     User Device Sessions storing login activity and FCM push notification tokens.
