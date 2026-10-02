@@ -9,6 +9,27 @@ export default function BaseLayout() {
   const location = useLocation();
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleSidebar = () => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem("sidebar_collapsed", String(next));
+        } catch {}
+        return next;
+      });
+    }
+  };
 
   // Dynamic route resolution from vite-plugin-pages (~react-pages)
   const element = useRoutes(routes);
@@ -60,11 +81,27 @@ export default function BaseLayout() {
       )}
 
       {/* Main Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => {
+          setSidebarCollapsed((prev) => {
+            const next = !prev;
+            try {
+              localStorage.setItem("sidebar_collapsed", String(next));
+            } catch {}
+            return next;
+          });
+        }}
+      />
 
       {/* Primary Layout Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopNavBar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
+        <TopNavBar
+          onToggleSidebar={handleToggleSidebar}
+          isSidebarCollapsed={sidebarCollapsed}
+        />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-canvas-subtle">
           <div className="max-w-7xl mx-auto animate-fade-in">
             {element}
