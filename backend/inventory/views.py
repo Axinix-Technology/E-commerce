@@ -1,3 +1,1 @@
-from django.shortcuts import render
-
-# Create your views here.
+# Views not needed; all operations handled through centralized Populate Engine and domain services.

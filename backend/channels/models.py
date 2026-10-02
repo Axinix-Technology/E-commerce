@@ -1,8 +1,10 @@
 from django.db import models
+from core.registry import register_model
 
 
+@register_model("sales_channel", table_type="master", status_field="status")
 class SalesChannel(models.Model):
-    """Marketplace or external sales platform, such as Flipkart."""
+    """Marketplace or external sales platform, such as Amazon or Flipkart."""
 
     INTEGRATION_TYPE_CHOICES = [
         ("api", "API"),
@@ -23,6 +25,12 @@ class SalesChannel(models.Model):
     default_currency = models.CharField(max_length=3, default="INR")
     timezone = models.CharField(max_length=50, default="Asia/Kolkata")
     is_active = models.BooleanField(default=True)
+    status = models.SmallIntegerField(
+        default=1,
+        choices=[(1, "Active"), (0, "Inactive")],
+        db_index=True,
+        help_text="1 = Active, 0 = Inactive"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -32,6 +40,7 @@ class SalesChannel(models.Model):
 
     def __str__(self):
         return self.name
+
 
 
 class ChannelOrder(models.Model):
@@ -306,3 +315,48 @@ class ChannelReturn(models.Model):
 
     def __str__(self):
         return f"Return for {self.order_item}"
+
+
+@register_model("channel_listing", table_type="master", status_field="status")
+class ChannelListing(models.Model):
+    product = models.ForeignKey(
+        "catalogue.ProductType",
+        on_delete=models.CASCADE,
+        related_name="channel_listings",
+        verbose_name="Catalogue Product",
+    )
+    channel = models.ForeignKey(
+        SalesChannel,
+        on_delete=models.CASCADE,
+        related_name="listings",
+        verbose_name="Sales Channel",
+    )
+    channel_sku = models.CharField(max_length=100, db_index=True, help_text="Marketplace Seller SKU")
+    external_listing_id = models.CharField(max_length=100, blank=True, null=True, help_text="ASIN (Amazon) / FSN (Flipkart)")
+    listing_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Marketplace Selling Price")
+    sync_inventory = models.BooleanField(default=True, help_text="Auto-push live sellable stock")
+    last_synced_at = models.DateTimeField(blank=True, null=True)
+    last_sync_status = models.CharField(max_length=50, default="synced")
+    
+    # Rule 11
+    status = models.SmallIntegerField(
+        default=1,
+        choices=[(1, "Active"), (0, "Inactive")],
+        db_index=True,
+        help_text="1 = Active, 0 = Inactive"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "channel_listings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["channel", "channel_sku"],
+                name="unique_channel_sku",
+            )
+        ]
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.channel.code}: {self.product.name} ({self.channel_sku})"
