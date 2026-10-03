@@ -17,6 +17,11 @@ export const SettingsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await populateApi.read("general_setting", {
         limit: 100,

@@ -154,6 +154,74 @@ class Command(BaseCommand):
             }
         )
 
+        sales_root, _ = Sidebar.objects.update_or_create(
+            title="Sales & POS",
+            is_parent=True,
+            defaults={
+                "title": "Sales & POS",
+                "icon": "ShoppingBag",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "sales",
+                "order": 6,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        returns_root, _ = Sidebar.objects.update_or_create(
+            title="Customer Returns",
+            is_parent=True,
+            defaults={
+                "title": "Customer Returns",
+                "icon": "RotateCcw",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "returns",
+                "order": 7,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        payments_root, _ = Sidebar.objects.update_or_create(
+            title="Payment Operations",
+            is_parent=True,
+            defaults={
+                "title": "Payment Operations",
+                "icon": "CreditCard",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "payments",
+                "order": 8,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        settings_root, _ = Sidebar.objects.update_or_create(
+            title="Store Settings",
+            is_parent=True,
+            defaults={
+                "title": "Store Settings",
+                "icon": "ShieldCheck",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "settings",
+                "order": 9,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
         # 3. Seed Catalogue Submenus
         catalogue_submenus = [
             {
@@ -240,25 +308,155 @@ class Command(BaseCommand):
 
         # 6. Reports & Analytics Submenus
         reports_submenus = [
-            {
-                "title": "Stock In/Out Summary",
-                "icon": "FileSpreadsheet",
-                "main_route": "/reports/stock-summary",
-                "order": 1,
-                "parent": reports_root,
-                "caps": ["reports.stock_summary.read"],
-            },
-            {
-                "title": "Detailed Stock Report",
-                "icon": "Barcode",
-                "main_route": "/reports/detailed-stock",
-                "order": 2,
-                "parent": reports_root,
-                "caps": ["reports.detailed_stock.read"],
-            },
+            {"title": "Sales Summary", "icon": "BarChart3", "main_route": "/reports/sales-summary", "order": 1, "parent": reports_root, "caps": []},
+            {"title": "Customer Purchases", "icon": "Users", "main_route": "/reports/customer-purchases", "order": 2, "parent": reports_root, "caps": []},
+            {"title": "Payment Reconciliation", "icon": "CreditCard", "main_route": "/reports/payments", "order": 3, "parent": reports_root, "caps": []},
+            {"title": "Stock In/Out Summary", "icon": "FileSpreadsheet", "main_route": "/reports/stock-summary", "order": 4, "parent": reports_root, "caps": ["reports.stock_summary.read"]},
+            {"title": "Detailed Stock Report", "icon": "Barcode", "main_route": "/reports/detailed-stock", "order": 5, "parent": reports_root, "caps": ["reports.detailed_stock.read"]},
         ]
 
-        all_submenus = catalogue_submenus + inward_submenus + inventory_submenus + reports_submenus
+        # 6b. Sales Submenus
+        sales_submenus = [
+            {"title": "Sales Orders", "icon": "ShoppingBag", "main_route": "/sales/index", "order": 1, "parent": sales_root, "caps": []},
+            {"title": "New Sale (POS)", "icon": "Receipt", "main_route": "/sales/create", "order": 2, "parent": sales_root, "caps": []},
+        ]
+
+        # 6c. Returns Submenus
+        returns_submenus = [
+            {"title": "Returns (RMA)", "icon": "RotateCcw", "main_route": "/returns/index", "order": 1, "parent": returns_root, "caps": []},
+            {"title": "Initiate Return", "icon": "ArrowRightLeft", "main_route": "/returns/create", "order": 2, "parent": returns_root, "caps": []},
+        ]
+
+        # 6d. Payments Submenus
+        payments_submenus = [
+            {"title": "Payment Collections", "icon": "CreditCard", "main_route": "/payments/index", "order": 1, "parent": payments_root, "caps": []},
+            {"title": "Customer Refunds", "icon": "RotateCcw", "main_route": "/payments/refunds", "order": 2, "parent": payments_root, "caps": []},
+        ]
+
+        # 6e. Settings Submenus
+        settings_submenus = [
+            {"title": "Store Profile", "icon": "Building2", "main_route": "/settings/store", "order": 1, "parent": settings_root, "caps": []},
+            {"title": "Staff Personnel", "icon": "Users", "main_route": "/settings/staff", "order": 2, "parent": settings_root, "caps": []},
+            {"title": "Roles & Permissions", "icon": "ShieldCheck", "main_route": "/settings/roles-permissions", "order": 3, "parent": settings_root, "caps": []},
+        ]
+
+        shopping_root, _ = Sidebar.objects.update_or_create(
+            title="Shopping",
+            is_parent=True,
+            defaults={
+                "title": "Shopping",
+                "icon": "ShoppingBag",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "shopping",
+                "order": 10,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        customer_root, _ = Sidebar.objects.update_or_create(
+            title="Customer Account",
+            is_parent=True,
+            defaults={
+                "title": "Customer Account",
+                "icon": "Users",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "customer_account",
+                "order": 11,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        help_root, _ = Sidebar.objects.update_or_create(
+            title="Help & Policies",
+            is_parent=True,
+            defaults={
+                "title": "Help & Policies",
+                "icon": "ShieldCheck",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "help_policies",
+                "order": 12,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        useful_root, _ = Sidebar.objects.update_or_create(
+            title="Useful Additions",
+            is_parent=True,
+            defaults={
+                "title": "Useful Additions",
+                "icon": "Tags",
+                "icon_package": "lucide",
+                "main_route": None,
+                "visibility": "protected",
+                "module_key": "useful_additions",
+                "order": 9,
+                "is_parent": True,
+                "has_children": True,
+                "status": 1,
+            }
+        )
+
+        # 7. Shopping Submenus
+        shopping_submenus = [
+            {"title": "Storefront Home", "icon": "Package", "main_route": "/shopping", "order": 1, "parent": shopping_root, "caps": []},
+            {"title": "Product Catalogue", "icon": "Tags", "main_route": "/shopping/products", "order": 2, "parent": shopping_root, "caps": []},
+            {"title": "Shopping Cart", "icon": "Boxes", "main_route": "/shopping/cart", "order": 3, "parent": shopping_root, "caps": []},
+            {"title": "Checkout", "icon": "Receipt", "main_route": "/shopping/checkout", "order": 4, "parent": shopping_root, "caps": []},
+        ]
+
+        # 8. Customer Account Submenus
+        customer_submenus = [
+            {"title": "Sign In / Sign Up", "icon": "Users", "main_route": "/customer-account/auth", "order": 1, "parent": customer_root, "caps": []},
+            {"title": "Account Profile", "icon": "Building2", "main_route": "/customer-account/profile", "order": 2, "parent": customer_root, "caps": []},
+            {"title": "Order History", "icon": "PackageCheck", "main_route": "/customer-account/orders", "order": 3, "parent": customer_root, "caps": []},
+            {"title": "Saved Addresses", "icon": "FolderTree", "main_route": "/customer-account/addresses", "order": 4, "parent": customer_root, "caps": []},
+        ]
+
+        # 9. Help & Policies Submenus
+        help_submenus = [
+            {"title": "Contact Support", "icon": "Users", "main_route": "/help-policies/contact", "order": 1, "parent": help_root, "caps": []},
+            {"title": "FAQ & Help", "icon": "FileSpreadsheet", "main_route": "/help-policies/faq", "order": 2, "parent": help_root, "caps": []},
+            {"title": "Shipping Policy", "icon": "Truck", "main_route": "/help-policies/shipping", "order": 3, "parent": help_root, "caps": []},
+            {"title": "Returns & Refunds", "icon": "ArrowRightLeft", "main_route": "/help-policies/returns", "order": 4, "parent": help_root, "caps": []},
+            {"title": "Privacy Policy", "icon": "ShieldCheck", "main_route": "/help-policies/privacy-policy", "order": 5, "parent": help_root, "caps": []},
+            {"title": "Terms & Conditions", "icon": "FileSpreadsheet", "main_route": "/help-policies/terms", "order": 6, "parent": help_root, "caps": []},
+        ]
+
+        # 10. Useful Additions Submenus
+        useful_submenus = [
+            {"title": "About Us", "icon": "Building2", "main_route": "/useful-additions/about", "order": 1, "parent": useful_root, "caps": []},
+            {"title": "Customer Reviews", "icon": "FileSpreadsheet", "main_route": "/useful-additions/reviews", "order": 2, "parent": useful_root, "caps": []},
+            {"title": "Saved Wishlist", "icon": "Tags", "main_route": "/useful-additions/wishlist", "order": 3, "parent": useful_root, "caps": []},
+            {"title": "Track an Order", "icon": "QrCode", "main_route": "/useful-additions/track-order", "order": 4, "parent": useful_root, "caps": []},
+            {"title": "Promotions & Sale", "icon": "Tags", "main_route": "/useful-additions/promotions", "order": 5, "parent": useful_root, "caps": []},
+        ]
+
+        all_submenus = (
+            catalogue_submenus +
+            inward_submenus +
+            inventory_submenus +
+            reports_submenus +
+            sales_submenus +
+            returns_submenus +
+            payments_submenus +
+            settings_submenus +
+            shopping_submenus +
+            customer_submenus +
+            help_submenus +
+            useful_submenus
+        )
 
         # Clean up any obsolete submenus
         Sidebar.objects.filter(main_route__in=["/catalogue/variants", "/inventory/stock-report"]).delete()

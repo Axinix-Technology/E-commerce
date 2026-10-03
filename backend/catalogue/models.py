@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from core.registry import register_model
 
 
@@ -253,6 +254,14 @@ class CustomerMaster(models.Model):
         ("b2b", "Registered Business (B2B)"),
     ]
     customer_type = models.CharField(max_length=10, choices=CUSTOMER_TYPES, default="b2c")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="customer_profiles",
+        verbose_name="Linked User Account"
+    )
     name = models.CharField(max_length=150, verbose_name="Customer / Business Name")
     phone = models.CharField(max_length=20, db_index=True, verbose_name="Phone Number")
     email = models.EmailField(max_length=120, blank=True, null=True, verbose_name="Email Address")
