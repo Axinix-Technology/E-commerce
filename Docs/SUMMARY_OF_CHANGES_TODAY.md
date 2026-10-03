@@ -446,12 +446,99 @@ Every table, summary bar, and card adheres to the system UI rules:
 
 1. **Frontend Production Build**:
    - Executed `npm run build` with Vite.
-   - Result: Built 1,800+ modules with **0 errors** in 4.45s.
+   - Result: Built 1,860+ modules with **0 errors** in 5.50s.
 2. **Backend Server & Migrations**:
    - `python manage.py runserver` running without warnings on `http://127.0.0.1:8000`.
-   - All 4 new migration files applied cleanly with 0 pending operations.
+   - All migration files applied cleanly with 0 pending operations.
 3. **Frontend Dev Server**:
    - `npm run dev` running on `http://localhost:5173`.
 4. **Formatting Compliance**:
    - 100% compliance with UI Rule 1 (`formatQty` and `formatCurrency` returning em-dash `—` for zero values).
    - 100% compliance with UI Rule 2 (horizontal single-line summary bars; zero bulky KPI card blocks).
+
+---
+
+## 11. Phase 3: Comprehensive ERP Enterprise Modules & Data Models
+
+In this major expansion, we delivered the complete enterprise management tier spanning Masters, Procurement & Lots, Advanced Barcoding, Cash Operations, and Security Audit Trails.
+
+### 11.1 New Database Models Created & Migrated (6 New Migrations Applied)
+1. **`core/models.py` (`core/migrations/0002_auditlog.py`)**:
+   - `AuditLog` (`table_type="system"`): Immutable system change log capturing `user`, `action`, `module`, `ip_address`, `description`, `created_at`.
+2. **`company/models.py` (`company/migrations/0002_branchmaster_departmentmaster_professionmaster_and_more.py`)**:
+   - `BranchMaster` (`table_type="master"`): Corporate branches & showrooms with branch code, contact, GSTIN, and address.
+   - `DepartmentMaster` (`table_type="master"`): Functional corporate departments with head of department and status.
+   - `DesignationMaster` (`table_type="master"`): Job titles, seniority levels, and responsibilities.
+   - `ProfessionMaster` (`table_type="master"`): Customer profession taxonomy for retail segmentation.
+3. **`integrations/models.py` (`integrations/migrations/0001_initial.py`)**:
+   - `PaymentGatewayConfig` (`table_type="master"`): Razorpay/Stripe/PayU gateway API configurations with environment credentials.
+   - `ShopIntegration` (`table_type="master"`): Shopify/Amazon/Flipkart multichannel API connectors and auto-sync toggles.
+4. **`catalogue/models.py` (`catalogue/migrations/0008_agegroupmaster_brandmaster_designmaster_and_more.py`)**:
+   - `MaterialMaster` (`table_type="master"`): Fabric materials, compositions, and GSM specifications.
+   - `DesignMaster` (`table_type="master"`): Design patterns, motifs, and collections.
+   - `BrandMaster` (`table_type="master"`): Product brands, manufacturer codes, and logos.
+   - `SizeMaster` (`table_type="master"`): Dimension measurements and apparel size scales.
+   - `AgeGroupMaster` (`table_type="master"`): Demographic age brackets (Kids, Teens, Adults, Seniors).
+5. **`orders/models.py` (`orders/migrations/0004_pettycashtransaction_billingreceipt_customeradvance_and_more.py`)**:
+   - `PurchaseLot` (`table_type="transaction"`): Procurement lot generation with expected piece quantities.
+   - `PettyCashTransaction` (`table_type="transaction"`): Daily store petty cash vouchers (payments and receipts).
+   - `BillingReceipt` (`table_type="transaction"`): Counter sales payment receipts and settlement records.
+   - `CustomerAdvance` (`table_type="transaction"`): Pre-orders, booking advances, and layaway deposit ledger.
+6. **`inventory/models.py` (`inventory/migrations/0006_barcodeeditlog_duplicatebarcodelog_orderbarcodelink_and_more.py`)**:
+   - `BarcodeEditLog` (`table_type="system"`): Physical barcode modification and tag correction history.
+   - `DuplicateBarcodeLog` (`table_type="system"`): Conflict scans, duplicate tag detection, and resolution notes.
+   - `OrderBarcodeLink` (`table_type="system"`): Binding/unlinking physical barcode tags to sales orders.
+   - `RebarcodingRecord` (`table_type="transaction"`): Retagging lifecycle mapping old barcodes to replacement QR tags.
+
+### 11.2 Frontend Pages Created (Standard `Folder / concept-name / index.jsx & create.jsx` Structure)
+- **Masters Suite (`src/pages/masters/`)**:
+  - `employees/` (`index.jsx`, `create.jsx`): Staff personnel and employee directory.
+  - `branches/` (`index.jsx`, `create.jsx`): Multi-branch locations and warehouse hubs.
+  - `professions/` (`index.jsx`, `create.jsx`): Customer profession classifications.
+  - `departments/` (`index.jsx`, `create.jsx`): Organizational departments.
+  - `designations/` (`index.jsx`, `create.jsx`): Staff titles and roles hierarchy.
+  - `gateways/` (`index.jsx`, `create.jsx`): Payment gateway accounts.
+  - `shop-integrations/` (`index.jsx`, `create.jsx`): E-commerce store connectors.
+- **Catalogue Suite (`src/pages/catalogue/`)**:
+  - `materials/` (`index.jsx`, `create.jsx`): Fabrics, silks, and weaves.
+  - `designs/` (`index.jsx`, `create.jsx`): Patterns and motifs.
+  - `brands/` (`index.jsx`, `create.jsx`): Brand labels and manufacturers.
+  - `sizes/` (`index.jsx`, `create.jsx`): Size specifications.
+  - `age-groups/` (`index.jsx`, `create.jsx`): Target demographic age brackets.
+- **Purchase Suite (`src/pages/purchase/`)**:
+  - `lot-generate/` (`index.jsx`, `create.jsx`): Bulk lot assignment and batch generation.
+  - `supplier-outstanding/` (`index.jsx`, `create.jsx`): Vendor payables and dues tracker.
+  - `reports/grn-report/` (`index.jsx`, `create.jsx`): Goods Received Notes audit log.
+  - `reports/purchase-return-report/` (`index.jsx`, `create.jsx`): Vendor return memos.
+  - `reports/supplier-ledger/` (`index.jsx`, `create.jsx`): Running supplier financial balance.
+  - `reports/supplier-payment-report/` (`index.jsx`, `create.jsx`): Vendor payout reconciliations.
+- **Inventory Operations (`src/pages/inventory/`)**:
+  - `barcode-edit/` (`index.jsx`, `create.jsx`): Barcode tag correction workflow.
+  - `duplicate-barcode/` (`index.jsx`, `create.jsx`): Duplicate barcode conflict resolver.
+  - `barcode-edit-log/` (`index.jsx`, `create.jsx`): Historical tag modification audit trail.
+  - `duplicate-barcode-log/` (`index.jsx`, `create.jsx`): Duplicate detection audit logs.
+  - `order-link/` (`index.jsx`, `create.jsx`): Bind item barcodes to customer orders.
+  - `order-unlink/` (`index.jsx`, `create.jsx`): Detach barcodes and restore to sellable pool.
+  - `re-barcoding/` (`index.jsx`, `create.jsx`): Replacement barcode generation lifecycle.
+- **Billing Suite (`src/pages/billing/`)**:
+  - `index.jsx`: Module router redirect.
+  - `petty-cash/` (`index.jsx`, `create.jsx`): Expense vouchers and cash replenishments.
+  - `receipts/` (`index.jsx`, `create.jsx`): Official counter payment receipts.
+- **Orders Suite (`src/pages/orders/`)**:
+  - `index.jsx`: Module router redirect.
+  - `advance/` (`index.jsx`, `create.jsx`): Customer advance booking deposits.
+  - `report/` (`index.jsx`, `create.jsx`): Consolidated orders analytics and fulfillment report.
+- **Reports & Analytics (`src/pages/reports/`)**:
+  - `gst/` (`index.jsx`, `create.jsx`): GSTR-1 and tax slab liability reconciliation.
+  - `available-stock/` (`index.jsx`, `create.jsx`): Real-time sellable inventory registry.
+  - `stock-in-out/` (`index.jsx`, `create.jsx`): Volumetric inward vs outward movement ledger.
+  - `branch-transfer/` (`index.jsx`, `create.jsx`): Inter-branch consignment transit tracker.
+  - `lot-vs-barcode/` (`index.jsx`, `create.jsx`): Lot procurement vs unit barcode tagging reconciliation.
+  - `re-barcoding/` (`index.jsx`, `create.jsx`): Relabeling incidence and root cause analytics.
+- **Settings Suite (`src/pages/settings/`)**:
+  - `capabilities/` (`index.jsx`, `create.jsx`): Granular system permission capabilities.
+  - `general/` (`index.jsx`, `create.jsx`): Currency, timezone, prefixes, and thresholds.
+  - `company/` (`index.jsx`, `create.jsx`): Statutory GSTIN, CIN, bank details, and legal profile.
+- **Audit Logs (`src/pages/audit-log/`)**:
+  - `index.jsx` & `create.jsx`: Complete tamper-proof system audit log.
+  - `index/index.jsx` & `index/create.jsx`: Nested route compatibility wrappers.

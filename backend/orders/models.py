@@ -533,3 +533,142 @@ class SalesReturnItem(models.Model):
 
     def __str__(self):
         return f"{self.sale_item.sku}: {self.quantity} returned"
+
+
+@register_model("purchase_lot", table_type="transaction", status_field="status", aliases=["lots", "lot", "lot_generate"])
+class PurchaseLot(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Cancelled")]
+
+    lot_number = models.CharField(max_length=50, unique=True, verbose_name="Lot Number")
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.PROTECT,
+        related_name="purchase_lots"
+    )
+    goods_receipt = models.ForeignKey(
+        GoodsReceipt,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lots"
+    )
+    inward_date = models.DateField(auto_now_add=True)
+    total_quantity = models.PositiveIntegerField(default=0)
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "purchase_lots"
+        verbose_name = "Purchase Lot"
+        verbose_name_plural = "Purchase Lots"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.lot_number
+
+
+@register_model("petty_cash", table_type="transaction", status_field="status", aliases=["petty_cash_transactions"])
+class PettyCashTransaction(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Void")]
+    TXN_TYPES = [
+        ("cash_in", "Cash In (Top-Up / Deposit)"),
+        ("cash_out", "Cash Out (Disbursement / Expense)"),
+    ]
+
+    voucher_number = models.CharField(max_length=50, unique=True, verbose_name="Voucher Number")
+    transaction_type = models.CharField(max_length=20, choices=TXN_TYPES, default="cash_out")
+    category = models.CharField(max_length=100, default="Office Supplies", verbose_name="Expense / Inflow Category")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payee_name = models.CharField(max_length=150, verbose_name="Payee / Recipient Name")
+    approved_by = models.CharField(max_length=100, blank=True, null=True, verbose_name="Approved By")
+    remarks = models.TextField(blank=True, null=True, verbose_name="Remarks / Business Purpose")
+    transacted_at = models.DateTimeField(auto_now_add=True)
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+
+    class Meta:
+        db_table = "petty_cash_transactions"
+        verbose_name = "Petty Cash Voucher"
+        verbose_name_plural = "Petty Cash Vouchers"
+        ordering = ["-transacted_at"]
+
+    def __str__(self):
+        return f"{self.voucher_number} - ₹{self.amount} ({self.get_transaction_type_display()})"
+
+
+@register_model("billing_receipt", table_type="transaction", status_field="status", aliases=["receipts", "billing_receipts"])
+class BillingReceipt(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Cancelled")]
+
+    receipt_number = models.CharField(max_length=50, unique=True, verbose_name="Receipt Number")
+    customer = models.ForeignKey(
+        "catalogue.CustomerMaster",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="billing_receipts"
+    )
+    customer_name = models.CharField(max_length=150, blank=True, null=True)
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="receipts"
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_mode = models.CharField(max_length=50, default="cash", verbose_name="Payment Mode")
+    reference_no = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ref / UTR / Cheque No")
+    receipt_date = models.DateField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "billing_receipts"
+        verbose_name = "Billing Receipt"
+        verbose_name_plural = "Billing Receipts"
+        ordering = ["-receipt_date", "-id"]
+
+    def __str__(self):
+        return f"{self.receipt_number} - ₹{self.amount}"
+
+
+@register_model("customer_advance", table_type="transaction", status_field="status", aliases=["advances", "customer_advances"])
+class CustomerAdvance(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Void / Refunded")]
+
+    advance_number = models.CharField(max_length=50, unique=True, verbose_name="Advance Slip Number")
+    customer = models.ForeignKey(
+        "catalogue.CustomerMaster",
+        on_delete=models.PROTECT,
+        related_name="advances"
+    )
+    customer_name = models.CharField(max_length=150, blank=True, null=True)
+    order = models.ForeignKey(
+        Sale,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="advance_payments"
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Advance Received")
+    used_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Allocated / Used Amount")
+    balance_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Available Advance Balance")
+    payment_mode = models.CharField(max_length=50, default="upi", verbose_name="Mode of Payment")
+    reference_no = models.CharField(max_length=100, blank=True, null=True, verbose_name="Transaction Ref")
+    notes = models.TextField(blank=True, null=True)
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "customer_advances"
+        verbose_name = "Customer Advance"
+        verbose_name_plural = "Customer Advances"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.advance_number} - {self.customer_name} (₹{self.amount})"

@@ -11,6 +11,10 @@ from .models import (
     SalePayment,
     SalesReturn,
     SalesReturnItem,
+    PurchaseLot,
+    PettyCashTransaction,
+    BillingReceipt,
+    CustomerAdvance,
 )
 
 
@@ -64,3 +68,31 @@ class SalesReturnAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("return_number", "sale__sale_number")
     inlines = [SalesReturnItemInline]
+
+
+@admin.register(PurchaseLot)
+class PurchaseLotAdmin(admin.ModelAdmin):
+    list_display = ("lot_number", "supplier", "inward_date", "total_quantity", "total_cost", "status")
+    list_filter = ("status",)
+    search_fields = ("lot_number", "supplier__name")
+
+
+@admin.register(PettyCashTransaction)
+class PettyCashTransactionAdmin(admin.ModelAdmin):
+    list_display = ("voucher_number", "transaction_type", "category", "amount", "payee_name", "transacted_at", "status")
+    list_filter = ("transaction_type", "status", "category")
+    search_fields = ("voucher_number", "payee_name")
+
+
+@admin.register(BillingReceipt)
+class BillingReceiptAdmin(admin.ModelAdmin):
+    list_display = ("receipt_number", "customer_name", "amount", "payment_mode", "receipt_date", "status")
+    list_filter = ("payment_mode", "status")
+    search_fields = ("receipt_number", "customer_name", "reference_no")
+
+
+@admin.register(CustomerAdvance)
+class CustomerAdvanceAdmin(admin.ModelAdmin):
+    list_display = ("advance_number", "customer_name", "amount", "balance_amount", "payment_mode", "status")
+    list_filter = ("payment_mode", "status")
+    search_fields = ("advance_number", "customer_name")

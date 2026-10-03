@@ -208,3 +208,90 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.movement_type}: {self.variant.sku} ({self.quantity_change})"
+
+
+@register_model("barcode_edit_log", table_type="system", aliases=["barcode_edits", "barcode_edit"])
+class BarcodeEditLog(models.Model):
+    original_barcode = models.CharField(max_length=64, db_index=True, verbose_name="Original Barcode")
+    new_barcode = models.CharField(max_length=64, db_index=True, verbose_name="New Barcode")
+    sku = models.CharField(max_length=64, blank=True, null=True, verbose_name="SKU")
+    product_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Product Name")
+    reason = models.TextField(verbose_name="Correction Reason")
+    edited_by = models.CharField(max_length=100, blank=True, null=True, verbose_name="Edited By")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Edited At")
+
+    class Meta:
+        db_table = "barcode_edit_logs"
+        verbose_name = "Barcode Edit Log"
+        verbose_name_plural = "Barcode Edit Logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.original_barcode} -> {self.new_barcode}"
+
+
+@register_model("duplicate_barcode_log", table_type="system", aliases=["duplicate_barcodes", "duplicate_barcode"])
+class DuplicateBarcodeLog(models.Model):
+    barcode = models.CharField(max_length=64, db_index=True, verbose_name="Duplicate Barcode")
+    duplicate_count = models.PositiveIntegerField(default=2, verbose_name="Instances Detected")
+    location = models.CharField(max_length=100, blank=True, null=True, verbose_name="Detection Point")
+    resolved = models.BooleanField(default=False, verbose_name="Is Resolved")
+    resolution_notes = models.TextField(blank=True, null=True, verbose_name="Resolution Notes")
+    reported_by = models.CharField(max_length=100, blank=True, null=True, verbose_name="Reported By")
+    reported_at = models.DateTimeField(auto_now_add=True, verbose_name="Reported At")
+
+    class Meta:
+        db_table = "duplicate_barcode_logs"
+        verbose_name = "Duplicate Barcode Log"
+        verbose_name_plural = "Duplicate Barcode Logs"
+        ordering = ["-reported_at"]
+
+    def __str__(self):
+        return f"Duplicate: {self.barcode} ({self.duplicate_count} hits)"
+
+
+@register_model("order_barcode_link", table_type="system", aliases=["order_links", "order_link"])
+class OrderBarcodeLink(models.Model):
+    barcode = models.CharField(max_length=64, db_index=True, verbose_name="Scanned Barcode")
+    sku = models.CharField(max_length=64, blank=True, null=True, verbose_name="SKU")
+    product_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Product Name")
+    sale_number = models.CharField(max_length=64, db_index=True, verbose_name="Order / Sale Number")
+    customer_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Customer")
+    is_linked = models.BooleanField(default=True, verbose_name="Is Active Link")
+    unlink_reason = models.TextField(blank=True, null=True, verbose_name="Unlink Reason")
+    linked_by = models.CharField(max_length=100, blank=True, null=True, verbose_name="Linked By")
+    linked_at = models.DateTimeField(auto_now_add=True, verbose_name="Linked At")
+    unlinked_at = models.DateTimeField(null=True, blank=True, verbose_name="Unlinked At")
+
+    class Meta:
+        db_table = "order_barcode_links"
+        verbose_name = "Order Barcode Link"
+        verbose_name_plural = "Order Barcode Links"
+        ordering = ["-linked_at"]
+
+    def __str__(self):
+        status_txt = "Linked" if self.is_linked else "Unlinked"
+        return f"{self.barcode} <-> {self.sale_number} ({status_txt})"
+
+
+@register_model("rebarcoding_record", table_type="transaction", status_field="status", aliases=["rebarcodings", "re_barcoding"])
+class RebarcodingRecord(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Void")]
+
+    batch_no = models.CharField(max_length=50, verbose_name="Rebarcoding Batch")
+    old_barcode = models.CharField(max_length=64, verbose_name="Old Barcode")
+    new_barcode = models.CharField(max_length=64, verbose_name="New Generated Barcode")
+    sku = models.CharField(max_length=64, blank=True, null=True, verbose_name="SKU")
+    reason = models.CharField(max_length=100, default="Damaged Tag", verbose_name="Reason")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    performed_by = models.CharField(max_length=100, blank=True, null=True, verbose_name="Staff")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Processed At")
+
+    class Meta:
+        db_table = "rebarcoding_records"
+        verbose_name = "Rebarcoding Record"
+        verbose_name_plural = "Rebarcoding Records"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.old_barcode} -> {self.new_barcode} ({self.batch_no})"

@@ -130,3 +130,101 @@ class GeneralSetting(models.Model):
         else:
             # International standard format: ###,###.##
             return f"{symbol} {val:,.2f}"
+
+
+@register_model("branch_master", table_type="master", status_field="status", aliases=["branches", "branch"])
+class BranchMaster(models.Model):
+    STATUS_CHOICES = [(1, 'Active'), (0, 'Inactive')]
+
+    name = models.CharField(max_length=150, verbose_name="Branch Name")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Branch Code")
+    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Phone Number")
+    email = models.EmailField(max_length=120, blank=True, null=True, verbose_name="Email Address")
+    address = models.TextField(blank=True, null=True, verbose_name="Address")
+    city = models.CharField(max_length=100, blank=True, null=True, verbose_name="City")
+    state = models.CharField(max_length=100, blank=True, null=True, verbose_name="State")
+    pincode = models.CharField(max_length=20, blank=True, null=True, verbose_name="Pincode")
+    gstin = models.CharField(max_length=20, blank=True, null=True, verbose_name="GSTIN")
+    is_head_office = models.BooleanField(default=False, verbose_name="Head Office Flag")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "branch_masters"
+        verbose_name = "Branch Master"
+        verbose_name_plural = "Branch Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+@register_model("department_master", table_type="master", status_field="status", aliases=["departments", "department"])
+class DepartmentMaster(models.Model):
+    STATUS_CHOICES = [(1, 'Active'), (0, 'Inactive')]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Department Name")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Department Code")
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "department_masters"
+        verbose_name = "Department Master"
+        verbose_name_plural = "Department Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+@register_model("designation_master", table_type="master", status_field="status", aliases=["designations", "designation"])
+class DesignationMaster(models.Model):
+    STATUS_CHOICES = [(1, 'Active'), (0, 'Inactive')]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Designation Name")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Designation Code")
+    department = models.ForeignKey(
+        DepartmentMaster,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="designations"
+    )
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "designation_masters"
+        verbose_name = "Designation Master"
+        verbose_name_plural = "Designation Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+@register_model("profession_master", table_type="master", status_field="status", aliases=["professions", "profession"])
+class ProfessionMaster(models.Model):
+    STATUS_CHOICES = [(1, 'Active'), (0, 'Inactive')]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Profession Name")
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "profession_masters"
+        verbose_name = "Profession Master"
+        verbose_name_plural = "Profession Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
