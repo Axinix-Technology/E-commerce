@@ -137,7 +137,7 @@ else:
             'ENGINE': 'django.db.backends.mysql',
             'NAME': os.getenv('MYSQL_DATABASE', 'axinix_ecommerce_db'),
             'USER': os.getenv('MYSQL_USER', 'root'),
-            'PASSWORD': os.getenv('MYSQL_PASSWORD', 'root@123'),
+            'PASSWORD': os.getenv('MYSQL_PASSWORD', 'Axinix@123'),
             'HOST': os.getenv('MYSQL_HOST', '127.0.0.1'),
             'PORT': mysql_port,
             'OPTIONS': {
