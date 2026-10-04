@@ -19,9 +19,18 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request Interceptor: Attach JWT Access Token
+// Request Interceptor: Attach JWT Access Token & Distributed Correlation Request ID
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Inject unique Request Correlation ID if not present
+    if (!config.headers["X-Request-ID"]) {
+      const generatedId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      config.headers["X-Request-ID"] = generatedId;
+    }
+
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = token.startsWith('Token ') || token.startsWith('Bearer ') 

@@ -17,17 +17,11 @@ export default function AuditLogIndex() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await populateApi.read("audit_log", { limit: 100 });
+      const res = await populateApi.read("audit_log", { limit: 100, sort: ["-created_at"] });
       const items = Array.isArray(res) ? res : res.data || [];
       setLogs(items);
     } catch {
-      setLogs([
-        { id: 1, user: "admin", action: "UPDATE", module: "inventory", ip_address: "192.168.1.10", description: "Modified barcode BC-KAN-00129 to BC-KAN-00130", created_at: "2026-10-02 11:20:15" },
-        { id: 2, user: "cashier1", action: "CREATE", module: "sales", ip_address: "192.168.1.25", description: "Executed POS invoice INV-2026-901 for ₹14,500", created_at: "2026-10-02 11:32:04" },
-        { id: 3, user: "admin", action: "DELETE", module: "catalogue", ip_address: "192.168.1.10", description: "Archived discontinued size master XXL-Junior", created_at: "2026-10-02 15:45:20" },
-        { id: 4, user: "inventory_lead", action: "TRANSFER", module: "inventory", ip_address: "192.168.1.18", description: "Approved branch transfer TR-2026-081 with 50 units", created_at: "2026-10-03 09:12:40" },
-        { id: 5, user: "finance_mgr", action: "APPROVE", module: "billing", ip_address: "192.168.1.14", description: "Approved petty cash voucher PC-2026-003 for ₹10,000", created_at: "2026-10-03 10:30:11" },
-      ]);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -38,11 +32,20 @@ export default function AuditLogIndex() {
   }, []);
 
   const filtered = logs.filter((l) => {
+    const uName = (l.user_name || (typeof l.user === 'object' ? l.user?.username : l.user) || "").toLowerCase();
+    const mod = (l.module || l.entity || "").toLowerCase();
+    const desc = (l.description || l.details || "").toLowerCase();
+    const ip = (l.ip_address || "");
+    const reqId = (l.request_id || "").toLowerCase();
+    const term = search.toLowerCase();
+
     const matchesSearch =
-      (l.user || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.module || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.description || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.ip_address || "").includes(search);
+      uName.includes(term) ||
+      mod.includes(term) ||
+      desc.includes(term) ||
+      ip.includes(term) ||
+      reqId.includes(term);
+
     const matchesAction = actionFilter === "all" || (l.action || "").toUpperCase() === actionFilter.toUpperCase();
     return matchesSearch && matchesAction;
   });
@@ -109,6 +112,7 @@ export default function AuditLogIndex() {
           <table className="w-full text-left text-xs text-text-muted">
             <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
               <tr>
+                <th className="px-4 py-2.5">Request ID</th>
                 <th className="px-4 py-2.5">User</th>
                 <th className="px-4 py-2.5">Action</th>
                 <th className="px-4 py-2.5">Module</th>
@@ -120,33 +124,38 @@ export default function AuditLogIndex() {
             <tbody className="divide-y divide-border/30">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">Loading audit log events...</td>
+                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">Loading audit log events...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">No audit events match criteria.</td>
+                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">No audit events match criteria.</td>
                 </tr>
               ) : (
                 filtered.map((l) => (
                   <tr key={l.id} className="hover:bg-surface-ground/30 transition">
+                    <td className="px-4 py-3 font-mono text-[11px] text-text-muted" title={l.request_id || "—"}>
+                      {l.request_id ? `${l.request_id.slice(0, 8)}...` : "—"}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-text-primary flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-accent-primary" />
-                      {l.user}
+                      {l.user_name || (typeof l.user === 'object' ? l.user?.username : l.user) || 'System'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         l.action === "CREATE" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
                         l.action === "UPDATE" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
                         l.action === "DELETE" ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
+                        l.action === "LOGIN" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                        l.action === "LOGOUT" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
                         "bg-purple-500/10 text-purple-400 border border-purple-500/20"
                       }`}>
                         {l.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 uppercase text-[11px] font-mono text-text-secondary">{l.module}</td>
-                    <td className="px-4 py-3 text-text-primary max-w-md">{l.description}</td>
+                    <td className="px-4 py-3 uppercase text-[11px] font-mono text-text-secondary">{l.module || l.entity || "—"}</td>
+                    <td className="px-4 py-3 text-text-primary max-w-md">{l.description || l.details || "—"}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-text-muted">{l.ip_address || "—"}</td>
-                    <td className="px-4 py-3 text-text-muted">{l.created_at || "—"}</td>
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleString() : "—"}</td>
                   </tr>
                 ))
               )}

@@ -49,6 +49,10 @@ class RequestContext:
     pagination: dict = field(default_factory=lambda: {"page": 1, "limit": 20, "offset": 0})
     user: Any = None
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    ip_address: str | None = None
+    user_agent: str | None = None
+    path: str | None = None
+    method: str | None = None
     tenant_context: dict | None = None
     metadata: dict = field(default_factory=dict)
     model_cls: Any = None

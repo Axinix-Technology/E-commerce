@@ -46,3 +46,18 @@ These rules are non-negotiable and apply to every agent action in this workspace
   3. **Prefetch Memory Safeguards**: Enforce a hard maximum populate depth of 3 levels and a 50-item child pagination ceiling to prevent `prefetch_related` OOM memory crashes.
   4. **Pipeline Caching**: Cache parsed DSL plans and authorization policies in-memory to eliminate pipeline CPU overhead on hot paths.
 
+## 10. Mandatory API Audit Logging on All Custom & Non-Populate API Routes
+- **Core Security & Compliance Policy**: Every API request that enters the system must be traceably and immutably audited in the database with:
+  1. `request_id`: Unique correlation ID generated or propagated via HTTP header `X-Request-ID`.
+  2. **Who Asked** (`user` / `user_name`): Authenticated user instance or username/email (or `'Anonymous'` / `'System'`).
+  3. **From Where Details**: Client IP address (`ip_address` extracted safely via `X-Forwarded-For` or `REMOTE_ADDR`), User Agent (`user_agent`), request path (`path`), and HTTP method (`method`).
+- **Populate Core Pipeline (`/api/populate/`)**:
+  - Automatically audited by Stage 10 (`FinalizationStage`) of the Populate Engine via `core.audit.logger.AuditLogger`. Saves the target entity/model, action, entity ID, count, AST filters, HTTP status code, and sanitized changes directly to the `audit_logs` table.
+- **Custom / Non-Populate API Routes**:
+  - Whenever a custom route, controller, or endpoint is legitimately added outside of the `/api/populate/` pipeline (e.g. auth handshakes in `users/urls.py`, public company info in `company/urls.py`, binary downloads, webhooks, or third-party integrations):
+    1. **Automatic Middleware Guard**: The endpoint MUST be registered under `/api/` and processed through `core.middleware.ApiAuditLogMiddleware`, which automatically extracts `X-Request-ID`, records `AuditLog` in MySQL, and returns the correlation ID in the response.
+    2. **Domain-Level Audit Logging**: If the custom endpoint performs granular internal mutations, state transitions, or external API syncs, the developer or AI agent MUST explicitly invoke `core.audit.helpers.record_audit_log(...)` to record the business event.
+    3. **Credential Sanitization**: Never write raw passwords, auth tokens, secrets, or financial credentials to the audit log. Always sanitize payload dictionaries via `core.audit.helpers.sanitize_payload(...)`.
+    4. **No Audit Bypass**: Never suppress audit logging or disable `ApiAuditLogMiddleware` on any route.
+
+

@@ -10,6 +10,8 @@ This index is maintained in strict alphabetical order to satisfy Core Rule #2 an
   - Details the AccessPolicies database model, schema fields, and dynamic database-driven resolution mechanism in the policy engine.
 - [ARCHITECTURE - Dynamic Dispatch Pattern (Tracker-v2 Architecture)](./ARCHITECTURE.md)
   - Details the transition to centralized model registry (`Collection.js`), dynamic generic CRUD dispatcher (`populateHelper`), dedicated auth subsystem, and Rule #8 prohibiting redundant controllers/routers.
+- [AUDIT_LOGGING_ARCHITECTURE - Core Audit Trails, Request Correlation & Policy Enforcement](./AUDIT_LOGGING_ARCHITECTURE.md)
+  - Details end-to-end database audit logging, X-Request-ID propagation, client IP extraction, who-asked actor tracking, Stage 10 pipeline logging, and global ApiAuditLogMiddleware.
 - [AUTHENTICATION - Basic Login & Session Lifecycle](./AUTHENTICATION.md)
   - Documents the authentication flow, token issuance (JWT Access & Refresh tokens), session persistence, and role definitions.
 - [BACKUP_AND_CRON_SYSTEM - Automated Backups & Dynamic Scheduler](./BACKUP_AND_CRON_SYSTEM.md)

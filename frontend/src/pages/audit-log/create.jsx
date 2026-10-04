@@ -26,16 +26,18 @@ export default function AuditLogCreate() {
     try {
       await populateApi.create("audit_log", {
         user: form.user.trim(),
+        user_name: form.user.trim(),
         action: form.action,
         module: form.module,
+        entity: form.module,
         description: form.description.trim(),
+        details: form.description.trim(),
         ip_address: form.ip_address.trim(),
       });
       toast.success("Audit trail event manually logged!");
       navigate("/audit-log");
-    } catch {
-      toast.success("Audit entry saved!");
-      navigate("/audit-log");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to record audit event");
     } finally {
       setSubmitting(false);
     }

@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -17,6 +18,7 @@ from core.crud import (
 )
 from core.serialization.output import OutputSerializer
 from core.audit.logger import AuditLogger
+from core.audit.helpers import get_client_ip
 from core.response.normalizer import success_response, error_response
 
 
@@ -100,6 +102,30 @@ class IngressStage:
         if isinstance(fields, str):
             fields = [s.strip() for s in fields.split(",") if s.strip()]
 
+        # Mark request as populate-handled to prevent duplicate audit logging in middleware
+        try:
+            request._is_populate_request = True
+        except Exception:
+            pass
+
+        # Extract Request ID (from header, middleware, or generate fresh)
+        raw_req_id = (
+            getattr(request, "request_id", None)
+            or (request.headers.get("X-Request-ID") if hasattr(request, "headers") else None)
+            or request.META.get("HTTP_X_REQUEST_ID")
+            or str(uuid.uuid4())
+        )
+        try:
+            request.request_id = raw_req_id
+        except Exception:
+            pass
+
+        # Extract Client IP and User Agent
+        client_ip = get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        req_path = getattr(request, "path", "")
+        req_method = getattr(request, "method", "POST")
+
         context = RequestContext(
             action=action_clean,
             model_name=model_clean,
@@ -111,6 +137,11 @@ class IngressStage:
             ordering=ordering,
             pagination={"page": page, "limit": limit},
             user=getattr(request, "user", None),
+            request_id=raw_req_id,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            path=req_path,
+            method=req_method,
         )
         return context
 
@@ -229,16 +260,22 @@ class FinalizationStage:
         elif context.action == Action.UPDATE.value:
             message = f"{context.model_name.capitalize()} updated successfully."
 
-        return success_response(
+        resp = success_response(
             data=data,
             count=count,
             message=message,
             metadata=metadata if metadata else None,
             status_code=201 if context.action == Action.CREATE.value else 200,
         )
+        if context.request_id:
+            resp["X-Request-ID"] = context.request_id
+        return resp
 
     @classmethod
     def execute_error(cls, error: Exception, context: RequestContext | None = None) -> Response:
         if context:
             AuditLogger.log(context, {"error": str(error), "count": 0})
-        return error_response(error)
+        resp = error_response(error)
+        if context and context.request_id:
+            resp["X-Request-ID"] = context.request_id
+        return resp

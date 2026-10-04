@@ -139,8 +139,9 @@ class AccessPolicy(models.Model):
 class AuditLog(models.Model):
     """
     System activity and mutation audit log.
-    Tracks user actions, target entities, IP addresses, and state changes.
+    Tracks user actions, target entities, IP addresses, request correlation IDs, and state changes.
     """
+    request_id = models.CharField(max_length=100, blank=True, null=True, db_index=True, help_text="Unique request correlation ID")
     user = models.ForeignKey(
         "users.User",
         on_delete=models.SET_NULL,
@@ -149,13 +150,18 @@ class AuditLog(models.Model):
         related_name="audit_logs"
     )
     user_name = models.CharField(max_length=150, blank=True, null=True)
-    action = models.CharField(max_length=50, db_index=True, help_text="CREATE, UPDATE, DELETE, LOGIN, EXPORT, PRINT")
-    entity = models.CharField(max_length=100, db_index=True, help_text="e.g. product, sale, customer, barcode, setting")
+    action = models.CharField(max_length=50, blank=True, default="CREATE", db_index=True, help_text="CREATE, UPDATE, DELETE, LOGIN, LOGOUT, READ, EXPORT, PRINT")
+    entity = models.CharField(max_length=100, blank=True, null=True, default="core", db_index=True, help_text="e.g. product, sale, customer, barcode, setting")
     entity_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    module = models.CharField(max_length=100, blank=True, null=True, default="core", db_index=True, help_text="e.g. inventory, catalogue, users, core")
+    description = models.TextField(blank=True, null=True, help_text="Human-readable activity summary")
     details = models.TextField(blank=True, null=True)
     changes = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=255, blank=True, null=True)
+    path = models.CharField(max_length=255, blank=True, null=True, help_text="Request endpoint path")
+    method = models.CharField(max_length=20, blank=True, null=True, help_text="HTTP method e.g. GET, POST")
+    status_code = models.IntegerField(null=True, blank=True, help_text="HTTP response status code")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -163,7 +169,32 @@ class AuditLog(models.Model):
         verbose_name = "Audit Log"
         verbose_name_plural = "Audit Logs"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["request_id"]),
+            models.Index(fields=["action", "created_at"]),
+            models.Index(fields=["entity", "created_at"]),
+            models.Index(fields=["module", "created_at"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Auto-sync module and entity
+        if not self.module and self.entity:
+            self.module = self.entity
+        elif not self.entity and self.module:
+            self.entity = self.module
+
+        # Auto-sync description and details
+        if not self.description and self.details:
+            self.description = self.details
+        elif not self.details and self.description:
+            self.details = self.description
+
+        # Auto-fill user_name if user is populated
+        if self.user and not self.user_name:
+            self.user_name = getattr(self.user, "username", None) or getattr(self.user, "email", None) or str(self.user)
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.action} on {self.entity} #{self.entity_id} by {self.user_name or 'System'}"
+        return f"{self.action} on {self.entity} #{self.entity_id} by {self.user_name or 'System'} [{self.request_id or 'no-req-id'}]"
 
