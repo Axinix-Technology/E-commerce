@@ -4,8 +4,15 @@ import axios from "axios";
  * Pre-configured Axios Instance for Centralized Platform
  * Automatically injects JWT Bearer token and handles 401 session expirations.
  */
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (!envUrl) return "/api";
+  const trimmed = envUrl.trim().replace(/\/+$/, "");
+  return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+};
+
 const axiosInstance = axios.create({
-  baseURL: "/api",
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
