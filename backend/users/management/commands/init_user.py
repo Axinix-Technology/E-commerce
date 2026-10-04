@@ -1,0 +1,112 @@
+import hashlib
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.conf import settings
+from rest_framework.authtoken.models import Token
+from users.models import Role, User
+
+
+class Command(BaseCommand):
+    help = "Initializes default roles and provisions initial superadmin users (developer & admin)."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--username", default="developer", help="Developer username (default: developer)")
+        parser.add_argument("--password", default="Developer@123", help="Developer password (default: Developer@123)")
+        parser.add_argument("--email", default="developer@axinix.com", help="Developer email (default: developer@axinix.com)")
+        parser.add_argument("--first-name", default="System", help="First name (default: System)")
+        parser.add_argument("--last-name", default="Developer", help="Last name (default: Developer)")
+
+    def handle(self, *args, **options):
+        username = options["username"]
+        password = options["password"]
+        email = options["email"]
+        first_name = options["first_name"]
+        last_name = options["last_name"]
+
+        active_db = settings.DATABASES['default']
+        self.stdout.write(self.style.MIGRATE_HEADING("=" * 60))
+        self.stdout.write(self.style.MIGRATE_HEADING(" AXINIX E-COMMERCE PLATFORM - INITIAL USER SETUP"))
+        self.stdout.write(self.style.MIGRATE_HEADING("=" * 60))
+        self.stdout.write(f" Target Database : {active_db.get('NAME')}")
+        self.stdout.write(f" Target Host     : {active_db.get('HOST') or 'localhost'}:{active_db.get('PORT') or '3306'}")
+        self.stdout.write(f" DEBUG Mode      : {settings.DEBUG}")
+
+        default_roles = [
+            {"name": "Super Admin", "description": "Super Administrator with full platform access", "is_superadmin": True},
+            {"name": "Store Manager", "description": "Store Manager responsible for store operations", "is_superadmin": False},
+            {"name": "Staff", "description": "Staff operator", "is_superadmin": False},
+        ]
+
+        with transaction.atomic():
+            self.stdout.write("\n[1/2] Seeding Roles...")
+            roles_map = {}
+            for role_data in default_roles:
+                role, created = Role.objects.update_or_create(
+                    name=role_data["name"],
+                    defaults={
+                        "description": role_data["description"],
+                        "is_superadmin": role_data["is_superadmin"],
+                        "status": 1,
+                    }
+                )
+                action = "Created" if created else "Updated"
+                self.stdout.write(f"  - [{action}] {role.name} (is_superadmin: {role.is_superadmin})")
+                roles_map[role.name] = role
+
+            self.stdout.write(f"\n[2/2] Provisioning Users...")
+            super_admin_role = roles_map["Super Admin"]
+
+            # 1. Developer user
+            dev_user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "email": email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "role": super_admin_role,
+                    "is_staff": True,
+                    "is_superuser": True,
+                    "status": 1,
+                }
+            )
+            dev_sha256 = hashlib.sha256(password.encode('utf-8')).hexdigest()
+            dev_user.set_password(dev_sha256)
+            dev_user.role = super_admin_role
+            dev_user.is_staff = True
+            dev_user.is_superuser = True
+            dev_user.status = 1
+            dev_user.email = email
+            dev_user.first_name = first_name
+            dev_user.last_name = last_name
+            dev_user.save()
+            dev_token, _ = Token.objects.get_or_create(user=dev_user)
+
+            # 2. Default UI Admin user
+            admin_user, _ = User.objects.get_or_create(
+                username="admin",
+                defaults={
+                    "email": "admin@axinix.com",
+                    "first_name": "Super",
+                    "last_name": "Admin",
+                    "role": super_admin_role,
+                    "is_staff": True,
+                    "is_superuser": True,
+                    "status": 1,
+                }
+            )
+            admin_sha256 = hashlib.sha256("Admin@123456".encode("utf-8")).hexdigest()
+            admin_user.set_password(admin_sha256)
+            admin_user.role = super_admin_role
+            admin_user.is_staff = True
+            admin_user.is_superuser = True
+            admin_user.status = 1
+            admin_user.save()
+            admin_token, _ = Token.objects.get_or_create(user=admin_user)
+
+        self.stdout.write(self.style.SUCCESS("\n" + "=" * 60))
+        self.stdout.write(self.style.SUCCESS(" SUCCESS: Initial users provisioned successfully!"))
+        self.stdout.write(self.style.SUCCESS("=" * 60))
+        self.stdout.write(f"  Super Admin 1 : {username} / {password}")
+        self.stdout.write(f"  Super Admin 2 : admin / Admin@123456")
+        self.stdout.write(f"  Auth Token    : {dev_token.key}")
+        self.stdout.write(self.style.SUCCESS("=" * 60 + "\n"))
