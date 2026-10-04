@@ -1,9 +1,46 @@
 from typing import Any
+import sys
+from django.http import JsonResponse
+from django.utils import timezone
+from django.db import connection
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from core.pipeline.executor import PopulatePipeline
+
+
+def test_api_view(request):
+    """
+    Public Test and Health Check endpoint.
+    Verifies API availability and live database connectivity.
+    """
+    db_status = "connected"
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+
+    is_healthy = db_status == "connected"
+    return JsonResponse({
+        "status": "healthy" if is_healthy else "degraded",
+        "service": "Axinix Central E-Commerce Platform API",
+        "version": "1.1.0",
+        "database": db_status,
+        "timestamp": timezone.now().isoformat(),
+        "python_version": sys.version.split()[0],
+        "environment": "production" if not settings.DEBUG else "development",
+        "endpoints": {
+            "test": "/api/test/",
+            "auth": "/api/auth/login/",
+            "populate": "/api/populate/",
+            "company": "/api/company/",
+            "admin": "/admin/"
+        }
+    }, status=200 if is_healthy else 503)
+
 
 
 class PopulateAPIView(APIView):
