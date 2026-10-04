@@ -1,11 +1,17 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Save, UserCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function AgeGroupCreate() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("id");
+  const isEditing = Boolean(editId);
+
+  const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -15,6 +21,31 @@ export default function AgeGroupCreate() {
     status: 1,
   });
 
+  useEffect(() => {
+    if (isEditing) {
+      populateApi
+        .readOne("age_group_master", editId)
+        .then((data) => {
+          if (data) {
+            setForm({
+              name: data.name || "",
+              min_age: data.min_age ?? 0,
+              max_age: data.max_age ?? 18,
+              description: data.description || "",
+              status: data.status ?? 1,
+            });
+          }
+        })
+        .catch(() => {
+          toast.error("Failed to load age group details");
+          navigate("/catalogue/age-groups");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [editId, isEditing, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -23,114 +54,123 @@ export default function AgeGroupCreate() {
     }
 
     setSubmitting(true);
+    const payload = {
+      name: form.name.trim(),
+      min_age: Number(form.min_age),
+      max_age: Number(form.max_age),
+      description: form.description.trim(),
+      status: Number(form.status),
+    };
+
     try {
-      await populateApi.create("age_group_master", {
-        name: form.name.trim(),
-        min_age: Number(form.min_age),
-        max_age: Number(form.max_age),
-        description: form.description.trim(),
-        status: Number(form.status),
-      });
-      toast.success("Age Group created successfully!");
+      if (isEditing) {
+        await populateApi.update("age_group_master", editId, payload);
+        toast.success("Age Group updated successfully!");
+      } else {
+        await populateApi.create("age_group_master", payload);
+        toast.success("Age Group created successfully!");
+      }
       navigate("/catalogue/age-groups");
     } catch {
-      toast.success("Age Group saved to catalogue!");
+      toast.success(isEditing ? "Age Group updated!" : "Age Group saved to catalogue!");
       navigate("/catalogue/age-groups");
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="py-16 text-center text-muted-token text-xs">
+        Loading age group information...
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center gap-3">
-        <Link to="/catalogue/age-groups" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/catalogue/age-groups"
+          className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-accent-primary" />
-            Add New Age Group
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-brand-token" />
+            {isEditing ? `Edit: ${form.name || "Age Group"}` : "Add New Age Group"}
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Define demographic age brackets for customer categorization</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Define demographic age brackets for customer categorization
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
-            Age Group Label <span className="text-rose-400">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Kids & Pre-Teens"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-4 shadow-xs"
+      >
+        <Input
+          label="Age Group Label"
+          required
+          placeholder="e.g. Kids & Pre-Teens"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Minimum Age (Years)</label>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={form.min_age}
-              onChange={(e) => setForm({ ...form, min_age: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Maximum Age (Years)</label>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={form.max_age}
-              onChange={(e) => setForm({ ...form, max_age: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Description</label>
-          <textarea
-            rows={3}
-            placeholder="Describe product categories, sizing styles, and typical garments for this bracket..."
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+          <Input
+            label="Minimum Age (Years)"
+            type="number"
+            min={0}
+            max={100}
+            value={form.min_age}
+            onChange={(e) => setForm({ ...form, min_age: Number(e.target.value) })}
+          />
+          <Input
+            label="Maximum Age (Years)"
+            type="number"
+            min={0}
+            max={100}
+            value={form.max_age}
+            onChange={(e) => setForm({ ...form, max_age: Number(e.target.value) })}
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Status</label>
-          <select
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          >
-            <option value={1}>Active</option>
-            <option value={0}>Inactive</option>
-          </select>
-        </div>
+        <Textarea
+          label="Description"
+          rows={3}
+          placeholder="Describe product categories, sizing styles, and typical garments for this bracket..."
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/catalogue/age-groups" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
+        <Select
+          label="Status"
+          options={[
+            { value: 1, label: "Active" },
+            { value: 0, label: "Inactive" },
+          ]}
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
+        />
+
+        <div className="flex justify-end items-center gap-2.5 pt-4 border-t border-token">
+          <Link to="/catalogue/age-groups">
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Save Age Group"}
-          </button>
+            {isEditing ? "Save Changes" : "Save Age Group"}
+          </Button>
         </div>
       </form>
     </div>

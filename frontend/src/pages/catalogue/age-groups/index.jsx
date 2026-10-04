@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { UserCheck, Plus, Search, CheckCircle2, XCircle } from "lucide-react";
+import { UserCheck, Plus, Search, Edit2 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
+import { formatQty } from "../../../utils/formatters";
+import { Button, Input, Table, Badge } from "../../../components/ui";
 
 export default function AgeGroupsIndex() {
   const [ageGroups, setAgeGroups] = useState([]);
@@ -40,97 +37,96 @@ export default function AgeGroupsIndex() {
     (a.description || "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const columns = [
+    {
+      key: "name",
+      header: "Age Group Label",
+      render: (val) => <span className="font-semibold text-primary-token">{val}</span>,
+    },
+    {
+      key: "span",
+      header: "Span (Years)",
+      render: (_, row) => (
+        <span className="font-mono text-xs text-brand-token font-semibold">
+          {formatQty(row.min_age)} to {formatQty(row.max_age)} yrs
+        </span>
+      ),
+    },
+    {
+      key: "description",
+      header: "Category Scope",
+      render: (val) => <span className="text-secondary-token text-xs">{val || "—"}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (val) => (
+        <Badge variant={val === 1 ? "emerald" : "rose"} dot>
+          {val === 1 ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: (_, row) => (
+        <Link to={`/catalogue/age-groups/create?id=${row.id}`}>
+          <Button size="xs" variant="ghost" icon={Edit2}>
+            Edit
+          </Button>
+        </Link>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-brand-token" />
             Age Groups Master
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Demographic age bands for merchandise filtering and sizing recommendations</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Demographic age bands for merchandise filtering and sizing recommendations
+          </p>
         </div>
-        <Link
-          to="/catalogue/age-groups/create"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Age Group
+        <Link to="/catalogue/age-groups/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Add Age Group
+          </Button>
         </Link>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Age Categories: <strong className="text-text-primary font-medium">{formatQty(ageGroups.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Age Categories: <strong className="text-primary-token font-medium">{formatQty(ageGroups.length)}</strong></span>
         <span>•</span>
         <span>Active Cohorts: <strong className="text-emerald-400 font-medium">{formatQty(ageGroups.filter(a => a.status === 1).length)}</strong></span>
         <span>•</span>
-        <span>Storefront Tagging: <strong className="text-accent-primary font-medium">Auto Facets</strong></span>
+        <span>Storefront Tagging: <strong className="text-brand-token font-medium">Auto Facets</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
+      {/* Search Input Bar */}
+      <div className="w-full sm:max-w-md">
+        <Input
+          icon={Search}
           placeholder="Search by age group name or description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+          onClear={() => setSearch("")}
         />
       </div>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Age Group Label</th>
-                <th className="px-4 py-2.5">Span (Years)</th>
-                <th className="px-4 py-2.5">Category Scope</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-text-muted">Loading age groups...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-text-muted">No age groups configured.</td>
-                </tr>
-              ) : (
-                filtered.map((a) => (
-                  <tr key={a.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-medium text-text-primary">{a.name}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-accent-primary">{a.min_age} to {a.max_age} yrs</td>
-                    <td className="px-4 py-3 text-text-muted max-w-sm">{a.description || "—"}</td>
-                    <td className="px-4 py-3">
-                      {a.status === 1 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                          <XCircle className="w-3 h-3" />
-                          Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link to={`/catalogue/age-groups/create?id=${a.id}`} className="text-[11px] font-medium text-accent-primary hover:underline">
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No age groups configured."
+      />
     </div>
   );
 }

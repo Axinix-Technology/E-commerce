@@ -3,12 +3,11 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   FolderTree,
-  Save,
-  CheckCircle2,
-  HelpCircle
+  Save
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function CategoryFormPage() {
   const navigate = useNavigate();
@@ -56,7 +55,7 @@ export default function CategoryFormPage() {
             });
           }
         })
-        .catch((err) => {
+        .catch(() => {
           toast.error("Failed to load category details");
           navigate("/catalogue/categories");
         })
@@ -137,21 +136,22 @@ export default function CategoryFormPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
-            to="/catalogue/categories"
-            className="px-4 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold transition-colors"
-          >
-            Cancel
+          <Link to="/catalogue/categories">
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
+          <Button
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            loading={submitting}
+            variant="primary"
+            size="sm"
+            icon={Save}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Category"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Create Category"}
+          </Button>
         </div>
       </div>
 
@@ -170,53 +170,34 @@ export default function CategoryFormPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Category Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Footwear, Electronics, Men's Apparel"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-              <p className="text-[11px] text-muted-token mt-1">Unique display name shown in menus and catalog trees.</p>
-            </div>
+            <Input
+              label="Category Name"
+              required
+              placeholder="e.g. Footwear, Electronics, Men's Apparel"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              helperText="Unique display name shown in menus and catalog trees."
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Parent Category (Optional)
-              </label>
-              <select
-                value={formData.parent_id}
-                onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              >
-                <option value="">— None (Top-Level Category) —</option>
-                {parentCategories
-                  .filter((p) => !isEditing || String(p.id) !== String(editId))
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-              <p className="text-[11px] text-muted-token mt-1">Nest this category under an existing parent category.</p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-secondary-token mb-1.5">Description</label>
-            <textarea
-              rows="3"
-              placeholder="Describe the type of products grouped under this category..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs resize-none"
+            <Select
+              label="Parent Category (Optional)"
+              placeholder="— None (Top-Level Category) —"
+              options={parentCategories
+                .filter((p) => !isEditing || String(p.id) !== String(editId))
+                .map((p) => ({ value: p.id, label: p.name }))}
+              value={formData.parent_id}
+              onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
+              helperText="Nest this category under an existing parent category."
             />
           </div>
+
+          <Textarea
+            label="Description"
+            rows={3}
+            placeholder="Describe the type of products grouped under this category..."
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
         </div>
 
         {/* Taxation and Classification Card */}
@@ -231,57 +212,45 @@ export default function CategoryFormPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                HSN Code
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 6403, 8517"
-                value={formData.hsn_code}
-                onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-              <p className="text-[11px] text-muted-token mt-1">4 to 8 digit Indian GST tariff classification code.</p>
-            </div>
+            <Input
+              label="HSN Code"
+              placeholder="e.g. 6403, 8517"
+              value={formData.hsn_code}
+              onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+              helperText="4 to 8 digit Indian GST tariff classification code."
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Assigned GST Slab
-              </label>
-              <select
-                value={formData.tax_group_id}
-                onChange={(e) => setFormData({ ...formData, tax_group_id: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              >
-                <option value="">— Select Applicable GST Slab —</option>
-                {gstSlabs.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name} ({g.rate}%)
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-muted-token mt-1">Products inheriting this category will apply this tax rate.</p>
-            </div>
+            <Select
+              label="Assigned GST Slab"
+              placeholder="— Select Applicable GST Slab —"
+              options={gstSlabs.map((g) => ({
+                value: g.id,
+                label: `${g.name} (${g.rate}%)`,
+              }))}
+              value={formData.tax_group_id}
+              onChange={(e) => setFormData({ ...formData, tax_group_id: e.target.value })}
+              helperText="Products inheriting this category will apply this tax rate."
+            />
           </div>
         </div>
 
         {/* Bottom Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link
-            to="/catalogue/categories"
-            className="px-5 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold"
-          >
-            Cancel
+          <Link to="/catalogue/categories">
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
+          <Button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            loading={submitting}
+            variant="primary"
+            size="sm"
+            icon={Save}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Category"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Create Category"}
+          </Button>
         </div>
       </form>
     </div>

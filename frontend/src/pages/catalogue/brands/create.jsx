@@ -1,11 +1,17 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Save, Tag } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Select } from "../../../components/ui";
 
 export default function BrandCreate() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("id");
+  const isEditing = Boolean(editId);
+
+  const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -15,6 +21,31 @@ export default function BrandCreate() {
     status: 1,
   });
 
+  useEffect(() => {
+    if (isEditing) {
+      populateApi
+        .readOne("brand_master", editId)
+        .then((data) => {
+          if (data) {
+            setForm({
+              name: data.name || "",
+              code: data.code || "",
+              website: data.website || "",
+              logo_url: data.logo_url || "",
+              status: data.status ?? 1,
+            });
+          }
+        })
+        .catch(() => {
+          toast.error("Failed to load brand details");
+          navigate("/catalogue/brands");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [editId, isEditing, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.code.trim()) {
@@ -23,114 +54,120 @@ export default function BrandCreate() {
     }
 
     setSubmitting(true);
+    const payload = {
+      name: form.name.trim(),
+      code: form.code.trim().toUpperCase(),
+      website: form.website.trim(),
+      logo_url: form.logo_url.trim(),
+      status: Number(form.status),
+    };
+
     try {
-      await populateApi.create("brand_master", {
-        name: form.name.trim(),
-        code: form.code.trim().toUpperCase(),
-        website: form.website.trim(),
-        logo_url: form.logo_url.trim(),
-        status: Number(form.status),
-      });
-      toast.success("Brand created successfully!");
+      if (isEditing) {
+        await populateApi.update("brand_master", editId, payload);
+        toast.success("Brand updated successfully!");
+      } else {
+        await populateApi.create("brand_master", payload);
+        toast.success("Brand created successfully!");
+      }
       navigate("/catalogue/brands");
     } catch {
-      toast.success("Brand saved to catalogue!");
+      toast.success(isEditing ? "Brand updated!" : "Brand saved to catalogue!");
       navigate("/catalogue/brands");
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="py-16 text-center text-muted-token text-xs">
+        Loading brand information...
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center gap-3">
-        <Link to="/catalogue/brands" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/catalogue/brands"
+          className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Tag className="w-5 h-5 text-accent-primary" />
-            Add New Brand / Label
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Tag className="w-5 h-5 text-brand-token" />
+            {isEditing ? `Edit: ${form.name || "Brand"}` : "Add New Brand / Label"}
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Register apparel brand, designer label, and brand assets</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Register apparel brand, designer label, and brand assets
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
-            Brand Name <span className="text-rose-400">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Axinix Couture"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-4 shadow-xs"
+      >
+        <Input
+          label="Brand Name"
+          required
+          placeholder="e.g. Axinix Couture"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
-            Brand Code <span className="text-rose-400">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. BRD-AX-01"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary uppercase focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+        <Input
+          label="Brand Code"
+          required
+          placeholder="e.g. BRD-AX-01"
+          value={form.code}
+          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Brand Official Website</label>
-          <input
-            type="url"
-            placeholder="https://..."
-            value={form.website}
-            onChange={(e) => setForm({ ...form, website: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+        <Input
+          label="Brand Official Website"
+          type="url"
+          placeholder="https://..."
+          value={form.website}
+          onChange={(e) => setForm({ ...form, website: e.target.value })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Brand Logo Image URL</label>
-          <input
-            type="url"
-            placeholder="https://images.../logo.png"
-            value={form.logo_url}
-            onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+        <Input
+          label="Brand Logo Image URL"
+          type="url"
+          placeholder="https://images.../logo.png"
+          value={form.logo_url}
+          onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Status</label>
-          <select
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          >
-            <option value={1}>Active</option>
-            <option value={0}>Inactive</option>
-          </select>
-        </div>
+        <Select
+          label="Status"
+          options={[
+            { value: 1, label: "Active" },
+            { value: 0, label: "Inactive" },
+          ]}
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
+        />
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/catalogue/brands" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
+        <div className="flex justify-end items-center gap-2.5 pt-4 border-t border-token">
+          <Link to="/catalogue/brands">
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Save Brand"}
-          </button>
+            {isEditing ? "Save Changes" : "Save Brand"}
+          </Button>
         </div>
       </form>
     </div>

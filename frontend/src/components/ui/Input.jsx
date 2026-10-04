@@ -40,7 +40,7 @@ export default function Input({
     lg: "text-sm font-semibold",
   };
 
-  const activeLeftIcon = Icon || LeftIcon;
+  const ActiveLeftIcon = Icon || LeftIcon;
 
   return (
     <div className={`space-y-1.5 ${containerClassName}`}>
@@ -51,9 +51,9 @@ export default function Input({
       )}
 
       <div className="relative flex items-center">
-        {activeLeftIcon && (
+        {ActiveLeftIcon && (
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-token pointer-events-none">
-            <activeLeftIcon className="w-3.5 h-3.5" />
+            <ActiveLeftIcon className="w-3.5 h-3.5" />
           </div>
         )}
 
@@ -73,7 +73,7 @@ export default function Input({
           className={`w-full bg-surface-elevated border transition-all text-primary-token placeholder-muted-token focus:outline-none focus:border-[var(--brand-secondary)] focus:ring-1 focus:ring-[var(--brand-secondary)]/30 disabled:opacity-50 disabled:cursor-not-allowed ${
             sizeStyles[size] || sizeStyles.sm
           } ${error ? "border-rose-500/80 focus:border-rose-500" : "border-token"} ${
-            activeLeftIcon ? "pl-9" : prefix ? "pl-7" : ""
+            ActiveLeftIcon ? "pl-9" : prefix ? "pl-7" : ""
           } ${onClear && value ? "pr-8" : suffix || RightIcon ? "pr-9" : ""} ${className}`}
           {...props}
         />

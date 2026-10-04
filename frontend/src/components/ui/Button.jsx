@@ -43,7 +43,7 @@ export default function Button({
       "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20",
   };
 
-  const activeIcon = Icon || LeftIcon;
+  const ActiveIcon = Icon || LeftIcon;
 
   return (
     <button
@@ -59,8 +59,8 @@ export default function Button({
     >
       {loading ? (
         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-      ) : activeIcon ? (
-        <activeIcon className="w-3.5 h-3.5 shrink-0" />
+      ) : ActiveIcon ? (
+        <ActiveIcon className="w-3.5 h-3.5 shrink-0" />
       ) : null}
 
       {children && <span className="truncate">{children}</span>}
