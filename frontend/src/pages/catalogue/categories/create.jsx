@@ -37,7 +37,7 @@ export default function CategoryFormPage() {
     ]).then(([catRes, gstRes]) => {
       if (catRes?.data) setParentCategories(catRes.data);
       if (gstRes?.data) setGstSlabs(gstRes.data);
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 2. If editing, hydrate data
     if (isEditing) {

@@ -26,8 +26,34 @@ if not SECRET_KEY:
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+
+# Render cloud deployment auto-detection & domain support
+render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if render_hostname and render_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_hostname)
+
+if '.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.onrender.com')
+
+if 'e-commerce-dpyc.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('e-commerce-dpyc.onrender.com')
+
 if DEBUG and '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('*')
+
+# CSRF Trusted Origins for HTTPS & Cloud Deployments
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,https://*.onrender.com'
+    ).split(',') if origin.strip()
+]
+if render_hostname:
+    https_render = f"https://{render_hostname}"
+    if https_render not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(https_render)
+if 'https://e-commerce-dpyc.onrender.com' not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append('https://e-commerce-dpyc.onrender.com')
 
 
 # Application definition
