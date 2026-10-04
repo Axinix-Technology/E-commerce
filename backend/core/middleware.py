@@ -38,27 +38,27 @@ class ApiAuditLogMiddleware:
         request.client_ip = client_ip
         user_agent = request.META.get("HTTP_USER_AGENT", "")
 
-        # 3. Cache request payload for non-populate mutation routes if JSON
-        cached_payload = None
-        if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            if not request.path.startswith("/api/populate/"):
-                try:
-                    if request.body:
-                        cached_payload = json.loads(request.body.decode("utf-8"))
-                except Exception:
-                    pass
-
-        # 4. Process Request
+        # 3. Process Request
         response = self.get_response(request)
 
-        # 5. Always attach X-Request-ID to response headers
+        # 4. Always attach X-Request-ID to response headers
         try:
             response["X-Request-ID"] = req_id
         except Exception:
             pass
 
-        # 6. Audit Logging for Non-Populate API Routes
+        # 5. Audit Logging for Non-Populate API Routes
         try:
+            cached_payload = getattr(request, "data", None)
+            if cached_payload is None:
+                try:
+                    if hasattr(request, "_body") and request._body:
+                        cached_payload = json.loads(request._body.decode("utf-8"))
+                    elif hasattr(request, "POST") and request.POST:
+                        cached_payload = dict(request.POST.items())
+                except Exception:
+                    pass
+
             self._audit_non_populate_request(request, response, req_id, client_ip, user_agent, cached_payload)
         except Exception as exc:
             logger.warning(f"[ApiAuditLogMiddleware] Error recording audit log: {exc}")

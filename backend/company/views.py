@@ -1,18 +1,30 @@
+import time
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 from .models import Company
 
+_company_cache = None
+_company_cache_time = 0
+CACHE_TTL = 60  # seconds
+
 
 class PublicCompanyView(APIView):
     """
     Public Company Profile endpoint (Used by Login Page & Header branding).
     Returns active company details or standard defaults if not yet populated.
+    Cached in-memory to prevent repeated cloud database latency.
     """
     permission_classes = [AllowAny]
 
     def get(self, request):
+        global _company_cache, _company_cache_time
+
+        now = time.time()
+        if _company_cache is not None and (now - _company_cache_time) < CACHE_TTL:
+            return Response(_company_cache, status=status.HTTP_200_OK)
+
         company = Company.objects.filter(status=1).first()
 
         if company:
@@ -41,4 +53,6 @@ class PublicCompanyView(APIView):
                 "is_configured": False,
             }
 
+        _company_cache = data
+        _company_cache_time = now
         return Response(data, status=status.HTTP_200_OK)

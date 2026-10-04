@@ -59,10 +59,18 @@ class QueryPlanner:
                     prefetch_qs = prefetch_qs.filter(status=1)
 
                 if rel_path.projection_fields:
-                    # Only project needed fields plus primary key and foreign key
+                    # Only project needed fields plus primary key and foreign keys
                     valid_fields = [f for f in rel_path.projection_fields if hasattr(target_model, f)]
-                    if "id" not in valid_fields:
+                    if "id" not in valid_fields and hasattr(target_model, "id"):
                         valid_fields.append("id")
+
+                    # Include any foreign key linking back to parent model to avoid N+1 queries during prefetch hydration
+                    for f in target_model._meta.get_fields():
+                        if f.is_relation and getattr(f, "related_model", None) == model_cls:
+                            attname = getattr(f, "attname", None)
+                            if attname and attname not in valid_fields:
+                                valid_fields.append(attname)
+
                     if valid_fields:
                         prefetch_qs = prefetch_qs.only(*valid_fields)
 

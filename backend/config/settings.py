@@ -103,6 +103,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.ApiAuditLogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -142,6 +143,8 @@ if not DEBUG and os.getenv('MYSQL_DATABASE_LIVE'):
     if ssl_mode:
         live_options['ssl_mode'] = ssl_mode
 
+    conn_max_age = int(os.getenv('CONN_MAX_AGE', '600'))
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -150,6 +153,7 @@ if not DEBUG and os.getenv('MYSQL_DATABASE_LIVE'):
             'PASSWORD': unquote(live_url.password) if live_url.password else '',
             'HOST': live_url.hostname or '',
             'PORT': str(live_url.port or 3306),
+            'CONN_MAX_AGE': conn_max_age,
             'OPTIONS': live_options,
         }
     }
@@ -160,6 +164,8 @@ else:
     except (ValueError, TypeError):
         mysql_port = '3306'
 
+    conn_max_age = int(os.getenv('CONN_MAX_AGE', '600'))
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -168,6 +174,7 @@ else:
             'PASSWORD': os.getenv('MYSQL_PASSWORD', 'Axinix@123'),
             'HOST': os.getenv('MYSQL_HOST', '127.0.0.1'),
             'PORT': mysql_port,
+            'CONN_MAX_AGE': conn_max_age,
             'OPTIONS': {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
                 'charset': 'utf8mb4',
@@ -281,6 +288,12 @@ from corsheaders.defaults import default_headers, default_methods
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'authorization',
     'x-token',
+    'x-request-id',
+    'x-correlation-id',
+]
+CORS_EXPOSE_HEADERS = [
+    'x-request-id',
+    'content-disposition',
 ]
 CORS_ALLOW_METHODS = list(default_methods)
 

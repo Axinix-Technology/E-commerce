@@ -103,11 +103,14 @@ const ICON_MAP = {
   ShieldAlert,
 };
 
+let sidebarCache = null;
+let sidebarInFlightPromise = null;
+
 export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse }) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [appVersion, setAppVersion] = useState("1.0.0");
-  const [navItems, setNavItems] = useState([]);
+  const [navItems, setNavItems] = useState(() => sidebarCache || []);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -123,15 +126,34 @@ export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggle
       .catch(() => {});
   }, []);
 
-  // Fetch dynamic sidebars from Populate Engine
+  // Fetch dynamic sidebars from Populate Engine (cached & deduplicated)
   useEffect(() => {
     let isMounted = true;
-    populateApi
-      .read("sidebar", {
-        filter: { parent__isnull: true },
-        populate: { children: ["id", "title", "main_route", "icon", "badge", "order"] },
-        sort: ["order", "id"],
-      })
+
+    if (sidebarCache && sidebarCache.length > 0) {
+      setNavItems(sidebarCache);
+      return;
+    }
+
+    if (!sidebarInFlightPromise) {
+      sidebarInFlightPromise = populateApi
+        .read("sidebar", {
+          filter: { parent__isnull: true },
+          populate: { children: ["id", "title", "main_route", "icon", "badge", "order"] },
+          sort: ["order", "id"],
+        })
+        .then((res) => {
+          if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+            sidebarCache = res.data;
+          }
+          return res;
+        })
+        .finally(() => {
+          sidebarInFlightPromise = null;
+        });
+    }
+
+    sidebarInFlightPromise
       .then((res) => {
         if (isMounted && res?.data && Array.isArray(res.data) && res.data.length > 0) {
           setNavItems(res.data);
