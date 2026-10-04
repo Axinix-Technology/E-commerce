@@ -7,7 +7,6 @@ Directory structure:
     │   ├── create_developer.py
     │   ├── manage.py
     │   ├── requirements.txt
-    │   ├── .env.example
     │   ├── catalogue/
     │   │   ├── __init__.py
     │   │   ├── admin.py
@@ -143,6 +142,7 @@ Directory structure:
     │   │       ├── 0002_inventorystock_stockmovementledger.py
     │   │       ├── 0003_alter_stockmovementledger_reference_id_and_more.py
     │   │       ├── 0004_stockissuetype_stockmovementledger_issue_type.py
+    │   │       ├── 0005_alter_stockmovementledger_movement_type.py
     │   │       └── __init__.py
     │   ├── inward/
     │   │   ├── __init__.py
@@ -169,6 +169,9 @@ Directory structure:
     │   │   ├── inventory_service.py
     │   │   ├── purchase_inward_service.py
     │   │   └── stock_ledger_service.py
+    │   ├── src/
+    │   │   └── constants/
+    │   │       └── releaseNotes.json
     │   ├── storefront/
     │   │   ├── __init__.py
     │   │   ├── admin.py
@@ -216,7 +219,6 @@ Directory structure:
     │   ├── index.html
     │   ├── package.json
     │   ├── vite.config.js
-    │   ├── .env.example
     │   ├── public/
     │   │   └── version.json
     │   └── src/
@@ -615,7 +617,7 @@ FILE: package.json
 ================================================
 {
   "name": "central-ecommerce-platform-root",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -627,7 +629,7 @@ FILE: package.json
     "version:bump:major": "node scripts/version-tool.mjs bump major",
     "verify:backend": "node scripts/verify-deploy-version.mjs --target=backend",
     "verify:frontend": "node scripts/verify-deploy-version.mjs --target=frontend",
-    "check:backend": "node --check backend/src/index.js"
+    "check:backend": "python backend/manage.py check"
   }
 }
 
@@ -638,9 +640,9 @@ FILE: version.json
 ================================================
 {
   "name": "central-ecommerce-platform",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Centralized E-commerce Platform",
-  "updatedAt": "2026-09-21T10:55:00.000Z",
+  "updatedAt": "2026-10-02T11:46:19.964Z",
   "minSupportedClientVersion": "1.0.0",
   "forceDeploy": false
 }
@@ -861,31 +863,6 @@ Pillow>=12.3.0
 pydantic>=2.13.5
 sqlparse>=0.6.0
 asgiref>=3.12.1
-
-
-
-================================================
-FILE: backend/.env.example
-================================================
-# ==========================================
-# Axinix E-Commerce Platform - Backend Environment
-# ==========================================
-
-# 1. Local MySQL Database (Active when DEBUG=True)
-MYSQL_HOST=localhost
-MYSQL_PORT=port
-MYSQL_USER=username
-MYSQL_PASSWORD=password
-MYSQL_DATABASE=database_name
-
-# 2. Live Cloud MySQL Database (Active automatically when DEBUG=False)
-# Format: mysql://<username>:<password>@<host>:<port>/<database>?ssl-mode=REQUIRED
-MYSQL_DATABASE_LIVE=website_url
-
-# 3. Django Core Configuration
-DEBUG=True
-SECRET_KEY=django-insecure-change-this-to-a-secure-random-secret-key
-ALLOWED_HOSTS=*
 
 
 
@@ -2624,13 +2601,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env
 load_dotenv(BASE_DIR / '.env')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-i%ctq5m4erhrw8hf31c2@n9v7z4@9ipn9kc@3f6bucz2_+q*1s')
+# SECURITY: Fail closed if SECRET_KEY is missing in production
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if os.getenv('ENVIRONMENT') == 'production':
+        raise RuntimeError("SECRET_KEY environment variable is mandatory in production.")
+    SECRET_KEY = 'django-insecure-dev-only-local-secret-key-change-in-env'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+# SECURITY: Default DEBUG to False unless explicitly set to True
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = ['*'] if DEBUG else [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+if DEBUG and '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('*')
 
 
 # Application definition
@@ -2776,11 +2759,41 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = os.getenv('TIME_ZONE', 'Asia/Kolkata')
 
 USE_I18N = True
 
 USE_TZ = True
+
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name}:{lineno} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+        'core.audit': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
 
 # Static files (CSS, JavaScript, Images)
@@ -3091,8 +3104,82 @@ class AccessPolicy(models.Model):
 FILE: backend/core/tests.py
 ================================================
 from django.test import TestCase
+from rest_framework.test import APIClient
+from rest_framework import status
+from django.contrib.auth import get_user_model
+from catalogue.models import ProductType
 
-# Create your tests here.
+User = get_user_model()
+
+
+class PopulateEngineSecurityTests(TestCase):
+    """
+    Regression and security tests for the 10-stage Populate Engine.
+    Verifies fail-closed authentication, mass assignment blocking,
+    sensitive field filtering prevention, and bulk mutation guards.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="TestPassword@123",
+            status=1,
+            is_active=True
+        )
+        self.admin = User.objects.create_superuser(
+            username="adminuser",
+            email="admin@example.com",
+            password="AdminPassword@123",
+            status=1,
+            is_active=True
+        )
+
+    def test_unauthenticated_requests_blocked(self):
+        """Unauthenticated requests must be blocked with HTTP 401."""
+        response = self.client.get("/api/populate/read/category_master")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_authenticated_user_access(self):
+        """Authenticated users can query permitted models."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/populate/read/category_master")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get("success"))
+
+    def test_sensitive_field_filter_blocked(self):
+        """Blind hash extraction via password filters must be rejected with 400/Security error."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/populate/read/user?filter={"password.startswith":"pbkdf2"}')
+        self.assertIn(response.status_code, (status.HTTP_400_BAD_REQUEST, status.HTTP_500_INTERNAL_SERVER_ERROR))
+        self.assertFalse(response.data.get("success"))
+        self.assertIn("prohibited", response.data.get("error", {}).get("message", "").lower())
+
+    def test_mass_assignment_of_superuser_blocked(self):
+        """Standard users cannot grant themselves superuser status."""
+        self.client.force_authenticate(user=self.user)
+        payload = {"is_superuser": True}
+        response = self.client.patch(f"/api/populate/update/user/{self.user.id}", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_superuser)
+
+    def test_direct_modification_of_stock_ledger_blocked(self):
+        """Stock ledger rows are strictly immutable via generic CRUD."""
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.patch("/api/populate/update/stock_ledger/1", {"inward_qty": 999}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.client.delete("/api/populate/delete/stock_ledger/1")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_bulk_delete_requires_filters(self):
+        """Bulk delete without filters must be rejected to prevent table wiping."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post("/api/populate/bulk_delete/product_type", {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("explicit filter", response.data.get("error", {}).get("message", "").lower())
 
 
 
@@ -3120,7 +3207,7 @@ from typing import Any
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from core.pipeline.executor import PopulatePipeline
 
 
@@ -3128,8 +3215,9 @@ class PopulateAPIView(APIView):
     """
     Universal Entry Point for the Django Populate Engine.
     Dispatches every request directly into the 10-stage execution pipeline.
+    Fails closed: requires authenticated session or token.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
@@ -3173,8 +3261,10 @@ FILE: backend/core/audit/logger.py
 ================================================
 import logging
 from datetime import datetime
-from typing import Any
-from core.pipeline.context import RequestContext
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.pipeline.context import RequestContext
 
 logger = logging.getLogger("core.audit")
 
@@ -3186,7 +3276,7 @@ class AuditLogger:
     """
 
     @classmethod
-    def log(cls, context: RequestContext, result: dict[str, Any]) -> None:
+    def log(cls, context: Any, result: dict[str, Any]) -> None:
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),
             "request_id": context.request_id,
@@ -3248,22 +3338,31 @@ class BaseCRUDExecutor:
 
     @classmethod
     def find_target_instance(cls, context: RequestContext, queryset: Any) -> models.Model:
-        """Finds target instance in active scope or raises NotFoundError."""
-        try:
-            if context.object_id is not None:
+        """Finds target instance in active scope or raises NotFoundError / ValidationError."""
+        if context.object_id is not None:
+            try:
                 return queryset.get(pk=context.object_id)
-            obj = queryset.first()
-            if not obj:
+            except (models.ObjectDoesNotExist, ValueError):
                 raise NotFoundError(
                     f"Record '{context.model_name}' with ID '{context.object_id}' not found.",
                     details={"model": context.model_name, "id": context.object_id}
                 )
-            return obj
-        except (models.ObjectDoesNotExist, ValueError):
+
+        count = queryset.count()
+        if count == 0:
             raise NotFoundError(
-                f"Record '{context.model_name}' with ID '{context.object_id}' not found.",
-                details={"model": context.model_name, "id": context.object_id}
+                f"No active record found for '{context.model_name}' matching filter criteria.",
+                details={"model": context.model_name, "filters": context.filters}
             )
+        if count > 1:
+            from core.response.exceptions import ValidationError
+            raise ValidationError(
+                f"Filter matched {count} records. Single mutation requires an explicit object_id. Use bulk actions instead.",
+                code="AMBIGUOUS_TARGET",
+                details={"model": context.model_name, "match_count": count}
+            )
+
+        return queryset.first()
 
 
 
@@ -3276,14 +3375,34 @@ from core.pipeline.context import RequestContext
 from .base import BaseCRUDExecutor
 
 
+from core.response.exceptions import AuthorizationError
+
+FORBIDDEN_MUTATION_FIELDS = frozenset({"password", "is_superuser", "is_staff", "token", "secret_key"})
+RESTRICTED_CREATE_MODELS = frozenset({"inventory_stock", "user_session"})
+
+
 class CreateExecutor(BaseCRUDExecutor):
     """
     Stage 08 â€” Generic Create Executor.
-    Executes single or bulk create mutations within minimal transactions.
+    Executes single or bulk create mutations within atomic transactions.
+    Fails closed: rolls back entirely if any hook or child mutation fails.
     """
 
     @classmethod
     def execute(cls, context: RequestContext) -> dict[str, Any]:
+        # 0. Model-level creation restrictions
+        if context.model_name in RESTRICTED_CREATE_MODELS:
+            raise AuthorizationError(
+                f"Direct creation of '{context.model_name}' records is not permitted via generic API.",
+                code="RESTRICTED_MODEL"
+            )
+
+        if context.model_name in ("user", "role") and not getattr(context.user, "is_superuser", False):
+            raise AuthorizationError(
+                f"Managing '{context.model_name}' records requires administrative privileges.",
+                code="ADMIN_REQUIRED"
+            )
+
         service = cls.get_service(context)
         model_cls = context.model_cls
         model_meta = context.model_metadata
@@ -3292,42 +3411,50 @@ class CreateExecutor(BaseCRUDExecutor):
         if context.is_bulk:
             return cls._execute_bulk(context, service, model_cls, status_field)
 
-        # 1. Single Create: run before_create hook outside transaction
-        data = dict(context.body) if isinstance(context.body, dict) else {}
-        data = service.before_create(context, data)
-
-        # Ensure active status (1) for master/transaction tables
-        if hasattr(model_cls, status_field) and status_field not in data:
-            data[status_field] = 1
-
-        # Separate M2M or nested fields if necessary
-        m2m_data: dict[str, list] = {}
-        concrete_data: dict[str, Any] = {}
-
-        for key, val in data.items():
-            field_obj = None
-            try:
-                field_obj = model_cls._meta.get_field(key)
-            except Exception:
-                pass
-
-            if field_obj and field_obj.many_to_many:
-                m2m_data[key] = val
-            elif field_obj and field_obj.concrete:
-                concrete_data[key] = val
-            elif hasattr(model_cls, key):
-                concrete_data[key] = val
-
-        # 2. Minimal DB transaction window
+        # 1. Single Create: Run before_create, creation, and after_create inside a SINGLE atomic transaction
         with transaction.atomic():
+            data = dict(context.body) if isinstance(context.body, dict) else {}
+
+            # Guard against forbidden field injection
+            for forbidden_key in FORBIDDEN_MUTATION_FIELDS:
+                if forbidden_key in data:
+                    raise AuthorizationError(
+                        f"Direct mutation of '{forbidden_key}' is not allowed via generic API.",
+                        code="FORBIDDEN_FIELD"
+                    )
+
+            data = service.before_create(context, data)
+
+            # Ensure active status (1) for master/transaction tables
+            if hasattr(model_cls, status_field) and status_field not in data:
+                data[status_field] = 1
+
+            # Separate M2M or nested fields if necessary
+            m2m_data: dict[str, list] = {}
+            concrete_data: dict[str, Any] = {}
+
+            for key, val in data.items():
+                field_obj = None
+                try:
+                    field_obj = model_cls._meta.get_field(key)
+                except Exception:
+                    pass
+
+                if field_obj and field_obj.many_to_many:
+                    m2m_data[key] = val
+                elif field_obj and field_obj.concrete:
+                    concrete_data[key] = val
+                elif hasattr(model_cls, key):
+                    concrete_data[key] = val
+
             instance = model_cls.objects.create(**concrete_data)
             for m2m_key, m2m_vals in m2m_data.items():
                 m2m_rel = getattr(instance, m2m_key, None)
                 if m2m_rel and hasattr(m2m_rel, "set"):
                     m2m_rel.set(m2m_vals)
 
-        # 3. Service Hook: after_create (outside lock, post-commit)
-        instance = service.after_create(context, instance)
+            # Service Hook: after_create (runs atomically with create)
+            instance = service.after_create(context, instance)
 
         return {
             "items": [instance],
@@ -3371,8 +3498,10 @@ FILE: backend/core/crud/delete.py
 from typing import Any
 from django.db import transaction, models
 from core.pipeline.context import RequestContext
-from core.response.exceptions import NotFoundError, ExecutionError
+from core.response.exceptions import NotFoundError, ExecutionError, AuthorizationError, ValidationError
 from .base import BaseCRUDExecutor
+
+RESTRICTED_DELETE_MODELS = frozenset({"stock_ledger", "inventory_stock", "user_session"})
 
 
 class DeleteExecutor(BaseCRUDExecutor):
@@ -3386,12 +3515,30 @@ class DeleteExecutor(BaseCRUDExecutor):
 
     @classmethod
     def execute(cls, queryset: Any, context: RequestContext) -> dict[str, Any]:
+        # 0. Model-level delete restrictions
+        if context.model_name in RESTRICTED_DELETE_MODELS:
+            raise AuthorizationError(
+                f"Deletion of '{context.model_name}' records is strictly forbidden.",
+                code="IMMUTABLE_TABLE"
+            )
+
+        if context.model_name in ("user", "role") and not getattr(context.user, "is_superuser", False):
+            raise AuthorizationError(
+                f"Deleting '{context.model_name}' records requires administrative privileges.",
+                code="ADMIN_REQUIRED"
+            )
+
         service = cls.get_service(context)
         model_cls = context.model_cls
         model_meta = context.model_metadata
         status_field = getattr(model_meta, "status_field", "status") if model_meta else "status"
 
         if context.is_bulk:
+            if not context.filters:
+                raise ValidationError(
+                    "Bulk deletion requires explicit filter criteria to prevent wiping the entire table.",
+                    code="MISSING_BULK_FILTER"
+                )
             return cls._execute_bulk(queryset, context, service, status_field)
 
         # 1. Lookup target object in active scope
@@ -3577,21 +3724,37 @@ FILE: backend/core/crud/update.py
 from typing import Any
 from django.db import transaction, models
 from core.pipeline.context import RequestContext
-from core.response.exceptions import NotFoundError
+from core.response.exceptions import NotFoundError, AuthorizationError, ValidationError
 from .base import BaseCRUDExecutor
+
+FORBIDDEN_MUTATION_FIELDS = frozenset({"password", "is_superuser", "is_staff", "token", "secret_key"})
+RESTRICTED_UPDATE_MODELS = frozenset({"stock_ledger", "inventory_stock", "user_session"})
 
 
 class UpdateExecutor(BaseCRUDExecutor):
     """
     Stage 08 â€” Generic Update Executor.
     Adheres strictly to Recipe 01:
-    - Service before_update and external checks run OUTSIDE the lock.
+    - Enforces fail-closed access controls and forbidden mutation fields.
     - Minimal DB lock window (<10ms) using select_for_update().
     - Service after_update runs post-commit.
     """
 
     @classmethod
     def execute(cls, queryset: Any, context: RequestContext) -> dict[str, Any]:
+        # 0. Model-level update restrictions
+        if context.model_name in RESTRICTED_UPDATE_MODELS:
+            raise AuthorizationError(
+                f"Direct modification of '{context.model_name}' records is not permitted via generic API.",
+                code="RESTRICTED_MODEL"
+            )
+
+        if context.model_name in ("user", "role") and not getattr(context.user, "is_superuser", False):
+            raise AuthorizationError(
+                f"Modifying '{context.model_name}' records requires administrative privileges.",
+                code="ADMIN_REQUIRED"
+            )
+
         service = cls.get_service(context)
         model_cls = context.model_cls
 
@@ -3604,6 +3767,15 @@ class UpdateExecutor(BaseCRUDExecutor):
 
         # 2. Service Hook: before_update (runs OUTSIDE lock window)
         update_data = dict(context.body) if isinstance(context.body, dict) else {}
+
+        # Guard against forbidden field injection
+        for forbidden_key in FORBIDDEN_MUTATION_FIELDS:
+            if forbidden_key in update_data:
+                raise AuthorizationError(
+                    f"Direct mutation of '{forbidden_key}' is not allowed via generic API.",
+                    code="FORBIDDEN_FIELD"
+                )
+
         update_data = service.before_update(context, target_instance, update_data)
 
         # 3. Minimal DB lock window (Recipe 01: keep lock duration < 10ms)
@@ -4371,7 +4543,7 @@ class IngressStage:
         model_name: str,
         object_id: Any | None = None
     ) -> RequestContext:
-        action_clean = action.lower().strip()
+        action_clean = action.lower().strip().replace("_", "-")
         model_clean = model_name.lower().strip()
 
         # Ingress parses source parameters:
@@ -4414,6 +4586,21 @@ class IngressStage:
             page = query_params.get("page", 1)
             limit = query_params.get("limit", 20)
             mutation_body = body_data
+
+        # If filters or populate are passed as serialized JSON strings in query params, deserialize them
+        if isinstance(filters, str):
+            import json
+            try:
+                filters = json.loads(filters)
+            except Exception:
+                filters = {}
+
+        if isinstance(populate, str):
+            import json
+            try:
+                populate = json.loads(populate)
+            except Exception:
+                pass
 
         if isinstance(ordering_raw, str):
             ordering = [s.strip() for s in ordering_raw.split(",") if s.strip()]
@@ -4900,9 +5087,10 @@ class DeveloperDSLParser:
 
     @classmethod
     def _make_cache_key(cls, model_name: str, action: str, filters: dict, populate: Any, fields: Any, ordering: list) -> str:
+        import hashlib
         try:
             raw = f"{model_name}:{action}:{json.dumps(filters, sort_keys=True)}:{json.dumps(populate, sort_keys=True)}:{json.dumps(fields, sort_keys=True)}:{json.dumps(ordering)}"
-            return str(hash(raw))
+            return hashlib.sha256(raw.encode('utf-8')).hexdigest()
         except Exception:
             return ""
 
@@ -4966,6 +5154,15 @@ class DeveloperDSLParser:
             except Exception:
                 # Custom report or service parameter that is not a direct model column
                 continue
+
+            # Guard against sensitive field filtering (prevents blind character-by-character hash extraction)
+            SENSITIVE_FILTER_FIELDS = frozenset({"password", "token", "secret_key"})
+            if any(seg.lower() in SENSITIVE_FILTER_FIELDS for seg in field_segments):
+                from core.response.exceptions import SecuritySanitizationError
+                raise SecuritySanitizationError(
+                    f"Filtering on sensitive credential fields is prohibited.",
+                    code="SENSITIVE_FIELD_FILTER_BLOCKED"
+                )
 
             lookup_field = "__".join(field_segments)
             if op != "exact":
@@ -5793,6 +5990,10 @@ def success_response(
     return Response(payload, status=status_code)
 
 
+from rest_framework.exceptions import ValidationError as DRFValidationError, APIException
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+
 def error_response(error: Exception | str, status_code: int | None = None) -> Response:
     """
     Standard Error Response Envelope:
@@ -5810,6 +6011,34 @@ def error_response(error: Exception | str, status_code: int | None = None) -> Re
         message = error.message
         details = error.details
         status_val = status_code or error.status_code
+    elif isinstance(error, DRFValidationError):
+        code = "VALIDATION_ERROR"
+        if isinstance(error.detail, list):
+            message = "; ".join(str(d) for d in error.detail)
+            details = [str(d) for d in error.detail]
+        elif isinstance(error.detail, dict):
+            parts = []
+            clean_details = {}
+            for k, v in error.detail.items():
+                v_str = ", ".join(str(item) for item in v) if isinstance(v, list) else str(v)
+                parts.append(f"{k}: {v_str}")
+                clean_details[k] = v_str
+            message = "; ".join(parts)
+            details = clean_details
+        else:
+            message = str(error.detail)
+            details = None
+        status_val = status_code or 400
+    elif isinstance(error, DjangoValidationError):
+        code = "VALIDATION_ERROR"
+        message = "; ".join(error.messages) if hasattr(error, "messages") else str(error)
+        details = getattr(error, "message_dict", None)
+        status_val = status_code or 400
+    elif isinstance(error, APIException):
+        code = getattr(error, "default_code", "API_ERROR").upper()
+        message = str(error.detail) if hasattr(error, "detail") else str(error)
+        details = None
+        status_val = status_code or getattr(error, "status_code", 400)
     elif isinstance(error, Exception):
         code = "INTERNAL_SERVER_ERROR"
         message = str(error)
@@ -6378,6 +6607,14 @@ class RequestValidator:
         elif context.action == Action.BULK_UPDATE.value:
             if not isinstance(context.body, list) and not isinstance(context.body, dict):
                 raise ValidationError("Bulk update requires a list of items or an update body with filters.")
+            if isinstance(context.body, dict) and not context.filters:
+                raise ValidationError("Bulk update with an object body requires non-empty filter criteria.")
+            if isinstance(context.body, list) and len(context.body) == 0:
+                raise ValidationError("Bulk update list payload cannot be empty.")
+
+        elif context.action == Action.BULK_DELETE.value:
+            if not context.filters and not (isinstance(context.body, list) and len(context.body) > 0):
+                raise ValidationError("Bulk delete requires explicit filter criteria or a list of target IDs to prevent wiping the table.")
 
         return context
 
@@ -6674,13 +6911,17 @@ class StockMovementLedger(models.Model):
         # Inward (+)
         ("purchase_inward", "Purchase / GRN Inward"),
         ("return_restock", "Return Restocked after QC"),
+        ("return_quarantine", "Customer Return Quarantine"),
+        ("qc_restock", "QC Pass & Restock Return"),
         ("approval_return", "Returned from Approval / Photoshoot"),
         ("repair_return", "Returned from Repair / Alteration"),
+        ("branch_transfer_inward", "Branch Transfer Inward"),
         ("audit_plus", "Stock Audit Plus Adjustment"),
         
         # Outward (-)
         ("pos_sale", "POS Billing Sale"),
         ("marketplace_sale", "Marketplace Sale (Amazon/Flipkart)"),
+        ("branch_transfer_outward", "Branch Transfer Outward"),
         ("approval_outward", "Sent to Photoshoot / Approval Memo"),
         ("repair_outward", "Sent to Repair / Alteration Workshop"),
         ("vendor_return", "Returned to Vendor (RTV)"),
@@ -7013,6 +7254,30 @@ class Migration(migrations.Migration):
             model_name='stockmovementledger',
             name='issue_type',
             field=models.ForeignKey(blank=True, db_column='issue_type_id', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='movements', to='inventory.stockissuetype', verbose_name='Stock Issue Type'),
+        ),
+    ]
+
+
+
+================================================
+FILE: backend/inventory/migrations/0005_alter_stockmovementledger_movement_type.py
+================================================
+# Generated by Django 6.1.1 on 2026-10-02 11:40
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('inventory', '0004_stockissuetype_stockmovementledger_issue_type'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='stockmovementledger',
+            name='movement_type',
+            field=models.CharField(choices=[('purchase_inward', 'Purchase / GRN Inward'), ('return_restock', 'Return Restocked after QC'), ('return_quarantine', 'Customer Return Quarantine'), ('qc_restock', 'QC Pass & Restock Return'), ('approval_return', 'Returned from Approval / Photoshoot'), ('repair_return', 'Returned from Repair / Alteration'), ('branch_transfer_inward', 'Branch Transfer Inward'), ('audit_plus', 'Stock Audit Plus Adjustment'), ('pos_sale', 'POS Billing Sale'), ('marketplace_sale', 'Marketplace Sale (Amazon/Flipkart)'), ('branch_transfer_outward', 'Branch Transfer Outward'), ('approval_outward', 'Sent to Photoshoot / Approval Memo'), ('repair_outward', 'Sent to Repair / Alteration Workshop'), ('vendor_return', 'Returned to Vendor (RTV)'), ('scrap_writeoff', 'Damaged / Scrap Write-Off'), ('audit_minus', 'Stock Audit Minus Adjustment')], db_index=True, max_length=30),
         ),
     ]
 
@@ -8566,9 +8831,29 @@ class PurchaseInwardService(BaseService):
         if not invoice_number:
             raise ValidationError("Supplier invoice / bill number is required.")
 
+        # Check for duplicate vendor invoice submission
+        if PurchaseInward.objects.filter(vendor=vendor, invoice_number__iexact=invoice_number, status=1).exists():
+            raise ValidationError(
+                f"An active purchase inward already exists for vendor '{vendor.name}' with invoice #{invoice_number}."
+            )
+
         today_str = timezone.now().strftime("%Y%m%d")
-        inward_count = PurchaseInward.objects.filter(inward_number__startswith=f"INW-{today_str}").count() + 1
-        data["inward_number"] = f"INW-{today_str}-{inward_count:04d}"
+        last_inw = (
+            PurchaseInward.objects
+            .filter(inward_number__startswith=f"INW-{today_str}")
+            .order_by("-inward_number")
+            .first()
+        )
+        if last_inw and last_inw.inward_number:
+            try:
+                last_seq = int(last_inw.inward_number.split("-")[-1])
+                next_seq = last_seq + 1
+            except (ValueError, IndexError):
+                next_seq = 1
+        else:
+            next_seq = 1
+
+        data["inward_number"] = f"INW-{today_str}-{next_seq:04d}"
         data["inward_status"] = "received"
         data["inward_date"] = timezone.now().date().isoformat()
         data["received_by"] = context.user if context.user and context.user.is_authenticated else None
@@ -8590,6 +8875,8 @@ class PurchaseInwardService(BaseService):
 
             if quantity <= 0:
                 raise ValidationError(f"Item #{idx}: Quantity must be greater than zero.")
+            if quantity > 5000:
+                raise ValidationError(f"Item #{idx}: Quantity ({quantity}) exceeds maximum unit-tagging limit of 5,000 per line.")
             if unit_cost < 0:
                 raise ValidationError(f"Item #{idx}: Unit cost cannot be negative.")
             if not ProductType.objects.filter(id=product_id, status=1).exists():
@@ -8615,73 +8902,141 @@ class PurchaseInwardService(BaseService):
         items = context.metadata.get("inward_items_raw", [])
         today_str = timezone.now().strftime("%Y%m%d")
 
-        with transaction.atomic():
-            for idx, item_data in enumerate(items, start=1):
-                product = ProductType.objects.get(id=item_data["product_id"])
-                quantity = int(item_data["quantity"])
-                unit_cost = Decimal(str(item_data["unit_cost"]))
-                tax_rate = Decimal(str(item_data.get("tax_rate", "0.00")))
-                line_taxable = unit_cost * quantity
-                line_tax = (line_taxable * tax_rate) / Decimal("100.00")
-                line_total = line_taxable + line_tax
+        # Deadlock prevention: Lock stock rows in deterministic sorted order
+        unique_product_ids = sorted(list({int(item["product_id"]) for item in items}))
+        stock_map = {}
+        for pid in unique_product_ids:
+            stock, _ = InventoryStock.objects.select_for_update().get_or_create(
+                product_id=pid,
+                defaults={"status": 1, "reorder_level": 10}
+            )
+            stock_map[pid] = stock
 
-                lot_number = f"LOT-{today_str}-{instance.id:04d}-{idx:02d}"
+        tagged_units_to_create = []
 
-                inward_item = InwardItem.objects.create(
-                    inward=instance,
-                    product=product,
-                    quantity=quantity,
-                    unit_cost=unit_cost,
-                    tax_rate=tax_rate,
-                    tax_amount=line_tax,
-                    total_cost=line_total,
-                    lot_number=lot_number,
-                    status=1,
-                )
+        for idx, item_data in enumerate(items, start=1):
+            product = ProductType.objects.get(id=item_data["product_id"])
+            quantity = int(item_data["quantity"])
+            unit_cost = Decimal(str(item_data["unit_cost"]))
+            tax_rate = Decimal(str(item_data.get("tax_rate", "0.00")))
+            line_taxable = unit_cost * quantity
+            line_tax = (line_taxable * tax_rate) / Decimal("100.00")
+            line_total = line_taxable + line_tax
 
-                # Physical item barcode stickers
-                tagged_units = [
+            lot_number = f"LOT-{today_str}-{instance.id:04d}-{idx:02d}"
+
+            inward_item = InwardItem.objects.create(
+                inward=instance,
+                product=product,
+                quantity=quantity,
+                unit_cost=unit_cost,
+                tax_rate=tax_rate,
+                tax_amount=line_tax,
+                total_cost=line_total,
+                lot_number=lot_number,
+                status=1,
+            )
+
+            # Barcodes include line idx and 4-digit piece index to guarantee global uniqueness
+            for p in range(1, quantity + 1):
+                tagged_units_to_create.append(
                     TaggedInventoryUnit(
                         inward_item=inward_item,
                         product=product,
-                        item_barcode=f"ITM-{today_str}-{product.id:04d}-{instance.id:03d}-{p:03d}",
+                        item_barcode=f"{product.id:06d}-{p:06d}",
                         lot_number=lot_number,
                         current_bucket="sellable",
                         unit_cost=unit_cost,
                         is_sold=False,
                         status=1,
                     )
-                    for p in range(1, quantity + 1)
-                ]
-                TaggedInventoryUnit.objects.bulk_create(tagged_units)
-
-                # Update live stock level
-                stock, _ = InventoryStock.objects.select_for_update().get_or_create(
-                    product=product,
-                    defaults={"status": 1, "reorder_level": 10}
                 )
-                stock.quantity_on_hand += quantity
-                stock.sellable_stock += quantity
-                stock.save(update_fields=["quantity_on_hand", "sellable_stock", "updated_at"])
 
-                # Immutable double-entry movement ledger record
-                StockMovementLedger.objects.create(
-                    product=product,
-                    movement_type="purchase_inward",
-                    from_bucket="vendor",
-                    to_bucket="sellable",
-                    inward_qty=quantity,
-                    outward_qty=0,
-                    lot_number=lot_number,
-                    unit_cost=unit_cost,
-                    reference_type="GRN",
-                    reference_id=instance.inward_number,
-                    notes=f"Inward from {instance.vendor.name} (Bill #{instance.invoice_number})",
-                    status=1,
-                    created_by=instance.received_by,
-                )
+            # Update live stock counters
+            stock = stock_map[product.id]
+            stock.quantity_on_hand += quantity
+            stock.sellable_stock += quantity
+
+            # Record immutable double-entry movement ledger record
+            StockMovementLedger.objects.create(
+                product=product,
+                movement_type="purchase_inward",
+                from_bucket="vendor",
+                to_bucket="sellable",
+                inward_qty=quantity,
+                outward_qty=0,
+                lot_number=lot_number,
+                unit_cost=unit_cost,
+                reference_type="GRN",
+                reference_id=instance.inward_number,
+                notes=f"Inward from {instance.vendor.name} (Bill #{instance.invoice_number})",
+                status=1,
+                created_by=instance.received_by,
+            )
+
+        # Batch insert tagged barcode units
+        if tagged_units_to_create:
+            TaggedInventoryUnit.objects.bulk_create(tagged_units_to_create, batch_size=500)
+
+        # Save all updated stocks
+        for stock in stock_map.values():
+            stock.save(update_fields=["quantity_on_hand", "sellable_stock", "updated_at"])
 
         return instance
+
+    def before_delete(self, context, instance: PurchaseInward) -> None:
+        """
+        Reversal Path:
+        Soft-deleting or cancelling a PurchaseInward reverses live stock,
+        deactivates tagged units, and writes a reversal ledger entry.
+        """
+        inward_items = instance.items.filter(status=1)
+        if not inward_items.exists():
+            return
+
+        # Sort product IDs to prevent deadlocks
+        product_ids = sorted(list({item.product_id for item in inward_items}))
+        stocks = {
+            pid: InventoryStock.objects.select_for_update().get(product_id=pid)
+            for pid in product_ids
+        }
+
+        # Check sufficiency before deducting
+        for item in inward_items:
+            stock = stocks[item.product_id]
+            if stock.sellable_stock < item.quantity:
+                raise ValidationError(
+                    f"Cannot cancel inward #{instance.inward_number}: {item.quantity} units of '{item.product.name}' were received, but only {stock.sellable_stock} sellable units remain."
+                )
+
+        today_str = timezone.now().strftime("%Y%m%d")
+        for item in inward_items:
+            stock = stocks[item.product_id]
+            stock.sellable_stock -= item.quantity
+            stock.quantity_on_hand -= item.quantity
+            stock.save(update_fields=["sellable_stock", "quantity_on_hand", "updated_at"])
+
+            # Deactivate tagged units
+            item.tagged_units.filter(status=1).update(status=0)
+            item.status = 0
+            item.save(update_fields=["status"])
+
+            # Create reversal ledger entry
+            StockMovementLedger.objects.create(
+                product=item.product,
+                movement_type="vendor_return",
+                from_bucket="sellable",
+                to_bucket="vendor",
+                inward_qty=0,
+                outward_qty=item.quantity,
+                lot_number=item.lot_number,
+                unit_cost=item.unit_cost,
+                reference_type="GRN_REVERSAL",
+                reference_id=f"REV-{instance.inward_number}",
+                notes=f"Reversal of GRN #{instance.inward_number} upon deletion",
+                status=1,
+                created_by=context.user if context.user and context.user.is_authenticated else None,
+            )
 
 
 # Register with Populate Engine Service Registry
@@ -8695,7 +9050,7 @@ FILE: backend/services/stock_ledger_service.py
 from datetime import datetime
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Max
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -8754,7 +9109,7 @@ class StockLedgerService(BaseService):
                     else:
                         issue_type = StockIssueType.objects.get(code=str(issue_type_id).upper(), status=1)
                 except StockIssueType.DoesNotExist:
-                    pass
+                    raise ValidationError(f"Invalid or inactive Stock Issue Type: '{issue_type_id}'.")
 
             deduct_available = issue_type.deduct_from_available_stock if issue_type else True
 
@@ -8771,7 +9126,6 @@ class StockLedgerService(BaseService):
                 outward_qty = quantity
 
             elif movement_type == "approval_outward":
-                # Only deduct from sellable stock if issue type dictates removal
                 if deduct_available:
                     if stock.sellable_stock < quantity:
                         raise ValidationError(
@@ -8792,6 +9146,18 @@ class StockLedgerService(BaseService):
                         f"Return quantity ({quantity}) exceeds stock currently on approval ({stock.approval_stock})."
                     )
                 stock.approval_stock -= quantity
+
+                # If reference_id is provided, check if outward deducted sellable stock
+                ref_id = data.get("reference_id")
+                if ref_id:
+                    outward_mvt = StockMovementLedger.objects.filter(
+                        reference_id=ref_id,
+                        movement_type="approval_outward",
+                        status=1
+                    ).first()
+                    if outward_mvt and outward_mvt.from_bucket == "sellable_display":
+                        deduct_available = False
+
                 if deduct_available:
                     stock.sellable_stock += quantity
                     to_bucket = "sellable"
@@ -8830,7 +9196,7 @@ class StockLedgerService(BaseService):
                 to_bucket = "quarantine"
                 inward_qty = quantity
 
-            elif movement_type == "qc_restock":
+            elif movement_type in ("qc_restock", "return_restock"):
                 if stock.quarantine_stock < quantity:
                     raise ValidationError(
                         f"Restock quantity ({quantity}) exceeds quarantine stock ({stock.quarantine_stock})."
@@ -8842,17 +9208,26 @@ class StockLedgerService(BaseService):
                 inward_qty = quantity
 
             elif movement_type == "scrap_writeoff":
-                if stock.quarantine_stock >= quantity:
+                specified_bucket = data.get("from_bucket")
+                if specified_bucket == "quarantine" or (not specified_bucket and stock.quarantine_stock >= quantity):
+                    if stock.quarantine_stock < quantity:
+                        raise ValidationError(f"Insufficient quarantine stock ({stock.quarantine_stock}) for write-off.")
                     stock.quarantine_stock -= quantity
                     from_bucket = "quarantine"
-                elif stock.repair_stock >= quantity:
+                elif specified_bucket == "repair" or (not specified_bucket and stock.repair_stock >= quantity):
+                    if stock.repair_stock < quantity:
+                        raise ValidationError(f"Insufficient repair stock ({stock.repair_stock}) for write-off.")
                     stock.repair_stock -= quantity
                     from_bucket = "repair"
-                elif stock.sellable_stock >= quantity:
+                elif specified_bucket == "sellable":
+                    if stock.sellable_stock < quantity:
+                        raise ValidationError(f"Insufficient sellable stock ({stock.sellable_stock}) for write-off.")
                     stock.sellable_stock -= quantity
                     from_bucket = "sellable"
                 else:
-                    raise ValidationError(f"Insufficient stock to write-off {quantity} units.")
+                    raise ValidationError(
+                        f"Insufficient stock in quarantine ({stock.quarantine_stock}) or repair ({stock.repair_stock}) to write-off {quantity} units."
+                    )
                 stock.quantity_on_hand -= quantity
                 stock.damaged_stock += quantity
                 to_bucket = "damaged"
@@ -8869,19 +9244,65 @@ class StockLedgerService(BaseService):
                 to_bucket = "in_transit"
                 outward_qty = quantity
 
+            elif movement_type == "branch_transfer_inward":
+                stock.sellable_stock += quantity
+                stock.quantity_on_hand += quantity
+                from_bucket = "in_transit"
+                to_bucket = "sellable"
+                inward_qty = quantity
+
+            elif movement_type == "audit_plus":
+                stock.sellable_stock += quantity
+                stock.quantity_on_hand += quantity
+                from_bucket = "audit_adjustment"
+                to_bucket = "sellable"
+                inward_qty = quantity
+
+            elif movement_type == "audit_minus":
+                if stock.sellable_stock < quantity:
+                    raise ValidationError(
+                        f"Insufficient sellable stock for downward audit adjustment. Available: {stock.sellable_stock}, Requested: {quantity}."
+                    )
+                stock.sellable_stock -= quantity
+                stock.quantity_on_hand -= quantity
+                from_bucket = "sellable"
+                to_bucket = "audit_adjustment"
+                outward_qty = quantity
+
+            elif movement_type == "vendor_return":
+                if stock.sellable_stock < quantity:
+                    raise ValidationError(
+                        f"Insufficient stock for vendor return. Available: {stock.sellable_stock}, Requested: {quantity}."
+                    )
+                stock.sellable_stock -= quantity
+                stock.quantity_on_hand -= quantity
+                from_bucket = "sellable"
+                to_bucket = "vendor"
+                outward_qty = quantity
+
             else:
                 raise ValidationError(f"Unsupported movement type: '{movement_type}'.")
 
             stock.save()
+
+        # Calculate landed unit cost from latest GRN
+        latest_grn_item = (
+            StockMovementLedger.objects
+            .filter(product=product, movement_type="purchase_inward", status=1)
+            .order_by("-id")
+            .first()
+        )
+        landed_cost = latest_grn_item.unit_cost if latest_grn_item else (product.selling_price or Decimal("0.00"))
 
         data["product_id"] = product.id
         data["from_bucket"] = from_bucket
         data["to_bucket"] = to_bucket
         data["inward_qty"] = inward_qty
         data["outward_qty"] = outward_qty
-        data["unit_cost"] = product.selling_price or 0.00
+        data["unit_cost"] = data.get("unit_cost") or landed_cost
         data["reference_type"] = data.get("reference_type") or movement_type.upper()
         data["reference_id"] = data.get("reference_id") or f"MVT-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        data["notes"] = data.get("notes") or data.get("remarks")
         if issue_type:
             data["issue_type_id"] = issue_type.id
         data["created_by"] = context.user if context.user and context.user.is_authenticated else None
@@ -8889,8 +9310,9 @@ class StockLedgerService(BaseService):
 
     def execute_report(self, context, queryset) -> dict:
         """
-        Dynamic Stock In/Out Accounting Report:
+        Dynamic Stock In/Out Accounting Report (Optimized):
         Opening -> Inward -> Outward -> Closing
+        Executes in O(1) bulk aggregation queries instead of O(N) loops.
         """
         filters = context.filters or {}
         today_str = timezone.now().date().isoformat()
@@ -8913,18 +9335,7 @@ class StockLedgerService(BaseService):
         if product_id:
             products_qs = products_qs.filter(id=product_id)
 
-        report_rows = []
-        total_opening = 0
-        total_inward = 0
-        total_outward = 0
-        total_closing = 0
-        total_valuation = Decimal("0.00")
-
-        stock_map = {
-            s.product_id: s for s in InventoryStock.objects.filter(product__in=products_qs)
-        }
-
-        # Only count transactions that actually affect available stock
+        # Filters for movements affecting physical on-hand stock
         outward_filter = Q(outward_qty__gt=0) & (
             Q(issue_type__isnull=True) | Q(issue_type__deduct_from_available_stock=True)
         )
@@ -8932,33 +9343,69 @@ class StockLedgerService(BaseService):
             Q(issue_type__isnull=True) | Q(issue_type__deduct_from_available_stock=True)
         )
 
-        for prod in products_qs:
-            # 1. Opening Balance: strictly before start_date
-            prior_agg = StockMovementLedger.objects.filter(
-                product=prod,
-                created_at__lt=start_dt,
-                status=1
-            ).aggregate(
+        # 1. Bulk Aggregate: Prior Opening Balance per product (single SQL query)
+        prior_aggregates = (
+            StockMovementLedger.objects
+            .filter(product__in=products_qs, created_at__lt=start_dt, status=1)
+            .values("product_id")
+            .annotate(
                 prior_in=Sum("inward_qty", filter=inward_filter),
                 prior_out=Sum("outward_qty", filter=outward_filter)
             )
-            opening = max(0, (prior_agg["prior_in"] or 0) - (prior_agg["prior_out"] or 0))
+        )
+        prior_map = {
+            item["product_id"]: ((item["prior_in"] or 0) - (item["prior_out"] or 0))
+            for item in prior_aggregates
+        }
 
-            # 2. Period Inward & Outward: [start_dt, end_dt]
-            period_agg = StockMovementLedger.objects.filter(
-                product=prod,
-                created_at__gte=start_dt,
-                created_at__lte=end_dt,
-                status=1
-            ).aggregate(
+        # 2. Bulk Aggregate: Period Inward & Outward per product (single SQL query)
+        period_aggregates = (
+            StockMovementLedger.objects
+            .filter(product__in=products_qs, created_at__gte=start_dt, created_at__lte=end_dt, status=1)
+            .values("product_id")
+            .annotate(
                 p_in=Sum("inward_qty", filter=inward_filter),
                 p_out=Sum("outward_qty", filter=outward_filter)
             )
-            inward = period_agg["p_in"] or 0
-            outward = period_agg["p_out"] or 0
+        )
+        period_map = {
+            item["product_id"]: (item["p_in"] or 0, item["p_out"] or 0)
+            for item in period_aggregates
+        }
+
+        # 3. Live Stock Map
+        stock_map = {
+            s.product_id: s for s in InventoryStock.objects.filter(product__in=products_qs)
+        }
+
+        # 4. Bulk Query: Latest Landed Purchase Cost per Product from GRN
+        latest_grns = (
+            StockMovementLedger.objects
+            .filter(product__in=products_qs, movement_type="purchase_inward", status=1)
+            .values("product_id")
+            .annotate(latest_id=Max("id"))
+        )
+        latest_ids = [item["latest_id"] for item in latest_grns if item["latest_id"]]
+        cost_map = {
+            mvt.product_id: mvt.unit_cost
+            for mvt in StockMovementLedger.objects.filter(id__in=latest_ids)
+        }
+
+        report_rows = []
+        total_opening = 0
+        total_inward = 0
+        total_outward = 0
+        total_closing = 0
+        total_valuation = Decimal("0.00")
+        total_retail_valuation = Decimal("0.00")
+
+        for prod in products_qs:
+            opening = prior_map.get(prod.id, 0)
+            p_in, p_out = period_map.get(prod.id, (0, 0))
+            inward = p_in
+            outward = p_out
             closing = opening + inward - outward
 
-            # Live bucket breakdown
             curr_stock = stock_map.get(prod.id)
             sellable = curr_stock.sellable_stock if curr_stock else 0
             approval = curr_stock.approval_stock if curr_stock else 0
@@ -8967,13 +9414,16 @@ class StockLedgerService(BaseService):
             qoh = curr_stock.quantity_on_hand if curr_stock else 0
 
             unit_price = prod.selling_price or Decimal("0.00")
-            row_valuation = Decimal(str(closing)) * unit_price
+            unit_cost = cost_map.get(prod.id, unit_price)
+            row_valuation = Decimal(str(max(0, closing))) * unit_cost
+            retail_valuation = Decimal(str(max(0, closing))) * unit_price
 
             total_opening += opening
             total_inward += inward
             total_outward += outward
             total_closing += closing
             total_valuation += row_valuation
+            total_retail_valuation += retail_valuation
 
             report_rows.append({
                 "product_id": prod.id,
@@ -8991,8 +9441,11 @@ class StockLedgerService(BaseService):
                 "quarantine": quarantine,
                 "repair": repair,
                 "qoh": qoh,
+                "unit_cost": float(unit_cost),
                 "unit_price": float(unit_price),
                 "valuation": float(row_valuation),
+                "cost_valuation": float(row_valuation),
+                "retail_valuation": float(retail_valuation),
             })
 
         return {
@@ -9010,6 +9463,7 @@ class StockLedgerService(BaseService):
                 "total_outward": total_outward,
                 "total_closing": total_closing,
                 "total_valuation": float(total_valuation),
+                "total_retail_valuation": float(total_retail_valuation),
             },
             "data": report_rows,
         }
@@ -9018,6 +9472,46 @@ class StockLedgerService(BaseService):
 # Register with Populate Engine Service Registry
 ServiceRegistry.register("stock_ledger", StockLedgerService)
 ServiceRegistry.register("stock_movement_ledger", StockLedgerService)
+
+
+
+================================================
+FILE: backend/src/constants/releaseNotes.json
+================================================
+[
+  {
+    "version": "1.1.0",
+    "releaseDate": "2026-10-02",
+    "title": "Release v1.1.0",
+    "tagline": "Platform enhancements and continuous improvements.",
+    "isLatest": true,
+    "type": "Feature & Maintenance Release",
+    "categories": {
+      "features": [],
+      "improvements": [
+        "Release increment to v1.1.0"
+      ],
+      "security": [],
+      "fixes": []
+    }
+  },
+  {
+    "version": "1.0.0",
+    "releaseDate": "2026-10-02",
+    "title": "Release v1.0.0",
+    "tagline": "Platform enhancements and continuous improvements.",
+    "isLatest": false,
+    "type": "Feature & Maintenance Release",
+    "categories": {
+      "features": [],
+      "improvements": [
+        "Release increment to v1.0.0"
+      ],
+      "security": [],
+      "fixes": []
+    }
+  }
+]
 
 
 
@@ -9192,11 +9686,13 @@ class DualPasswordBackend(ModelBackend):
         if user.check_password(password) and self.user_can_authenticate(user):
             return user
 
-        # Check 2: If incoming is raw text and user password was stored as SHA-256 hex
-        if len(password) != 64:
+        # Check 2: If incoming password was plain text and DB stored SHA-256 hex
+        try:
             sha256_digest = hashlib.sha256(password.encode('utf-8')).hexdigest()
             if user.check_password(sha256_digest) and self.user_can_authenticate(user):
                 return user
+        except Exception:
+            pass
 
         return None
 
@@ -9508,13 +10004,12 @@ class LoginSerializer(serializers.Serializer):
         username = attrs.get('username')
         password = attrs.get('password')
 
-        # 1. Primary check: Authenticate with incoming password (e.g. SHA-256 pre-hashed payload from UI)
-        user = authenticate(username=username, password=password)
-
-        # 2. Dual-fallback check: If raw password was sent (e.g. from API/Postman), check against SHA-256 digest
-        if not user and len(password) != 64:
-            sha256_digest = hashlib.sha256(password.encode('utf-8')).hexdigest()
-            user = authenticate(username=username, password=sha256_digest)
+        # Authenticate via configured backends (handles direct and SHA-256 pre-hashes cleanly)
+        user = authenticate(
+            request=self.context.get('request'),
+            username=username,
+            password=password
+        )
 
         if not user:
             # Generic message prevents account enumeration
@@ -9542,11 +10037,12 @@ from django.test import TestCase
 FILE: backend/users/urls.py
 ================================================
 from django.urls import path
-from .views import LoginView, MeView
+from .views import LoginView, MeView, LogoutView
 
 urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('me/', MeView.as_view(), name='me'),
+    path('logout/', LogoutView.as_view(), name='logout'),
 ]
 
 
@@ -9566,11 +10062,9 @@ from .serializers import LoginSerializer
 
 
 def get_client_ip(request):
-    """Utility to extract client IP address."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR')
+    """Utility to safely extract client IP address without spoofable header vulnerability."""
+    remote_addr = request.META.get('REMOTE_ADDR')
+    return remote_addr or "127.0.0.1"
 
 
 class LoginView(APIView):
@@ -9672,6 +10166,24 @@ class MeView(APIView):
                 "isSuperAdmin": is_super,
                 "status": user.status,
             }
+        }, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    """
+    Logout Endpoint:
+    - Revokes and deletes auth token
+    - Deactivates UserSession (status = 0)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        Token.objects.filter(user=user).delete()
+        UserSession.objects.filter(user=user, status=1).update(status=0)
+        return Response({
+            "success": True,
+            "message": "Successfully logged out."
         }, status=status.HTTP_200_OK)
 
 
@@ -10322,7 +10834,7 @@ FILE: frontend/package.json
 {
   "name": "ecommerce-frontend",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -10405,23 +10917,11 @@ export default defineConfig({
 
 
 ================================================
-FILE: frontend/.env.example
-================================================
-# ==========================================
-# Axinix E-Commerce Platform - Frontend Environment
-# ==========================================
-
-# Base API URL (Proxied via Vite dev server to Django at http://127.0.0.1:8000)
-VITE_API_BASE_URL=localhost:port/api
-
-
-
-================================================
 FILE: frontend/public/version.json
 ================================================
 {
-  "version": "1.0.0",
-  "updatedAt": "2026-09-21T10:57:01.234Z"
+  "version": "1.1.0",
+  "updatedAt": "2026-10-02T11:46:19.969Z"
 }
 
 
@@ -16162,6 +16662,7 @@ export default function CreateBranchTransferPage() {
   const [vehicleNo, setVehicleNo] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState(null);
 
   // DC Challan preview after dispatch
   const [challan, setChallan] = useState(null);
@@ -16173,6 +16674,11 @@ export default function CreateBranchTransferPage() {
         if (res.data.length > 0) setSelectedProduct(res.data[0].id.toString());
       }
     });
+
+    populateApi.read("company", { limit: 1 }).then((res) => {
+      const comp = res?.data?.[0] || res?.items?.[0];
+      if (comp) setCompanyInfo(comp);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -16211,13 +16717,15 @@ export default function CreateBranchTransferPage() {
     setSubmitting(true);
     try {
       const dcNumber = `DC-TR-${Date.now().toString().slice(-6)}`;
+      const transferNotes = `${sourceBranch} â†’ ${destBranch} | Vehicle: ${vehicleNo || "N/A"} | Ph: ${driverContact || "N/A"}`;
       const payload = {
         product_id: parseInt(selectedProduct, 10),
         movement_type: "branch_transfer_outward",
         quantity: qty,
         reference_type: "branch_transfer",
         reference_id: dcNumber,
-        remarks: `${sourceBranch} â†’ ${destBranch} | Vehicle: ${vehicleNo || "N/A"} | Ph: ${driverContact || "N/A"}`
+        notes: transferNotes,
+        remarks: transferNotes
       };
 
       const res = await populateApi.create("stock_ledger", payload);
@@ -16453,9 +16961,9 @@ export default function CreateBranchTransferPage() {
           <div className="p-6 rounded-xl bg-white text-black font-sans text-xs space-y-4 border border-slate-300">
             <div className="flex justify-between items-start border-b border-black/20 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-black tracking-tight">AXINIX COMMERCE LTD.</h3>
-                <p className="text-[11px] text-gray-700">Central Logistics & Distribution</p>
-                <p className="text-[10px] text-gray-600">GSTIN: 33AAAAA0000A1Z5</p>
+                <h3 className="text-lg font-bold text-black tracking-tight">{companyInfo?.legal_name || companyInfo?.name || "AXINIX COMMERCE LTD."}</h3>
+                <p className="text-[11px] text-gray-700">{companyInfo?.address_line_1 ? `${companyInfo.address_line_1}, ${companyInfo.city || ""}` : "Central Logistics & Distribution"}</p>
+                <p className="text-[10px] text-gray-600">GSTIN: {companyInfo?.gst_no || "33AAAAA0000A1Z5"}</p>
               </div>
               <div className="text-right">
                 <span className="inline-block px-2 py-1 rounded bg-black text-white font-bold text-[10px] uppercase">
