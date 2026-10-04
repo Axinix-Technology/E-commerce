@@ -27,16 +27,14 @@ DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
-# Render cloud deployment auto-detection & domain support
+# Render & Vercel cloud deployment auto-detection & domain support
 render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if render_hostname and render_hostname not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(render_hostname)
 
-if '.onrender.com' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append('.onrender.com')
-
-if 'e-commerce-dpyc.onrender.com' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append('e-commerce-dpyc.onrender.com')
+for host in ('.onrender.com', 'e-commerce-dpyc.onrender.com', '.vercel.app', 'e-commerce-iota-one-32.vercel.app'):
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
 if DEBUG and '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('*')
@@ -45,15 +43,17 @@ if DEBUG and '*' not in ALLOWED_HOSTS:
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in os.getenv(
         'CSRF_TRUSTED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,https://*.onrender.com'
+        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,https://*.onrender.com,https://*.vercel.app'
     ).split(',') if origin.strip()
 ]
 if render_hostname:
     https_render = f"https://{render_hostname}"
     if https_render not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(https_render)
-if 'https://e-commerce-dpyc.onrender.com' not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append('https://e-commerce-dpyc.onrender.com')
+
+for origin in ('https://e-commerce-dpyc.onrender.com', 'https://e-commerce-iota-one-32.vercel.app'):
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 
 # Application definition
@@ -259,7 +259,28 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_ALL_ORIGINS = DEBUG or os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 't')
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,https://e-commerce-iota-one-32.vercel.app,https://e-commerce-dpyc.onrender.com'
+    ).split(',') if origin.strip()
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+    r"^https://.*\.onrender\.com$",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+from corsheaders.defaults import default_headers, default_methods
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'authorization',
+    'x-token',
+]
+CORS_ALLOW_METHODS = list(default_methods)
 
 
 # Django REST Framework Configuration
