@@ -133,3 +133,37 @@ class AccessPolicy(models.Model):
 
     def __str__(self):
         return f"Policy: Role #{self.role_id} -> {self.model_name}"
+
+
+@register_model("audit_log", table_type="system", aliases=["audit_logs", "activity_log"])
+class AuditLog(models.Model):
+    """
+    System activity and mutation audit log.
+    Tracks user actions, target entities, IP addresses, and state changes.
+    """
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs"
+    )
+    user_name = models.CharField(max_length=150, blank=True, null=True)
+    action = models.CharField(max_length=50, db_index=True, help_text="CREATE, UPDATE, DELETE, LOGIN, EXPORT, PRINT")
+    entity = models.CharField(max_length=100, db_index=True, help_text="e.g. product, sale, customer, barcode, setting")
+    entity_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    details = models.TextField(blank=True, null=True)
+    changes = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "audit_logs"
+        verbose_name = "Audit Log"
+        verbose_name_plural = "Audit Logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.action} on {self.entity} #{self.entity_id} by {self.user_name or 'System'}"
+

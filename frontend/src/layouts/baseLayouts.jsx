@@ -49,9 +49,14 @@ export default function BaseLayout() {
   }
 
   const isAuthPage = location.pathname === "/login";
+  const isPublicStorefront =
+    location.pathname.startsWith("/shopping") ||
+    location.pathname.startsWith("/customer-account") ||
+    location.pathname.startsWith("/help-policies") ||
+    location.pathname.startsWith("/useful-additions");
 
-  // Redirect unauthenticated requests to login
-  if (!user && !isAuthPage) {
+  // Redirect unauthenticated requests to login (except auth page & public storefront pages)
+  if (!user && !isAuthPage && !isPublicStorefront) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

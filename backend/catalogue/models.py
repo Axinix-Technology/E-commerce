@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from core.registry import register_model
 
 
@@ -253,6 +254,14 @@ class CustomerMaster(models.Model):
         ("b2b", "Registered Business (B2B)"),
     ]
     customer_type = models.CharField(max_length=10, choices=CUSTOMER_TYPES, default="b2c")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="customer_profiles",
+        verbose_name="Linked User Account"
+    )
     name = models.CharField(max_length=150, verbose_name="Customer / Business Name")
     phone = models.CharField(max_length=20, db_index=True, verbose_name="Phone Number")
     email = models.EmailField(max_length=120, blank=True, null=True, verbose_name="Email Address")
@@ -292,6 +301,117 @@ class CustomerMaster(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.phone})"
+
+
+@register_model("material_master", table_type="master", status_field="status", aliases=["materials", "material"])
+class MaterialMaster(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Inactive")]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Material / Fabric Name")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Material Code")
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    care_instructions = models.TextField(blank=True, null=True, verbose_name="Care Instructions")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "material_masters"
+        verbose_name = "Material Master"
+        verbose_name_plural = "Material Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+@register_model("design_master", table_type="master", status_field="status", aliases=["designs", "design"])
+class DesignMaster(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Inactive")]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Design / Pattern Name")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Design Code")
+    pattern_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="Pattern Type")
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "design_masters"
+        verbose_name = "Design Master"
+        verbose_name_plural = "Design Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+@register_model("brand_master", table_type="master", status_field="status", aliases=["brands", "brand"])
+class BrandMaster(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Inactive")]
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Brand Name")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Brand Code")
+    logo_url = models.URLField(max_length=300, blank=True, null=True, verbose_name="Logo URL")
+    website = models.URLField(max_length=255, blank=True, null=True, verbose_name="Website")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "brand_masters"
+        verbose_name = "Brand Master"
+        verbose_name_plural = "Brand Masters"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+@register_model("size_master", table_type="master", status_field="status", aliases=["sizes", "size"])
+class SizeMaster(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Inactive")]
+
+    name = models.CharField(max_length=50, verbose_name="Size Name / Label")
+    code = models.CharField(max_length=50, verbose_name="Size Code")
+    category_type = models.CharField(max_length=50, default="Apparel", verbose_name="Category / Segment")
+    sort_order = models.IntegerField(default=0, verbose_name="Sort Order")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "size_masters"
+        verbose_name = "Size Master"
+        verbose_name_plural = "Size Masters"
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.category_type})"
+
+
+@register_model("age_group_master", table_type="master", status_field="status", aliases=["age_groups", "age_group"])
+class AgeGroupMaster(models.Model):
+    STATUS_CHOICES = [(1, "Active"), (0, "Inactive")]
+
+    name = models.CharField(max_length=80, unique=True, verbose_name="Age Group Name")
+    min_age = models.IntegerField(default=0, verbose_name="Minimum Age (Years)")
+    max_age = models.IntegerField(default=100, verbose_name="Maximum Age (Years)")
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    status = models.SmallIntegerField(default=1, choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "age_group_masters"
+        verbose_name = "Age Group Master"
+        verbose_name_plural = "Age Group Masters"
+        ordering = ["min_age"]
+
+    def __str__(self):
+        return f"{self.name} ({self.min_age}-{self.max_age} yrs)"
+
 
 
 

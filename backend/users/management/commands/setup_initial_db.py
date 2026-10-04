@@ -93,15 +93,44 @@ class Command(BaseCommand):
             user.first_name = first_name
             user.last_name = last_name
             user.save()
-
             token, _ = Token.objects.get_or_create(user=user)
 
+            # Also provision default UI admin user ('admin' / 'Admin@123456')
+            admin_user, _ = User.objects.get_or_create(
+                username="admin",
+                defaults={
+                    "email": "admin@axinix.com",
+                    "first_name": "Super",
+                    "last_name": "Admin",
+                    "role": super_admin_role,
+                    "is_staff": True,
+                    "is_superuser": True,
+                    "status": 1,
+                }
+            )
+            admin_sha256 = hashlib.sha256("Admin@123456".encode("utf-8")).hexdigest()
+            admin_user.set_password(admin_sha256)
+            admin_user.role = super_admin_role
+            admin_user.is_staff = True
+            admin_user.is_superuser = True
+            admin_user.status = 1
+            admin_user.save()
+            Token.objects.get_or_create(user=admin_user)
+
+        # 3. Seed Statutory GST States
+        self.stdout.write("\n[3/4] Seeding Statutory GST States & Union Territories...")
+        from django.core.management import call_command
+        call_command("seed_states", stdout=self.stdout)
+
+        # 4. Seed Dynamic Sidebars & Capabilities
+        self.stdout.write("\n[4/4] Seeding Master Navigation Sidebars & Capabilities...")
+        call_command("seed_navigation", stdout=self.stdout)
+
         self.stdout.write(self.style.SUCCESS("\n" + "=" * 60))
-        self.stdout.write(self.style.SUCCESS(" SUCCESS: Initial setup completed successfully!"))
+        self.stdout.write(self.style.SUCCESS(" SUCCESS: Full platform setup & seeding completed!"))
         self.stdout.write(self.style.SUCCESS("=" * 60))
-        self.stdout.write(f"  Username   : {username}")
-        self.stdout.write(f"  Password   : {password}")
-        self.stdout.write(f"  Email      : {email}")
-        self.stdout.write(f"  Role       : {user.role.name} (Super Admin: {user.role.is_superadmin})")
-        self.stdout.write(f"  Auth Token : {token.key}")
+        self.stdout.write(f"  Super Admin 1 : {username} / {password}")
+        self.stdout.write(f"  Super Admin 2 : admin / Admin@123456")
+        self.stdout.write(f"  Auth Token    : {token.key}")
         self.stdout.write(self.style.SUCCESS("=" * 60 + "\n"))
+
