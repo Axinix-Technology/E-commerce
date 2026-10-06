@@ -40,7 +40,7 @@ export default function Button({
     ghost:
       "bg-transparent hover:bg-surface-elevated text-secondary-token hover:text-primary-token",
     danger:
-      "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20",
+      "bg-rose-500/10 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/30",
   };
 
   const ActiveIcon = Icon || LeftIcon;

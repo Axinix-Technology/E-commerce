@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Ruler, Plus, Search, Edit2 } from "lucide-react";
+import { Ruler, Plus, RefreshCw, Edit2 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import { formatQty } from "../../../utils/formatters";
-import { Button, Input, Table, Badge } from "../../../components/ui";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function SizesIndex() {
   const [sizes, setSizes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [segmentFilter, setSegmentFilter] = useState("all");
 
   const fetchSizes = async () => {
     setLoading(true);
@@ -33,11 +35,25 @@ export default function SizesIndex() {
     fetchSizes();
   }, []);
 
-  const filtered = sizes.filter((s) =>
-    (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.code || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.category_type || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const segmentOptions = [
+    { label: "All Segments", value: "all" },
+    ...Array.from(new Set(sizes.map((s) => s.category_type).filter(Boolean))).map((seg) => ({
+      label: seg,
+      value: seg,
+    })),
+  ];
+
+  const filtered = sizes.filter((s) => {
+    if (statusFilter !== "all" && String(s.status) !== statusFilter) return false;
+    if (segmentFilter !== "all" && s.category_type !== segmentFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (s.name || "").toLowerCase().includes(term) ||
+      (s.code || "").toLowerCase().includes(term) ||
+      (s.category_type || "").toLowerCase().includes(term)
+    );
+  });
 
   const columns = [
     {
@@ -112,16 +128,48 @@ export default function SizesIndex() {
         <span>Variant Generation: <strong className="text-brand-token font-medium">Matrix Ready</strong></span>
       </div>
 
-      {/* Search Input Bar */}
-      <div className="w-full sm:max-w-md">
-        <Input
-          icon={Search}
-          placeholder="Search by size label, code, or category..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onClear={() => setSearch("")}
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search size by label, code, or category..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Active", value: "1" },
+                { label: "Inactive", value: "0" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={segmentFilter}
+              onChange={(e) => setSegmentFilter(e.target.value)}
+              options={segmentOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setStatusFilter("all");
+          setSegmentFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchSizes}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
       {/* Reusable Data Table */}
       <Table

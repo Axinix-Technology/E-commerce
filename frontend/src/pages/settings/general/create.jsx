@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Sliders } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Checkbox } from "../../../components/ui";
 
 export default function GeneralSettingsCreate() {
   const navigate = useNavigate();
@@ -18,137 +19,126 @@ export default function GeneralSettingsCreate() {
   });
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
       toast.success("General settings successfully saved and deployed!");
       navigate("/settings/general");
-    }, 600);
+    }, 400);
   };
 
   return (
     <div className="max-w-2xl space-y-4">
+      {/* Top Header */}
       <div className="flex items-center gap-3">
-        <Link to="/settings/general" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/settings/general"
+          className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Sliders className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Sliders className="w-5 h-5 text-brand-token" />
             Configure System Defaults
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Adjust store prefixes, memo durations, and automated threshold alerts</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Adjust store prefixes, memo durations, and automated threshold alerts
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Store Currency</label>
-            <input
-              type="text"
-              required
-              value={form.currency}
-              onChange={(e) => setForm({ ...form, currency: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-4 shadow-xs"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Store Currency"
+            required
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Timezone</label>
-            <select
-              value={form.timezone}
-              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="Asia/Kolkata">Asia/Kolkata (IST +5:30)</option>
-              <option value="UTC">UTC (Universal Coordinated Time)</option>
-            </select>
-          </div>
+          <Select
+            label="Timezone"
+            value={form.timezone}
+            onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+            options={[
+              { label: "Asia/Kolkata (IST +5:30)", value: "Asia/Kolkata" },
+              { label: "UTC (Universal Coordinated Time)", value: "UTC" },
+            ]}
+          />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Invoice Prefix</label>
-            <input
-              type="text"
-              required
-              value={form.invoice_prefix}
-              onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Invoice Prefix"
+            required
+            fieldType="code"
+            value={form.invoice_prefix}
+            onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value.toUpperCase() })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Barcode Prefix</label>
-            <input
-              type="text"
-              required
-              value={form.barcode_prefix}
-              onChange={(e) => setForm({ ...form, barcode_prefix: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Barcode Tag Prefix"
+            required
+            fieldType="code"
+            value={form.barcode_prefix}
+            onChange={(e) => setForm({ ...form, barcode_prefix: e.target.value.toUpperCase() })}
+          />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Stock Memo Return Limit (Days)</label>
-            <input
-              type="number"
-              min="1"
-              value={form.stock_memo_validity_days}
-              onChange={(e) => setForm({ ...form, stock_memo_validity_days: parseInt(e.target.value) || 14 })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Stock Memo Validity (Days)"
+            type="number"
+            min="1"
+            value={form.stock_memo_validity_days}
+            onChange={(e) => setForm({ ...form, stock_memo_validity_days: Number(e.target.value) })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Low Stock Warning Threshold (Units)</label>
-            <input
-              type="number"
-              min="0"
-              value={form.low_stock_threshold}
-              onChange={(e) => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) || 5 })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Low Stock Warning Threshold (Pcs)"
+            type="number"
+            min="1"
+            value={form.low_stock_threshold}
+            onChange={(e) => setForm({ ...form, low_stock_threshold: Number(e.target.value) })}
+          />
         </div>
 
-        <div className="space-y-2 pt-2 border-t border-border/30">
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-text-secondary">
-            <input
-              type="checkbox"
-              checked={form.whatsapp_receipts}
-              onChange={(e) => setForm({ ...form, whatsapp_receipts: e.target.checked })}
-              className="rounded border-border text-accent-primary focus:ring-accent-primary"
-            />
-            Send digital e-invoices via WhatsApp automatically on counter sale completion
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-text-secondary">
-            <input
-              type="checkbox"
-              checked={form.auto_backup}
-              onChange={(e) => setForm({ ...form, auto_backup: e.target.checked })}
-              className="rounded border-border text-accent-primary focus:ring-accent-primary"
-            />
-            Enable automated nightly database backups to secure cold storage
-          </label>
+        <div className="pt-2 border-t border-token space-y-3">
+          <Checkbox
+            label="Automated Database Backup"
+            description="Run automatic compressed database dump at 02:00 AM IST daily"
+            checked={form.auto_backup}
+            onChange={(e) => setForm({ ...form, auto_backup: e.target.checked })}
+          />
+
+          <Checkbox
+            label="Instant WhatsApp Digital Receipts"
+            description="Send e-invoice PDF link to customer mobile phone after checkout"
+            checked={form.whatsapp_receipts}
+            onChange={(e) => setForm({ ...form, whatsapp_receipts: e.target.checked })}
+          />
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/settings/general" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
+        <div className="flex justify-end gap-2.5 pt-3 border-t border-token">
+          <Link to="/settings/general">
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
+            onClick={handleSubmit}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Save Preferences"}
-          </button>
+            Save Defaults
+          </Button>
         </div>
       </form>
     </div>

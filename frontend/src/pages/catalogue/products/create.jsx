@@ -4,12 +4,11 @@ import {
   ArrowLeft,
   Package,
   Save,
-  Tag,
-  IndianRupee,
-  ShieldCheck
+  Tag
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function ProductFormPage() {
   const navigate = useNavigate();
@@ -148,7 +147,7 @@ export default function ProductFormPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/catalogue/products"
-            className="p-2 rounded-xl bg-surface-elevated hover:bg-surface border border-token text-secondary-token hover:text-primary-token transition-colors"
+            className="p-2 rounded-xl bg-surface-elevated/40 hover:bg-surface-elevated/80 border border-token text-muted-token hover:text-primary-token transition-colors"
             title="Back to Products"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -158,7 +157,7 @@ export default function ProductFormPage() {
               <span>Catalogue Master</span>
               <span>/</span>
               <Link to="/catalogue/products" className="hover:text-primary-token">
-                Product
+                Products
               </Link>
               <span>/</span>
               <span className="text-brand-token font-medium">
@@ -172,27 +171,31 @@ export default function ProductFormPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/catalogue/products"
-            className="px-4 py-2 rounded-xl border border-token hover:bg-surface-elevated text-secondary-token text-xs font-semibold transition-colors"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/products")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
             onClick={handleSubmit}
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Product"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Create Product"}
+          </Button>
         </div>
       </div>
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Core Product Information Card */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        {/* Core Product Information */}
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <Package className="w-4 h-4 text-brand-token" />
@@ -203,100 +206,68 @@ export default function ProductFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Product Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Classic Oxford Shoes, Organic Cotton T-Shirt"
-                value={formData.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Product Name"
+              required
+              placeholder="e.g. Classic Oxford Shoes, Organic Cotton T-Shirt"
+              value={formData.name}
+              onChange={(e) => handleNameChange(e.target.value)}
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                URL Slug / Key <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="classic-oxford-shoes"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Category <span className="text-rose-400">*</span>
-              </label>
-              <select
-                required
-                value={formData.category_id}
-                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              >
-                <option value="">— Select Category —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Brand / Label</label>
-              <input
-                type="text"
-                placeholder="e.g. Nike, Raymond, Loigmax"
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Selling Price / M.R.P. (₹)
-              </label>
-              <div className="relative">
-                <span className="text-xs font-mono text-muted-token absolute left-3 top-1/2 -translate-y-1/2">₹</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.selling_price}
-                  onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                  className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-surface-elevated border border-token text-xs text-primary-token font-mono font-semibold focus:outline-none focus:border-[var(--brand-secondary)] transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-secondary-token mb-1.5">Description</label>
-            <textarea
-              rows="3"
-              placeholder="Marketing highlights, product overview, and merchandising copy..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs resize-none"
+            <Input
+              label="URL Slug / Key"
+              required
+              placeholder="classic-oxford-shoes"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
             />
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Select
+              label="Category"
+              required
+              value={formData.category_id}
+              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+              options={[
+                { value: "", label: "— Select Category —" },
+                ...categories.map((c) => ({
+                  value: String(c.id),
+                  label: c.name,
+                })),
+              ]}
+            />
+
+            <Input
+              label="Brand / Label"
+              placeholder="e.g. Nike, Raymond, Loigmax"
+              value={formData.brand}
+              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            />
+
+            <Input
+              label="Selling Price / M.R.P. (₹)"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={formData.selling_price}
+              onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+            />
+          </div>
+
+          <Textarea
+            label="Description"
+            rows={3}
+            placeholder="Marketing highlights, product overview, and merchandising copy..."
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
         </div>
 
-        {/* Specifications & Attributes Card */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        {/* Specifications & Attributes */}
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <Tag className="w-4 h-4 text-brand-token" />
@@ -307,83 +278,68 @@ export default function ProductFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Material Composition</label>
-              <input
-                type="text"
-                placeholder="e.g. 100% Genuine Leather, Pure Cotton"
-                value={formData.material}
-                onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="Material Composition"
+              placeholder="e.g. 100% Genuine Leather, Pure Cotton"
+              value={formData.material}
+              onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Gender Label</label>
-              <input
-                type="text"
-                placeholder="e.g. Men, Women, Unisex, Boys"
-                value={formData.gender_label}
-                onChange={(e) => setFormData({ ...formData, gender_label: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
+            <Input
+              label="Gender Label"
+              placeholder="e.g. Men, Women, Unisex, Boys"
+              value={formData.gender_label}
+              onChange={(e) => setFormData({ ...formData, gender_label: e.target.value })}
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Age Group</label>
-              <input
-                type="text"
-                placeholder="e.g. Adult, Teens, Kids, Infant"
-                value={formData.age_group}
-                onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
+            <Input
+              label="Age Group"
+              placeholder="e.g. Adult, Teens, Kids, Infant"
+              value={formData.age_group}
+              onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Care Instructions</label>
-              <input
-                type="text"
-                placeholder="e.g. Machine wash cold, dry clean only"
-                value={formData.care_instructions}
-                onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Care Instructions"
+              placeholder="e.g. Machine wash cold, dry clean only"
+              value={formData.care_instructions}
+              onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })}
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              >
-                <option value={1}>Active (Available for Catalogue)</option>
-                <option value={0}>Inactive (Archived)</option>
-              </select>
-            </div>
+            <Select
+              label="Status"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
+              options={[
+                { value: 1, label: "Active (Available for Catalogue)" },
+                { value: 0, label: "Inactive (Archived)" },
+              ]}
+            />
           </div>
         </div>
 
         {/* Bottom Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link
-            to="/catalogue/products"
-            className="px-5 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/products")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Product"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Create Product"}
+          </Button>
         </div>
       </form>
     </div>

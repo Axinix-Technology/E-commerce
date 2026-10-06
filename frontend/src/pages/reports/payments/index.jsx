@@ -2,34 +2,20 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   CreditCard,
-  Search,
-  RefreshCw,
   Download,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownLeft,
-  DollarSign
+  RefreshCw,
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Select, Table, Badge, FilterBar } from "../../../components/ui";
 
 export default function PaymentsReportPage() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   const [metrics, setMetrics] = useState({
     totalInflow: 0,
@@ -53,43 +39,38 @@ export default function PaymentsReportPage() {
         sort: ["-transacted_at"],
       });
 
-      if (res?.data) {
-        let list = res.data;
-        if (methodFilter !== "all") {
-          list = list.filter((p) => p.payment_method === methodFilter);
-        }
-        setPayments(list);
+      const dataList = Array.isArray(res) ? res : res?.data || [];
+      setPayments(dataList);
 
-        const inflow = list
-          .filter((p) => p.transaction_type === "payment")
-          .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-        const refunds = list
-          .filter((p) => p.transaction_type === "refund")
-          .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const inflow = dataList
+        .filter((p) => p.transaction_type === "payment")
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const refunds = dataList
+        .filter((p) => p.transaction_type === "refund")
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-        const cash = list
-          .filter((p) => p.payment_method === "cash")
-          .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
-        const upi = list
-          .filter((p) => p.payment_method === "upi")
-          .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
-        const card = list
-          .filter((p) => p.payment_method === "card")
-          .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
-        const bank = list
-          .filter((p) => p.payment_method === "bank_transfer")
-          .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
+      const cash = dataList
+        .filter((p) => p.payment_method === "cash")
+        .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
+      const upi = dataList
+        .filter((p) => p.payment_method === "upi")
+        .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
+      const card = dataList
+        .filter((p) => p.payment_method === "card")
+        .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
+      const bank = dataList
+        .filter((p) => p.payment_method === "bank_transfer")
+        .reduce((sum, p) => sum + (p.transaction_type === "payment" ? Number(p.amount) : -Number(p.amount)), 0);
 
-        setMetrics({
-          totalInflow: inflow,
-          totalRefunds: refunds,
-          netIntake: inflow - refunds,
-          cashTotal: cash,
-          upiTotal: upi,
-          cardTotal: card,
-          bankTotal: bank,
-        });
-      }
+      setMetrics({
+        totalInflow: inflow,
+        totalRefunds: refunds,
+        netIntake: inflow - refunds,
+        cashTotal: cash,
+        upiTotal: upi,
+        cardTotal: card,
+        bankTotal: bank,
+      });
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Failed to load payments report");
     } finally {
@@ -99,173 +80,197 @@ export default function PaymentsReportPage() {
 
   useEffect(() => {
     fetchPayments();
-  }, [methodFilter]);
+  }, []);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setMethodFilter("all");
+    setTypeFilter("all");
+  };
+
+  const filtered = payments.filter((p) => {
+    const matchesSearch =
+      (p.reference_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.sale?.sale_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.customer?.name || p.sale?.customer_name || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesMethod = methodFilter === "all" || p.payment_method === methodFilter;
+    const matchesType = typeFilter === "all" || p.transaction_type === typeFilter;
+
+    return matchesSearch && matchesMethod && matchesType;
+  });
 
   const handleExportCSV = () => {
-    const headers = "Reference #,Sale Number,Customer,Type,Method,Amount,Transacted At,Notes\n";
+    const headers = "Reference Number,Date,Type,Payment Method,Amount,Customer,Sale Number\n";
     const rows = payments
       .map(
         (p) =>
-          `"${p.reference_number || "—"}","${p.sale?.sale_number || "—"}","${p.customer?.name || "Guest"}","${p.transaction_type}","${p.payment_method}",${p.amount},"${p.transacted_at}","${p.notes || "—"}"`
+          `"${p.reference_number || `TX-${p.id}`}","${p.transacted_at}","${p.transaction_type}","${p.payment_method}",${p.amount},"${p.customer?.name || "—"}","${p.sale?.sale_number || "—"}"`
       )
       .join("\n");
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `payment_reconciliation_${methodFilter}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `payments-report-${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success("Payments CSV exported!");
   };
 
+  const columns = [
+    {
+      key: "reference_number",
+      header: "Reference # / Date",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val || `TX-${row.id}`}</span>
+          <span className="text-[10px] text-muted-token">
+            {row.transacted_at ? new Date(row.transacted_at).toLocaleString() : "—"}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "transaction_type",
+      header: "Type",
+      render: (val) =>
+        val === "refund" ? (
+          <Badge variant="rose" dot>Refund</Badge>
+        ) : (
+          <Badge variant="emerald" dot>Collection</Badge>
+        ),
+    },
+    {
+      key: "payment_method",
+      header: "Channel",
+      render: (val) => (
+        <Badge variant="neutral" className="uppercase font-mono text-[10px]">
+          {val || "CASH"}
+        </Badge>
+      ),
+    },
+    {
+      key: "customer",
+      header: "Customer / Order",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-primary-token">{val?.name || row.sale?.customer_name || "Walk-in Guest"}</span>
+          <span className="text-[10px] text-brand-token font-mono">{row.sale?.sale_number || "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount (₹)",
+      align: "right",
+      render: (val, row) => {
+        const isRefund = row.transaction_type === "refund";
+        return (
+          <span
+            className={`font-mono font-bold ${
+              isRefund ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"
+            }`}
+          >
+            {isRefund ? `-${formatCurrency(val)}` : `+${formatCurrency(val)}`}
+          </span>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CreditCard className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">Payment Reconciliation Report</h1>
-            <p className="text-xs text-text-muted">Reconciliation across Cash counter, UPI, POS cards, and net deposits</p>
-          </div>
+    <div className="space-y-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-brand-token" />
+            Treasury & Payments Reconciliation
+          </h1>
+          <p className="text-xs text-muted-token mt-0.5">
+            Audit store collections, UPI merchant payouts, and counter cash reserves
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-surface-card border border-border/60 rounded-xl px-2.5 py-1.5 text-xs">
-            <select
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-              className="bg-transparent text-text-primary text-xs focus:outline-none capitalize"
-            >
-              <option value="all">All Methods</option>
-              <option value="cash">Cash Only</option>
-              <option value="upi">UPI Only</option>
-              <option value="card">Card Only</option>
-              <option value="bank_transfer">Bank Transfer Only</option>
-            </select>
-          </div>
-
-          <button
-            onClick={fetchPayments}
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
-            title="Refresh Report"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <button
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Download}
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary text-xs font-medium transition-colors"
           >
-            <Download className="w-4 h-4" />
             Export CSV
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Inflow: <strong className="text-emerald-400 font-medium">{formatCurrency(metrics.totalInflow)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Gross Intake: <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(metrics.totalInflow)}</strong></span>
         <span>•</span>
-        <span>Refunds: <strong className="text-rose-400 font-medium">{formatCurrency(metrics.totalRefunds)}</strong></span>
+        <span>Refunds: <strong className="text-rose-700 dark:text-rose-400 font-medium">{formatCurrency(metrics.totalRefunds)}</strong></span>
         <span>•</span>
-        <span>Net Cash Flow: <strong className="text-emerald-400 font-semibold">{formatCurrency(metrics.netIntake)}</strong></span>
+        <span>Net Cashflow: <strong className="text-primary-token font-bold">{formatCurrency(metrics.netIntake)}</strong></span>
         <span>•</span>
-        <span>UPI Net: <strong className="text-text-primary font-medium">{formatCurrency(metrics.upiTotal)}</strong></span>
+        <span>UPI: <strong className="text-brand-token font-medium">{formatCurrency(metrics.upiTotal)}</strong></span>
         <span>•</span>
-        <span>Cash Net: <strong className="text-text-primary font-medium">{formatCurrency(metrics.cashTotal)}</strong></span>
-        <span>•</span>
-        <span>Card Net: <strong className="text-text-primary font-medium">{formatCurrency(metrics.cardTotal)}</strong></span>
+        <span>Cash: <strong className="text-secondary-token font-medium">{formatCurrency(metrics.cashTotal)}</strong></span>
       </div>
 
-      {/* Reconciliation Table */}
-      <div className="rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border/60 bg-surface-card/80 text-text-muted font-medium">
-                <th className="py-3 px-4">Ref / Voucher #</th>
-                <th className="py-3 px-4">Sale Order #</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Method</th>
-                <th className="py-3 px-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40 text-text-primary">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-text-muted">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                    Reconciling payment ledgers...
-                  </td>
-                </tr>
-              ) : payments.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-text-muted">
-                    No payment transactions found for this selection.
-                  </td>
-                </tr>
-              ) : (
-                payments.map((p) => {
-                  const isRefund = p.transaction_type === "refund";
-                  return (
-                    <tr key={p.id} className="hover:bg-white/[0.02]">
-                      <td className="py-3 px-4 font-mono font-medium text-text-primary">
-                        {p.reference_number || `TX-${p.id}`}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-primary">
-                        {p.sale?.sale_number ? (
-                          <Link to={`/sales/details?id=${p.sale.id}`} className="hover:underline">
-                            {p.sale.sale_number}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-text-primary font-medium">
-                        {p.customer?.name || p.sale?.customer_name || "Guest Customer"}
-                      </td>
-                      <td className="py-3 px-4 text-text-muted">
-                        {p.transacted_at ? new Date(p.transacted_at).toLocaleDateString() : "—"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            isRefund
-                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          }`}
-                        >
-                          {isRefund ? (
-                            <ArrowDownLeft className="w-3 h-3" />
-                          ) : (
-                            <ArrowUpRight className="w-3 h-3" />
-                          )}
-                          <span className="capitalize">{p.transaction_type}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 capitalize text-text-muted">
-                        {p.payment_method?.replace("_", " ")}
-                      </td>
-                      <td
-                        className={`py-3 px-4 text-right font-medium ${
-                          isRefund ? "text-rose-400" : "text-emerald-400"
-                        }`}
-                      >
-                        {isRefund ? `-${formatCurrency(p.amount)}` : formatCurrency(p.amount)}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search reference #, customer, or invoice..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={methodFilter}
+              onChange={(e) => setMethodFilter(e.target.value)}
+              options={[
+                { label: "All Payment Methods", value: "all" },
+                { label: "Cash on Counter", value: "cash" },
+                { label: "UPI Payments", value: "upi" },
+                { label: "Credit/Debit Cards", value: "card" },
+                { label: "Bank Transfer", value: "bank_transfer" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              options={[
+                { label: "All Transaction Types", value: "all" },
+                { label: "Sales Collections", value: "payment" },
+                { label: "Customer Refunds", value: "refund" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchPayments}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
+
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No payment records found matching your filter."
+      />
     </div>
   );
 }

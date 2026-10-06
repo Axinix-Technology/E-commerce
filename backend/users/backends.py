@@ -15,16 +15,19 @@ class DualPasswordBackend(ModelBackend):
         if username is None or password is None:
             return None
 
-        # Fallback for email-based login if username field isn't explicitly matched
+        # Fallback for case-insensitive username or email-based login
         user = None
         try:
             user = UserModel.objects.get_by_natural_key(username)
         except UserModel.DoesNotExist:
             try:
-                user = UserModel.objects.get(email__iexact=username)
+                user = UserModel.objects.get(username__iexact=username)
             except (UserModel.DoesNotExist, UserModel.MultipleObjectsReturned):
-                UserModel().set_password(password)
-                return None
+                try:
+                    user = UserModel.objects.get(email__iexact=username)
+                except (UserModel.DoesNotExist, UserModel.MultipleObjectsReturned):
+                    UserModel().set_password(password)
+                    return None
 
         if not user:
             return None

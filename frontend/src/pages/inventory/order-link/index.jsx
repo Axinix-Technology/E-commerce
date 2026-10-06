@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Link2, Plus, Search, Barcode, CheckCircle2, ShoppingBag } from "lucide-react";
+import { Link2, Plus, Unlink2, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -12,6 +13,8 @@ export default function OrderLinkIndex() {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [staffFilter, setStaffFilter] = useState("all");
 
   const fetchLinks = async () => {
     setLoading(true);
@@ -34,111 +37,174 @@ export default function OrderLinkIndex() {
     fetchLinks();
   }, []);
 
-  const filtered = links.filter((l) =>
-    (l.order_id || "").toLowerCase().includes(search.toLowerCase()) ||
-    (l.barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (l.sku || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const staffOptions = [
+    { label: "All Staff Members", value: "all" },
+    ...Array.from(new Set(links.map((l) => l.linked_by).filter(Boolean))).map((st) => ({
+      label: st,
+      value: st,
+    })),
+  ];
+
+  const filtered = links.filter((l) => {
+    if (statusFilter !== "all" && l.status !== statusFilter) return false;
+    if (staffFilter !== "all" && l.linked_by !== staffFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (l.order_id || "").toLowerCase().includes(term) ||
+      (l.barcode || "").toLowerCase().includes(term) ||
+      (l.sku || "").toLowerCase().includes(term)
+    );
+  });
+
+  const columns = [
+    {
+      header: "Sales Order #",
+      render: (l) => (
+        <span className="font-mono font-bold text-primary-token text-xs">
+          {l.order_id}
+        </span>
+      ),
+    },
+    {
+      header: "Bound Barcode",
+      render: (l) => (
+        <span className="font-mono font-medium text-brand-token text-xs">
+          {l.barcode}
+        </span>
+      ),
+    },
+    {
+      header: "SKU / Article",
+      render: (l) => (
+        <span className="font-mono text-xs text-secondary-token">
+          {l.sku || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Fulfillment Status",
+      render: (l) => (
+        <Badge variant={l.status === "Linked" ? "success" : "neutral"} size="sm">
+          {l.status}
+        </Badge>
+      ),
+    },
+    {
+      header: "Linked By",
+      accessor: "linked_by",
+      className: "text-muted-token text-xs",
+    },
+    {
+      header: "Timestamp",
+      render: (l) => (
+        <span className="text-[11px] text-muted-token font-mono">
+          {l.linked_at || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      render: (l) => (
+        <Link to={`/inventory/order-unlink/create?barcode=${encodeURIComponent(l.barcode)}`}>
+          <Button variant="ghost" size="sm" icon={Unlink2} title="Unlink Item" />
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-accent-primary" />
-            Order Barcode Linkage
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Bind physical inventory barcodes to customer sales orders for pick & pack fulfillment</p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Link2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight">
+              Order Barcode Linkage
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Bind physical inventory barcodes to customer sales orders for pick & pack fulfillment
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <Link
-            to="/inventory/order-unlink"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition"
-          >
-            Unlink Item
+          <Link to="/inventory/order-unlink">
+            <Button variant="secondary" size="sm" icon={Unlink2}>
+              Unlink Item
+            </Button>
           </Link>
-          <Link
-            to="/inventory/order-link/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Link Barcode
+          <Link to="/inventory/order-link/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Link Barcode
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Linked Barcodes: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Linked Line Items: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Order Bindings: <strong className="text-emerald-400 font-medium">Active</strong></span>
+        <span>Pick & Pack: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Active</strong></span>
         <span>•</span>
-        <span>Fulfillment Status: <strong className="text-accent-primary font-medium">Ready for Dispatch</strong></span>
+        <span>Order Association: <strong className="text-brand-token font-medium">100%</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by order ID, barcode, or SKU..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by order ID, barcode, or SKU..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Linked Items", value: "Linked" },
+                { label: "Dispatched", value: "Dispatched" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              options={staffOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setStatusFilter("all");
+          setStaffFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchLinks}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Order ID</th>
-                <th className="px-4 py-2.5">Barcode</th>
-                <th className="px-4 py-2.5">SKU</th>
-                <th className="px-4 py-2.5">Linked By</th>
-                <th className="px-4 py-2.5">Linked Date</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">Loading linked barcodes...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">No barcodes linked to orders yet.</td>
-                </tr>
-              ) : (
-                filtered.map((l) => (
-                  <tr key={l.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-semibold text-text-primary flex items-center gap-1.5">
-                      <ShoppingBag className="w-3.5 h-3.5 text-accent-primary" />
-                      {l.order_id}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-accent-primary">{l.barcode}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-secondary">{l.sku || "—"}</td>
-                    <td className="px-4 py-3 text-text-secondary">{l.linked_by || "System"}</td>
-                    <td className="px-4 py-3 text-text-muted">{l.linked_at || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        {l.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link to={`/inventory/order-unlink?barcode=${l.barcode}`} className="text-[11px] font-medium text-rose-400 hover:underline">
-                        Unlink
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No linked barcodes found for active sales orders."
+      />
     </div>
   );
 }

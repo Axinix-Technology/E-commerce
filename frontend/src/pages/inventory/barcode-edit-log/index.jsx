@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FileSpreadsheet, Download, Search, History } from "lucide-react";
+import { FileSpreadsheet, Download, RefreshCw, ArrowLeft } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -12,6 +13,8 @@ export default function BarcodeEditLogIndex() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [editorFilter, setEditorFilter] = useState("all");
+  const [reasonFilter, setReasonFilter] = useState("all");
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -33,12 +36,34 @@ export default function BarcodeEditLogIndex() {
     fetchLogs();
   }, []);
 
-  const filtered = logs.filter((l) =>
-    (l.original_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (l.new_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (l.sku || "").toLowerCase().includes(search.toLowerCase()) ||
-    (l.reason || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const editorOptions = [
+    { label: "All Editors", value: "all" },
+    ...Array.from(new Set(logs.map((l) => l.edited_by).filter(Boolean))).map((ed) => ({
+      label: ed,
+      value: ed,
+    })),
+  ];
+
+  const reasonOptions = [
+    { label: "All Reasons", value: "all" },
+    ...Array.from(new Set(logs.map((l) => l.reason).filter(Boolean))).map((r) => ({
+      label: r,
+      value: r,
+    })),
+  ];
+
+  const filtered = logs.filter((l) => {
+    if (editorFilter !== "all" && l.edited_by !== editorFilter) return false;
+    if (reasonFilter !== "all" && l.reason !== reasonFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (l.original_barcode || "").toLowerCase().includes(term) ||
+      (l.new_barcode || "").toLowerCase().includes(term) ||
+      (l.sku || "").toLowerCase().includes(term) ||
+      (l.reason || "").toLowerCase().includes(term)
+    );
+  });
 
   const exportCsv = () => {
     const headers = ["Original Barcode,New Barcode,SKU,Product Name,Reason,Edited By,Timestamp"];
@@ -53,86 +78,139 @@ export default function BarcodeEditLogIndex() {
     a.click();
   };
 
+  const columns = [
+    {
+      header: "Original Barcode",
+      render: (l) => (
+        <span className="font-mono text-xs text-rose-600 dark:text-rose-400 line-through">
+          {l.original_barcode}
+        </span>
+      ),
+    },
+    {
+      header: "New Barcode",
+      render: (l) => (
+        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+          {l.new_barcode}
+        </span>
+      ),
+    },
+    {
+      header: "Product & SKU",
+      render: (l) => (
+        <div className="text-xs">
+          <div className="font-medium text-primary-token">{l.product_name || "—"}</div>
+          <div className="font-mono text-[11px] text-muted-token">{l.sku || "—"}</div>
+        </div>
+      ),
+    },
+    {
+      header: "Reason for Edit",
+      accessor: "reason",
+      className: "text-secondary-token text-xs max-w-sm",
+    },
+    {
+      header: "Edited By",
+      accessor: "edited_by",
+      className: "text-primary-token text-xs",
+    },
+    {
+      header: "Timestamp",
+      render: (l) => (
+        <span className="text-[11px] text-muted-token font-mono">
+          {l.created_at || "—"}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-accent-primary" />
-            Barcode Modification Audit Log
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Historical immutable audit log of every barcode alteration across warehouses</p>
+        <div className="flex items-center gap-2.5">
+          <Link
+            to="/inventory/barcode-edit"
+            className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-brand-token" />
+              Barcode Modification Audit Log
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Historical immutable audit log of every barcode alteration across warehouses
+            </p>
+          </div>
         </div>
-        <button
+
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={Download}
           onClick={exportCsv}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-primary hover:bg-surface-card transition shadow-sm"
         >
-          <Download className="w-3.5 h-3.5" />
           Export Audit CSV
-        </button>
+        </Button>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Historical Edits: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Historical Edits: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Ledger Continuity: <strong className="text-emerald-400 font-medium">Verified</strong></span>
+        <span>Ledger Continuity: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Verified</strong></span>
         <span>•</span>
-        <span>Audit Trail: <strong className="text-accent-primary font-medium">Immutable</strong></span>
+        <span>Audit Trail: <strong className="text-brand-token font-medium">Immutable</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by barcode, SKU, or user..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search audit log by barcode, SKU, or user..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={editorFilter}
+              onChange={(e) => setEditorFilter(e.target.value)}
+              options={editorOptions}
+            />
+            <Select
+              size="xs"
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+              options={reasonOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setEditorFilter("all");
+          setReasonFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchLogs}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Original Barcode</th>
-                <th className="px-4 py-2.5">New Barcode</th>
-                <th className="px-4 py-2.5">Product & SKU</th>
-                <th className="px-4 py-2.5">Reason for Edit</th>
-                <th className="px-4 py-2.5">Edited By</th>
-                <th className="px-4 py-2.5">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">Loading audit history...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">No audit records found.</td>
-                </tr>
-              ) : (
-                filtered.map((l) => (
-                  <tr key={l.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono text-[11px] text-rose-400 line-through">{l.original_barcode}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-[11px] text-emerald-400">{l.new_barcode}</td>
-                    <td className="px-4 py-3 text-text-primary">
-                      {l.product_name}
-                      <span className="block font-mono text-[10px] text-text-muted">{l.sku}</span>
-                    </td>
-                    <td className="px-4 py-3 text-text-muted max-w-sm">{l.reason}</td>
-                    <td className="px-4 py-3 text-[11px] text-text-primary">{l.edited_by || "System"}</td>
-                    <td className="px-4 py-3 text-text-muted">{l.created_at || "—"}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No audit log records found."
+      />
     </div>
   );
 }

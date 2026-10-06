@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input } from "../../../components/ui";
 
 export default function CompanySettingsCreate() {
   const navigate = useNavigate();
@@ -22,185 +23,147 @@ export default function CompanySettingsCreate() {
   });
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
       toast.success("Company profile and statutory tax credentials updated!");
       navigate("/settings/company");
-    }, 600);
+    }, 400);
   };
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="max-w-3xl space-y-4">
+      {/* Top Header */}
       <div className="flex items-center gap-3">
-        <Link to="/settings/company" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/settings/company"
+          className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-brand-token" />
             Update Company Legal Profile
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Edit tax registration details, corporate billing credentials, and bank payout coordinates</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Edit tax registration details, corporate billing credentials, and bank payout coordinates
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Legal Registered Name <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={form.legal_name}
-              onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Trade / Brand Name <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={form.trade_name}
-              onChange={(e) => setForm({ ...form, trade_name: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              GSTIN <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={form.gstin}
-              onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">PAN Number</label>
-            <input
-              type="text"
-              value={form.pan}
-              onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">CIN Number</label>
-            <input
-              type="text"
-              value={form.cin}
-              onChange={(e) => setForm({ ...form, cin: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Official Email</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Official Telephone</label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
-            Registered Office Address <span className="text-rose-400">*</span>
-          </label>
-          <textarea
-            rows={2}
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-4 shadow-xs"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Legal Registered Name"
             required
-            value={form.registered_address}
-            onChange={(e) => setForm({ ...form, registered_address: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+            fieldType="name"
+            value={form.legal_name}
+            onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
+          />
+
+          <Input
+            label="Trade / Brand Name"
+            required
+            fieldType="name"
+            value={form.trade_name}
+            onChange={(e) => setForm({ ...form, trade_name: e.target.value })}
           />
         </div>
 
-        <div className="pt-2 border-t border-border/30 space-y-3">
-          <h3 className="text-xs font-bold text-text-primary">Bank Account Coordinates</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Bank Name</label>
-              <input
-                type="text"
-                value={form.bank_name}
-                onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
-                className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Account Number</label>
-              <input
-                type="text"
-                value={form.bank_account}
-                onChange={(e) => setForm({ ...form, bank_account: e.target.value })}
-                className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">IFSC Code</label>
-              <input
-                type="text"
-                value={form.ifsc}
-                onChange={(e) => setForm({ ...form, ifsc: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary font-mono focus:outline-none focus:border-accent-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Branch Name</label>
-              <input
-                type="text"
-                value={form.branch}
-                onChange={(e) => setForm({ ...form, branch: e.target.value })}
-                className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input
+            label="GSTIN"
+            required
+            fieldType="gstin"
+            value={form.gstin}
+            onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
+          />
+
+          <Input
+            label="PAN Number"
+            fieldType="code"
+            value={form.pan}
+            onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase() })}
+          />
+
+          <Input
+            label="CIN Number"
+            fieldType="code"
+            value={form.cin}
+            onChange={(e) => setForm({ ...form, cin: e.target.value.toUpperCase() })}
+          />
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/settings/company" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Official Corporate Email"
+            type="email"
+            fieldType="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+
+          <Input
+            label="Corporate Phone"
+            fieldType="phone"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+        </div>
+
+        <Input
+          label="Registered Business Address"
+          value={form.registered_address}
+          onChange={(e) => setForm({ ...form, registered_address: e.target.value })}
+        />
+
+        <div className="pt-2 border-t border-token grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Bank Name"
+            value={form.bank_name}
+            onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+          />
+
+          <Input
+            label="Bank Account Number"
+            value={form.bank_account}
+            onChange={(e) => setForm({ ...form, bank_account: e.target.value })}
+          />
+
+          <Input
+            label="IFSC Code"
+            fieldType="code"
+            value={form.ifsc}
+            onChange={(e) => setForm({ ...form, ifsc: e.target.value.toUpperCase() })}
+          />
+
+          <Input
+            label="Bank Branch"
+            value={form.branch}
+            onChange={(e) => setForm({ ...form, branch: e.target.value })}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2.5 pt-3 border-t border-token">
+          <Link to="/settings/company">
+            <Button variant="outline" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
+            onClick={handleSubmit}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Updating..." : "Save Company Profile"}
-          </button>
+            Save Profile
+          </Button>
         </div>
       </form>
     </div>

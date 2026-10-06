@@ -7,26 +7,12 @@ import {
   Trash2,
   Save,
   Building2,
-  Calendar,
   Package,
-  QrCode,
-  DollarSign
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function CreateInwardPage() {
   const navigate = useNavigate();
@@ -71,8 +57,11 @@ export default function CreateInwardPage() {
           }),
         ]);
 
-        if (venRes?.data) setVendors(venRes.data);
-        if (varRes?.data) setVariants(varRes.data);
+        const venData = Array.isArray(venRes) ? venRes : venRes?.data || [];
+        const varData = Array.isArray(varRes) ? varRes : varRes?.data || [];
+
+        setVendors(venData);
+        setVariants(varData);
       } catch (err) {
         console.error("Failed loading lookups", err);
       } finally {
@@ -110,17 +99,18 @@ export default function CreateInwardPage() {
   const updateItem = (index, field, value) => {
     setItems((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
+      next[index] = {
+        ...next[index],
+        [field]: value,
+      };
 
       const qty = Number(next[index].quantity) || 1;
-      const unitCost = Number(next[index].taxable_amount) || 0;
+      const taxable = Number(next[index].taxable_amount) || 0;
       const taxRate = Number(next[index].tax_rate) || 0;
+      const singleTax = (taxable * taxRate) / 100;
 
-      const lineTaxable = unitCost * qty;
-      const lineTax = (lineTaxable * taxRate) / 100;
-
-      next[index].tax_amount = lineTax;
-      next[index].total_amount = lineTaxable + lineTax;
+      next[index].tax_amount = singleTax * qty;
+      next[index].total_amount = (taxable + singleTax) * qty;
 
       return next;
     });
@@ -144,316 +134,316 @@ export default function CreateInwardPage() {
 
   const removeItemRow = (index) => {
     if (items.length <= 1) {
-      toast.error("Inward must have at least one line item");
+      toast.error("GRN must contain at least one consignment item");
       return;
     }
-    setItems((prev) => prev.filter((_, idx) => idx !== index));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Totals
-  const calculateTotals = () => {
-    let taxable = 0;
-    let tax = 0;
-    let total = 0;
-    let units = 0;
-
-    items.forEach((item) => {
-      const q = Number(item.quantity) || 0;
-      const uCost = Number(item.taxable_amount) || 0;
-      const tRate = Number(item.tax_rate) || 0;
-
-      const lineNet = uCost * q;
-      const lineTax = (lineNet * tRate) / 100;
-
-      taxable += lineNet;
-      tax += lineTax;
-      total += lineNet + lineTax;
-      units += q;
-    });
-
-    return { taxable, tax, total, units };
-  };
-
-  const { taxable, tax, total, units } = calculateTotals();
+  const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  const totalTaxable = items.reduce((sum, it) => sum + (Number(it.taxable_amount) || 0) * (Number(it.quantity) || 0), 0);
+  const totalTax = items.reduce((sum, it) => sum + (Number(it.tax_amount) || 0), 0);
+  const grandTotal = items.reduce((sum, it) => sum + (Number(it.total_amount) || 0), 0);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!formData.vendor_id) {
       toast.error("Please select a vendor");
       return;
     }
 
-    if (!formData.invoice_number.trim()) {
-      toast.error("Please provide supplier invoice number");
-      return;
-    }
-
     const validItems = items.filter((it) => it.variant_id);
     if (validItems.length === 0) {
-      toast.error("Please add at least one valid product variant");
+      toast.error("Please select at least one valid product variant");
       return;
     }
 
     setSubmitting(true);
     try {
-      const inwardNumber = `GRN-${Date.now().toString().slice(-6)}`;
+      const grnNumber = `GRN-${Date.now().toString().slice(-6)}`;
 
-      // 1. Create PurchaseInward header
-      const inwardPayload = {
-        inward_number: inwardNumber,
+      const payload = {
+        inward_number: grnNumber,
         vendor_id: formData.vendor_id,
-        invoice_number: formData.invoice_number,
+        invoice_number: formData.invoice_number || `INV-${Date.now().toString().slice(-5)}`,
         invoice_date: formData.invoice_date,
-        total_taxable_amount: taxable,
-        total_tax_amount: tax,
-        total_amount: total,
         inward_status: formData.inward_status,
-        remarks: formData.remarks || "",
-        status: 1,
+        total_quantity: totalQty,
+        taxable_amount: totalTaxable,
+        tax_amount: totalTax,
+        total_amount: grandTotal,
+        remarks: formData.remarks,
       };
 
-      const res = await populateApi.create("purchase_inward", inwardPayload);
+      const res = await populateApi.create("purchase_inward", payload);
       const createdInward = res?.data || res;
 
-      // 2. Create Inward Items
       if (createdInward?.id) {
         for (const item of validItems) {
-          const qty = Number(item.quantity) || 1;
-          const uCost = Number(item.taxable_amount) || 0;
-          const tRate = Number(item.tax_rate) || 0;
-          const lineTax = (uCost * qty * tRate) / 100;
-          const lineTotal = uCost * qty + lineTax;
-
-          await populateApi.create("inward_item", {
-            purchase_inward_id: createdInward.id,
+          await populateApi.create("purchase_inward_item", {
+            inward_id: createdInward.id,
             variant_id: item.variant_id,
-            quantity: qty,
-            taxable_amount: uCost * qty,
-            tax_rate: tRate,
-            tax_amount: lineTax,
-            total_amount: lineTotal,
-            status: 1,
+            quantity: Number(item.quantity) || 1,
+            taxable_amount: Number(item.taxable_amount) || 0,
+            tax_rate: Number(item.tax_rate) || 0,
+            tax_amount: Number(item.tax_amount) || 0,
+            total_amount: Number(item.total_amount) || 0,
           });
         }
       }
 
-      toast.success(`Purchase inward ${inwardNumber} recorded successfully!`);
+      toast.success(`Inward consignment ${grnNumber} generated successfully!`);
       navigate(`/inward/details?id=${createdInward?.id || ""}`);
     } catch (err) {
-      toast.error(err?.response?.data?.error?.message || "Failed to save purchase inward");
+      toast.error(err?.response?.data?.error?.message || "Failed to record inward receipt");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           <Link
             to="/inward/purchase"
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
+            className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">Record Goods Receipt (GRN)</h1>
-            <p className="text-xs text-text-muted">Inward stock receiving against supplier commercial invoice</p>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+              <Truck className="w-5 h-5 text-brand-token" />
+              New Purchase Inward (GRN)
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Receive vendor shipment, record purchase bill, and stock inward items
+            </p>
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Save}
+          loading={submitting}
           onClick={handleSubmit}
-          disabled={submitting}
-          className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          {submitting ? "Saving GRN..." : "Confirm & Stock Inward"}
-        </button>
+          Confirm & Inward
+        </Button>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Line Items: <strong className="text-text-primary font-medium">{formatQty(items.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Total SKUs: <strong className="text-primary-token font-medium">{formatQty(items.length)}</strong></span>
         <span>•</span>
-        <span>Total Units: <strong className="text-text-primary font-medium">{formatQty(units)}</strong></span>
+        <span>Total Pcs: <strong className="text-primary-token font-medium">{formatQty(totalQty)}</strong></span>
         <span>•</span>
-        <span>Taxable Net: <strong className="text-text-primary font-medium">{formatCurrency(taxable)}</strong></span>
+        <span>Taxable Value: <strong className="text-primary-token font-medium">{formatCurrency(totalTaxable)}</strong></span>
         <span>•</span>
-        <span>GST Input: <strong className="text-emerald-400 font-medium">{formatCurrency(tax)}</strong></span>
+        <span>Total GST: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatCurrency(totalTax)}</strong></span>
         <span>•</span>
-        <span>Gross Inward Value: <strong className="text-emerald-400 font-semibold">{formatCurrency(total)}</strong></span>
+        <span>Consignment Total: <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(grandTotal)}</strong></span>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Vendor & Invoice Details Card */}
-        <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-            <Building2 className="w-4 h-4 text-primary" />
-            Vendor & Supplier Invoice Header
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left Column: Vendor & Items */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Vendor & Invoice Metadata Card */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+              <Building2 className="w-4 h-4 text-brand-token" />
+              Vendor Invoice Metadata
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Vendor / Supplier *
-              </label>
-              <select
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <Select
+                label="Select Supplier / Vendor"
                 required
                 value={formData.vendor_id}
                 onChange={(e) => setFormData((prev) => ({ ...prev, vendor_id: e.target.value }))}
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
-              >
-                <option value="">-- Choose Vendor --</option>
-                {vendors.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} ({v.vendor_code || v.phone || "No Code"})
-                  </option>
-                ))}
-              </select>
-            </div>
+                placeholder="-- Select Vendor --"
+                options={vendors.map((v) => ({
+                  value: v.id,
+                  label: `${v.name} (${v.vendor_code || "VN"})`,
+                }))}
+              />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Supplier Bill / Invoice # *
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Vendor Invoice #"
                 required
-                placeholder="e.g. INV-99081"
+                placeholder="e.g. INV-2026-99"
                 value={formData.invoice_number}
                 onChange={(e) => setFormData((prev) => ({ ...prev, invoice_number: e.target.value }))}
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
               />
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Invoice Date *
-              </label>
-              <input
+              <Input
+                label="Invoice Date"
                 type="date"
                 required
                 value={formData.invoice_date}
                 onChange={(e) => setFormData((prev) => ({ ...prev, invoice_date: e.target.value }))}
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
               />
             </div>
           </div>
-        </div>
 
-        {/* Inward Items Table Card */}
-        <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-              <Package className="w-4 h-4 text-primary" />
-              Inward Line Items
+          {/* Line Items Card */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+                <Package className="w-4 h-4 text-brand-token" />
+                Inward Consignment Items
+              </div>
+              <Button
+                size="xs"
+                variant="outline"
+                icon={Plus}
+                onClick={addItemRow}
+              >
+                Add SKU
+              </Button>
             </div>
-            <button
-              type="button"
-              onClick={addItemRow}
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium border border-primary/20 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Product Line
-            </button>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-border/60 text-text-muted font-medium">
-                  <th className="pb-2 w-[40%]">Product Variant</th>
-                  <th className="pb-2 w-[12%] text-center">Inward Qty</th>
-                  <th className="pb-2 w-[15%] text-right">Cost Price (₹)</th>
-                  <th className="pb-2 w-[12%] text-center">GST %</th>
-                  <th className="pb-2 w-[15%] text-right">Total (Inc. Tax)</th>
-                  <th className="pb-2 w-[6%] text-center"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40 text-text-primary">
-                {items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="py-2.5 pr-2">
-                      <select
-                        value={item.variant_id}
-                        onChange={(e) => handleVariantSelect(idx, e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-text-primary focus:outline-none"
-                      >
-                        <option value="">-- Choose Variant to Inward --</option>
-                        {variants.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.sku} - {v.product?.name || "Product"} (Cost: ₹{v.cost_price || 0})
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2.5 pr-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(idx, "quantity", e.target.value)}
-                        className="w-full px-2 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-center text-text-primary focus:outline-none"
-                      />
-                    </td>
-                    <td className="py-2.5 pr-2">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.taxable_amount}
-                        onChange={(e) => updateItem(idx, "taxable_amount", e.target.value)}
-                        className="w-full px-2 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-right text-text-primary focus:outline-none"
-                      />
-                    </td>
-                    <td className="py-2.5 pr-2">
-                      <select
-                        value={item.tax_rate}
-                        onChange={(e) => updateItem(idx, "tax_rate", e.target.value)}
-                        className="w-full px-2 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-center text-text-primary focus:outline-none"
-                      >
-                        <option value="0">0%</option>
-                        <option value="5">5%</option>
-                        <option value="12">12%</option>
-                        <option value="18">18%</option>
-                        <option value="28">28%</option>
-                      </select>
-                    </td>
-                    <td className="py-2.5 pr-2 text-right font-medium text-emerald-400">
-                      {formatCurrency(item.total_amount)}
-                    </td>
-                    <td className="py-2.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(idx)}
-                        className="p-1 rounded text-text-muted hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-token text-muted-token font-semibold uppercase text-[10px]">
+                    <th className="pb-2 w-[35%]">Product SKU</th>
+                    <th className="pb-2 w-[15%]">Qty</th>
+                    <th className="pb-2 w-[20%]">Cost / Unit (₹)</th>
+                    <th className="pb-2 w-[12%]">Tax %</th>
+                    <th className="pb-2 w-[13%] text-right">Total</th>
+                    <th className="pb-2 w-[5%] text-center"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-token">
+                  {items.map((item, idx) => (
+                    <tr key={idx} className="group">
+                      <td className="py-2.5 pr-2">
+                        <Select
+                          size="xs"
+                          value={item.variant_id}
+                          onChange={(e) => handleVariantSelect(idx, e.target.value)}
+                          placeholder="-- Choose Variant --"
+                          options={variants.map((v) => ({
+                            value: v.id,
+                            label: `${v.product?.name || "SKU"} (${v.sku})`,
+                          }))}
+                        />
+                      </td>
+                      <td className="py-2.5 pr-2">
+                        <Input
+                          size="xs"
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                        />
+                      </td>
+                      <td className="py-2.5 pr-2">
+                        <Input
+                          size="xs"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.taxable_amount}
+                          onChange={(e) => updateItem(idx, "taxable_amount", e.target.value)}
+                        />
+                      </td>
+                      <td className="py-2.5 pr-2">
+                        <Select
+                          size="xs"
+                          value={item.tax_rate}
+                          onChange={(e) => updateItem(idx, "tax_rate", e.target.value)}
+                          options={[
+                            { label: "0%", value: 0 },
+                            { label: "5%", value: 5 },
+                            { label: "12%", value: 12 },
+                            { label: "18%", value: 18 },
+                            { label: "28%", value: 28 },
+                          ]}
+                        />
+                      </td>
+                      <td className="py-2.5 text-right font-mono font-bold text-primary-token">
+                        {formatCurrency(item.total_amount)}
+                      </td>
+                      <td className="py-2.5 pl-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeItemRow(idx)}
+                          className="p-1 text-muted-token hover:text-rose-500 rounded-lg hover:bg-surface transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* Remarks */}
-        <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-2">
-          <label className="block text-[11px] font-medium text-text-muted">
-            Warehouse Remarks & Delivery Notes
-          </label>
-          <textarea
-            rows="2"
-            value={formData.remarks}
-            onChange={(e) => setFormData((prev) => ({ ...prev, remarks: e.target.value }))}
-            placeholder="Vehicle number, gate entry log, transporter..."
-            className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-          />
+        {/* Right Column: Inward Summary */}
+        <div className="space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+              <Truck className="w-4 h-4 text-brand-token" />
+              Consignment Summary
+            </div>
+
+            <Select
+              label="Inward Status"
+              value={formData.inward_status}
+              onChange={(e) => setFormData((prev) => ({ ...prev, inward_status: e.target.value }))}
+              options={[
+                { label: "Received & Inspected", value: "received" },
+                { label: "Draft / Pending Verification", value: "draft" },
+              ]}
+            />
+
+            <Textarea
+              label="Gate Remarks / Delivery Note"
+              placeholder="e.g. Transporter docket number, vehicle number..."
+              rows={3}
+              value={formData.remarks}
+              onChange={(e) => setFormData((prev) => ({ ...prev, remarks: e.target.value }))}
+            />
+
+            <div className="pt-3 border-t border-token space-y-2 text-xs">
+              <div className="flex justify-between text-secondary-token">
+                <span>Total Pieces</span>
+                <span className="font-semibold text-primary-token">{formatQty(totalQty)}</span>
+              </div>
+              <div className="flex justify-between text-secondary-token">
+                <span>Taxable Amount</span>
+                <span className="font-mono">{formatCurrency(totalTaxable)}</span>
+              </div>
+              <div className="flex justify-between text-secondary-token">
+                <span>Total GST</span>
+                <span className="font-mono">{formatCurrency(totalTax)}</span>
+              </div>
+              <div className="pt-2 border-t border-token flex justify-between font-bold text-sm text-primary-token">
+                <span>Grand Inward Total</span>
+                <span className="font-mono text-base text-brand-token">{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={Save}
+              loading={submitting}
+              onClick={handleSubmit}
+            >
+              Confirm Inward & Generate Barcodes
+            </Button>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

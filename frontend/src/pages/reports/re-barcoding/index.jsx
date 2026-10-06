@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { QrCode, Plus, Search, CheckCircle2, History, AlertTriangle } from "lucide-react";
+import { QrCode, Plus, ArrowRight, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
+import { formatQty } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function RebarcodingReportIndex() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [authorizerFilter, setAuthorizerFilter] = useState("all");
+  const [reasonFilter, setReasonFilter] = useState("all");
 
   const fetchReports = async () => {
     setLoading(true);
@@ -34,107 +33,153 @@ export default function RebarcodingReportIndex() {
     fetchReports();
   }, []);
 
-  const filtered = reports.filter((r) =>
-    (r.old_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.new_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.sku || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.reason || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setAuthorizerFilter("all");
+    setReasonFilter("all");
+  };
+
+  const filtered = reports.filter((r) => {
+    const matchesSearch =
+      (r.old_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.new_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.sku || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.reason || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesAuth = authorizerFilter === "all" || r.authorized_by === authorizerFilter;
+    const matchesReason = reasonFilter === "all" || (r.reason || "").toLowerCase().includes(reasonFilter.toLowerCase());
+
+    return matchesSearch && matchesAuth && matchesReason;
+  });
+
+  const columns = [
+    {
+      key: "barcodes",
+      header: "Tag Transition",
+      render: (_, row) => (
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <span className="line-through text-muted-token">{row.old_barcode}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-brand-token" />
+          <span className="font-bold text-brand-token">{row.new_barcode}</span>
+        </div>
+      ),
+    },
+    {
+      key: "sku",
+      header: "Product SKU",
+      render: (val) => <span className="font-mono text-xs text-primary-token font-semibold">{val}</span>,
+    },
+    {
+      key: "reason",
+      header: "Re-Tagging Justification",
+      render: (val) => <span className="text-secondary-token text-xs">{val}</span>,
+    },
+    {
+      key: "authorized_by",
+      header: "Authorized By",
+      render: (val) => (
+        <Badge variant="neutral">
+          {val}
+        </Badge>
+      ),
+    },
+    {
+      key: "date",
+      header: "Event Date",
+      render: (val) => <span className="text-secondary-token text-xs">{val}</span>,
+    },
+  ];
 
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <QrCode className="w-5 h-5 text-brand-token" />
             Re-Barcoding History & Analysis Report
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Statistical incidence of barcode tag replacements, print quality issues, and relabeling events</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Statistical incidence of barcode tag replacements, print quality issues, and relabeling events
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/inventory/re-barcoding"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition"
-          >
-            Re-Barcoding Ops
+          <Link to="/inventory/re-barcoding">
+            <Button variant="outline" size="sm">
+              Re-Barcoding Ops
+            </Button>
           </Link>
-          <Link
-            to="/reports/re-barcoding/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Export Analysis
+          <Link to="/reports/re-barcoding/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Export Analysis
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Re-Tagging Events: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Re-Tagging Events: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Audit Compliance: <strong className="text-emerald-400 font-medium">100% Validated</strong></span>
+        <span>Audit Compliance: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">100% Validated</strong></span>
         <span>•</span>
-        <span>Damaged Label Rate: <strong className="text-amber-400 font-medium">0.42%</strong></span>
+        <span>Damaged Label Rate: <strong className="text-amber-800 dark:text-amber-400 font-medium">0.42%</strong></span>
         <span>•</span>
-        <span>Format Migration: <strong className="text-accent-primary font-medium">Up to Date</strong></span>
+        <span>Format Migration: <strong className="text-brand-token font-medium">Up to Date</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by old barcode, new barcode, SKU, or reason..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by old barcode, new barcode, SKU, or reason..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={authorizerFilter}
+              onChange={(e) => setAuthorizerFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Authorizers" },
+                { value: "Store Manager", label: "Store Manager" },
+                { value: "Admin", label: "Admin" },
+                { value: "Inventory Lead", label: "Inventory Lead" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Justifications" },
+                { value: "Standardization", label: "Standardization" },
+                { value: "damaged", label: "Transit Damage" },
+                { value: "Repackaging", label: "Repackaging" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchReports}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Original Barcode</th>
-                <th className="px-4 py-2.5">New Assigned Tag</th>
-                <th className="px-4 py-2.5">Item SKU</th>
-                <th className="px-4 py-2.5">Relabeling Reason</th>
-                <th className="px-4 py-2.5">Authorized By</th>
-                <th className="px-4 py-2.5">Date</th>
-                <th className="px-4 py-2.5">Audit Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">Loading re-barcoding data...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">No re-barcoding events found.</td>
-                </tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono text-[11px] text-rose-400 line-through">{r.old_barcode}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-[11px] text-emerald-400">{r.new_barcode}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-secondary">{r.sku || "—"}</td>
-                    <td className="px-4 py-3 text-text-muted max-w-sm">{r.reason}</td>
-                    <td className="px-4 py-3 text-text-primary">{r.authorized_by || "System"}</td>
-                    <td className="px-4 py-3 text-text-muted">{r.date || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Verified
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No re-barcoding incidents logged."
+      />
     </div>
   );
 }

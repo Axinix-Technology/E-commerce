@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Edit, CheckCircle2, MapPin, Phone, Mail, FileText, Landmark } from "lucide-react";
+import { Building2, Edit, FileText, Landmark, MapPin, Phone, Mail } from "lucide-react";
+import { Button, Badge } from "../../../components/ui";
 
 export default function CompanySettingsIndex() {
-  const [company, setCompany] = useState({
+  const [company] = useState({
     legal_name: "Axinix Silk & Handlooms Private Limited",
     trade_name: "Axinix Textiles",
     gstin: "33AAACA1234F1Z8",
@@ -20,90 +21,88 @@ export default function CompanySettingsIndex() {
 
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-brand-token" />
             Company & Legal Entity Profile
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Statutory tax registrations, corporate credentials, and banking information for invoices</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Statutory tax registrations, corporate credentials, and banking information for invoices
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/settings/company/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Edit className="w-3.5 h-3.5" />
+        <Link to="/settings/company/create">
+          <Button variant="primary" size="sm" icon={Edit}>
             Edit Profile
-          </Link>
-        </div>
+          </Button>
+        </Link>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>GSTIN: <strong className="text-text-primary font-mono font-medium">{company.gstin}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>GSTIN: <strong className="text-primary-token font-mono font-medium">{company.gstin}</strong></span>
         <span>•</span>
-        <span>PAN: <strong className="text-text-primary font-mono font-medium">{company.pan}</strong></span>
+        <span>PAN: <strong className="text-primary-token font-mono font-medium">{company.pan}</strong></span>
         <span>•</span>
-        <span>CIN: <strong className="text-accent-primary font-mono font-medium">{company.cin}</strong></span>
+        <span>CIN: <strong className="text-brand-token font-mono font-medium">{company.cin}</strong></span>
         <span>•</span>
-        <span>KYC & Legal Verification: <strong className="text-emerald-400 font-medium">Verified</strong></span>
+        <span>KYC Status: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">Verified</strong></span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-3">
-          <h2 className="text-xs font-bold text-text-primary uppercase tracking-wider flex items-center gap-2 border-b border-border/40 pb-2">
-            <FileText className="w-4 h-4 text-accent-primary" />
+        {/* Corporate Identity */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3 shadow-xs">
+          <h2 className="text-xs font-bold text-primary-token uppercase tracking-wider flex items-center gap-2 border-b border-token pb-2">
+            <FileText className="w-4 h-4 text-brand-token" />
             Corporate Identity
           </h2>
           <div className="space-y-2 text-xs">
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">Legal Registered Name</span>
-              <span className="font-semibold text-text-primary">{company.legal_name}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">Legal Name:</span>
+              <span className="font-semibold text-primary-token">{company.legal_name}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">Trade / Brand Name</span>
-              <span className="font-semibold text-text-primary">{company.trade_name}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">Trade / Brand Name:</span>
+              <span className="font-semibold text-primary-token">{company.trade_name}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">Official Email</span>
-              <span className="text-accent-primary">{company.email}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">GSTIN:</span>
+              <span className="font-mono font-bold text-brand-token">{company.gstin}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">Official Phone</span>
-              <span className="text-text-primary">{company.phone}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">PAN:</span>
+              <span className="font-mono text-primary-token">{company.pan}</span>
             </div>
-            <div className="py-1">
-              <span className="text-text-secondary block mb-0.5">Registered Office Address</span>
-              <span className="text-text-primary flex items-start gap-1">
-                <MapPin className="w-3.5 h-3.5 text-text-muted shrink-0 mt-0.5" />
-                {company.registered_address}
-              </span>
+            <div className="flex justify-between py-1">
+              <span className="text-muted-token">CIN:</span>
+              <span className="font-mono text-primary-token">{company.cin}</span>
             </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-3">
-          <h2 className="text-xs font-bold text-text-primary uppercase tracking-wider flex items-center gap-2 border-b border-border/40 pb-2">
-            <Landmark className="w-4 h-4 text-accent-primary" />
-            Bank & Remittance Details
+        {/* Banking & Settlement Details */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3 shadow-xs">
+          <h2 className="text-xs font-bold text-primary-token uppercase tracking-wider flex items-center gap-2 border-b border-token pb-2">
+            <Landmark className="w-4 h-4 text-brand-token" />
+            Primary Bank Account (For Invoices)
           </h2>
           <div className="space-y-2 text-xs">
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">Bank Name</span>
-              <span className="font-semibold text-text-primary">{company.bank_name}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">Bank Name:</span>
+              <span className="font-semibold text-primary-token">{company.bank_name}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">Current Account No</span>
-              <span className="font-mono font-semibold text-text-primary">{company.bank_account}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">Account Number:</span>
+              <span className="font-mono text-primary-token">{company.bank_account}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-border/30">
-              <span className="text-text-secondary">IFSC Code</span>
-              <span className="font-mono font-semibold text-accent-primary">{company.ifsc}</span>
+            <div className="flex justify-between py-1 border-b border-token">
+              <span className="text-muted-token">IFSC Code:</span>
+              <span className="font-mono text-brand-token font-bold">{company.ifsc}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-text-secondary">Bank Branch</span>
-              <span className="text-text-primary">{company.branch}</span>
+              <span className="text-muted-token">Branch:</span>
+              <span className="text-primary-token">{company.branch}</span>
             </div>
           </div>
         </div>

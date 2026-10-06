@@ -1,24 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { CreditCard, Download, Search, CheckCircle2, Filter } from "lucide-react";
+import { CreditCard, Download, RefreshCw } from "lucide-react";
 import populateApi from "../../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../../components/ui";
 
 export default function SupplierPaymentReportIndex() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
 
   const fetchPayments = async () => {
     setLoading(true);
@@ -41,11 +33,25 @@ export default function SupplierPaymentReportIndex() {
     fetchPayments();
   }, []);
 
-  const filtered = payments.filter((p) =>
-    (p.voucher_number || "").toLowerCase().includes(search.toLowerCase()) ||
-    (p.supplier_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (p.reference_number || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const supplierOptions = [
+    { label: "All Suppliers", value: "all" },
+    ...Array.from(new Set(payments.map((p) => p.supplier_name).filter(Boolean))).map((sn) => ({
+      label: sn,
+      value: sn,
+    })),
+  ];
+
+  const filtered = payments.filter((p) => {
+    if (paymentMethodFilter !== "all" && p.payment_method !== paymentMethodFilter) return false;
+    if (supplierFilter !== "all" && p.supplier_name !== supplierFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (p.voucher_number || "").toLowerCase().includes(term) ||
+      (p.supplier_name || "").toLowerCase().includes(term) ||
+      (p.reference_number || "").toLowerCase().includes(term)
+    );
+  });
 
   const totalDisbursed = filtered.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
   const bankTransferVal = filtered.filter(p => p.payment_method === "bank_transfer").reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
@@ -64,92 +70,137 @@ export default function SupplierPaymentReportIndex() {
     a.click();
   };
 
+  const columns = [
+    {
+      key: "voucher_number",
+      header: "Voucher # / Date",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">{row.transacted_at || "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "supplier_name",
+      header: "Supplier / Recipient",
+      render: (val) => <span className="font-medium text-primary-token">{val}</span>,
+    },
+    {
+      key: "payment_method",
+      header: "Mode / Gateway",
+      render: (val) => (
+        <Badge variant="neutral" className="uppercase font-mono text-[10px]">
+          {val || "BANK"}
+        </Badge>
+      ),
+    },
+    {
+      key: "reference_number",
+      header: "UTR / Reference #",
+      render: (val) => (
+        <span className="font-mono text-xs text-brand-token font-semibold">
+          {val || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Disbursed Amount (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-brand-token" />
             Supplier Payments & Disbursal Report
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Procurement payouts, banking UTR reconciliation, and settlement methods</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Procurement payouts, banking UTR reconciliation, and settlement methods
+          </p>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
+          icon={Download}
           onClick={exportCsv}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-primary hover:bg-surface-card transition shadow-sm"
         >
-          <Download className="w-3.5 h-3.5" />
           Export CSV
-        </button>
+        </Button>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Payment Vouchers: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Payment Vouchers: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Total Disbursed: <strong className="text-emerald-400 font-medium">{formatCurrency(totalDisbursed)}</strong></span>
+        <span>Total Disbursed: <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(totalDisbursed)}</strong></span>
         <span>•</span>
-        <span>NEFT / RTGS: <strong className="text-text-primary font-medium">{formatCurrency(bankTransferVal)}</strong></span>
+        <span>NEFT / RTGS: <strong className="text-primary-token font-medium">{formatCurrency(bankTransferVal)}</strong></span>
         <span>•</span>
-        <span>UPI / IMPS: <strong className="text-accent-primary font-medium">{formatCurrency(upiVal)}</strong></span>
+        <span>UPI / IMPS: <strong className="text-brand-token font-medium">{formatCurrency(upiVal)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by voucher number, supplier, or UTR..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search voucher, supplier, or reference..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={paymentMethodFilter}
+              onChange={(e) => setPaymentMethodFilter(e.target.value)}
+              options={[
+                { label: "All Payment Methods", value: "all" },
+                { label: "Bank Transfer (NEFT/RTGS)", value: "bank_transfer" },
+                { label: "UPI / IMPS", value: "upi" },
+                { label: "Cheque Clearance", value: "cheque" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              options={supplierOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setPaymentMethodFilter("all");
+          setSupplierFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchPayments}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Voucher Number</th>
-                <th className="px-4 py-2.5">Supplier Name</th>
-                <th className="px-4 py-2.5">Disbursal Date</th>
-                <th className="px-4 py-2.5 text-right">Amount Disbursed</th>
-                <th className="px-4 py-2.5">Payment Method</th>
-                <th className="px-4 py-2.5">UTR / Bank Ref</th>
-                <th className="px-4 py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">Loading payment records...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">No payments found.</td>
-                </tr>
-              ) : (
-                filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono font-medium text-accent-primary">{p.voucher_number}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{p.supplier_name || `Supplier #${p.supplier_id}`}</td>
-                    <td className="px-4 py-3 text-text-muted">{p.transacted_at || "—"}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-emerald-400">{formatCurrency(p.amount)}</td>
-                    <td className="px-4 py-3 capitalize text-[11px] text-text-primary">{p.payment_method?.replace("_", " ") || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-muted">{p.reference_number || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Disbursed
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No supplier payment vouchers recorded."
+      />
     </div>
   );
 }

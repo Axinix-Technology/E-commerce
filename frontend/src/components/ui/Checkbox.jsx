@@ -58,8 +58,8 @@ export default function Checkbox({
           <div
             className={`${boxSizes[size] || boxSizes.sm} border transition-all flex items-center justify-center ${
               checked
-                ? "bg-[var(--brand-secondary)] border-[var(--brand-secondary)] text-slate-950 shadow-xs"
-                : "bg-surface-elevated border-token hover:border-[var(--brand-secondary)]/60"
+                ? "bg-[var(--brand-secondary)] border-[var(--brand-secondary)] text-white dark:text-slate-950 shadow-xs"
+                : "bg-white dark:bg-surface-elevated border-slate-300 dark:border-token shadow-xs hover:border-slate-400 dark:hover:border-[var(--brand-secondary)]/60"
             } ${error ? "border-rose-500" : ""} peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-secondary)]/40`}
           >
             {checked && <Check className={`${iconSizes[size] || iconSizes.sm} stroke-[3]`} />}

@@ -9,13 +9,17 @@ import {
   Receipt,
   Eye,
   X,
-  Plus
+  Plus,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Badge, FilterBar, Select } from "../../../components/ui";
+import { formatQty, formatCurrency } from "../../../utils/formatters";
 
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     // Load from localStorage or baseline orders
@@ -54,57 +58,95 @@ export default function OrderHistoryPage() {
     }
   }, []);
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+  };
+
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch =
+      (o.order_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      o.items?.some((it) => (it.name || "").toLowerCase().includes(search.toLowerCase()));
+
+    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <PackageCheck className="w-5 h-5 text-[var(--brand-primary)]" />
+          <h1 className="text-xl font-bold tracking-tight text-primary-token flex items-center gap-2">
+            <PackageCheck className="w-5 h-5 text-brand-token" />
             <span>Order History & Invoices</span>
           </h1>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-token mt-0.5">
             Track status, inspect statutory GST invoices, and manage post-purchase returns
           </p>
         </div>
 
-        <Link
-          to="/customer-account/orders/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <RotateCcw className="w-4 h-4 text-[var(--brand-primary)]" />
-          <span>Request Return / RMA</span>
+        <Link to="/customer-account/orders/create" className="self-start sm:self-auto">
+          <Button variant="outline" size="sm" icon={RotateCcw}>
+            Request Return / RMA
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
+      {/* Minimalist Metrics Bar (UI Rule 2 & UI Rule 1) */}
+      <div className="glass-panel py-2 px-3.5 rounded-xl border border-token text-xs font-mono flex flex-wrap items-center gap-2.5 sm:gap-3 text-secondary-token">
         <span>
-          Total Orders: <strong className="text-white">{orders.length || "—"}</strong>
+          Total Orders: <strong className="text-primary-token font-medium">{formatQty(filteredOrders.length)}</strong>
         </span>
-        <span className="text-gray-600">•</span>
+        <span className="text-muted-token">•</span>
         <span>
-          Tax Invoices: <strong className="text-[var(--brand-primary)]">Downloadable PDF</strong>
+          Tax Invoices: <strong className="text-brand-token font-medium">Downloadable PDF</strong>
         </span>
-        <span className="text-gray-600">•</span>
+        <span className="text-muted-token">•</span>
         <span>
-          Dispatches: <strong className="text-emerald-400">Air Express</strong>
+          Dispatches: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Air Express</strong>
         </span>
       </div>
 
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by order # or item name..."
+        onReset={handleResetFilters}
+        filters={
+          <Select
+            size="xs"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={[
+              { value: "all", label: "All Order Statuses" },
+              { value: "Delivered", label: "Delivered" },
+              { value: "Confirmed", label: "Confirmed" },
+              { value: "Processing", label: "Processing" },
+            ]}
+          />
+        }
+      />
+
       {/* Orders List */}
       <div className="space-y-4">
-        {orders.map((ord) => (
+        {filteredOrders.length === 0 ? (
+          <div className="p-8 text-center rounded-2xl bg-surface-elevated/40 border border-token text-muted-token text-xs">
+            No orders found matching the filter criteria.
+          </div>
+        ) : (
+          filteredOrders.map((ord) => (
           <div
             key={ord.order_number}
-            className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
+            className="card-surface p-4 sm:p-5 rounded-2xl border border-token hover:border-brand-token/30 transition-all space-y-4"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.06]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-token">
               <div>
-                <span className="text-xs font-mono font-bold text-white">
+                <span className="text-xs font-mono font-bold text-primary-token">
                   {ord.order_number}
                 </span>
-                <span className="text-xs text-gray-500 ml-2 font-mono">
+                <span className="text-xs text-muted-token ml-2 font-mono">
                   {new Date(ord.placed_at).toLocaleDateString("en-IN", {
                     day: "numeric",
                     month: "short",
@@ -114,98 +156,104 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Badge variant="emerald" size="xs">
                   {ord.status || "Confirmed"}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-gray-300 border border-white/10">
+                </Badge>
+                <Badge variant="neutral" size="xs">
                   {ord.payment_method?.toUpperCase() || "PAID"}
-                </span>
+                </Badge>
               </div>
             </div>
 
             <div className="space-y-2">
               {ord.items?.map((it, idx) => (
                 <div key={idx} className="flex justify-between items-center text-xs">
-                  <span className="text-gray-300">
-                    {it.quantity} × <strong className="text-white">{it.name}</strong>
-                    {it.sku && <span className="text-gray-500 font-mono ml-2">({it.sku})</span>}
+                  <span className="text-secondary-token">
+                    {formatQty(it.quantity)} × <strong className="text-primary-token">{it.name}</strong>
+                    {it.sku && <span className="text-muted-token font-mono ml-2">({it.sku})</span>}
                   </span>
-                  <span className="font-mono text-white font-semibold">
-                    ₹{((Number(it.selling_price) || 0) * it.quantity).toLocaleString("en-IN")}
+                  <span className="font-mono text-primary-token font-semibold">
+                    {formatCurrency((Number(it.selling_price) || 0) * it.quantity)}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between pt-3 border-t border-white/[0.06] gap-3">
+            <div className="flex flex-wrap items-center justify-between pt-3 border-t border-token gap-3">
               <div>
-                <span className="text-xs text-gray-500">Total Billed:</span>
-                <span className="text-base font-extrabold text-[var(--brand-primary)] ml-2">
-                  ₹{Number(ord.total_amount || 0).toLocaleString("en-IN")}
+                <span className="text-xs text-muted-token">Total Billed:</span>
+                <span className="text-base font-extrabold text-brand-token ml-2">
+                  {formatCurrency(ord.total_amount)}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="outline"
+                  size="xs"
+                  icon={Eye}
                   onClick={() => setSelectedOrder(ord)}
-                  className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>View Details</span>
-                </button>
-                <Link
-                  to={`/useful-additions/track-order?tracking=${ord.order_number}`}
-                  className="px-3 py-1.5 rounded-xl bg-[rgba(0,210,210,0.1)] hover:bg-[var(--brand-primary)] text-[var(--brand-primary)] hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
-                >
-                  <Truck className="w-3.5 h-3.5" />
-                  <span>Live Tracking</span>
+                  View Details
+                </Button>
+                <Link to={`/useful-additions/track-order?tracking=${ord.order_number}`}>
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    icon={Truck}
+                  >
+                    Live Tracking
+                  </Button>
                 </Link>
               </div>
             </div>
           </div>
-        ))}
+        )))}
       </div>
 
       {/* Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-gray-900 border border-white/10 p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="text-sm font-bold text-white">Order #{selectedOrder.order_number}</h3>
-              <button
+          <div className="w-full max-w-lg rounded-2xl card-surface border border-token p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-token">
+              <h3 className="text-sm font-bold text-primary-token">Order #{selectedOrder.order_number}</h3>
+              <Button
+                variant="ghost"
+                size="xs"
+                icon={X}
                 onClick={() => setSelectedOrder(null)}
-                className="text-gray-400 hover:text-white p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              />
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="divide-y divide-white/10">
+              <div className="divide-y divide-token">
                 {selectedOrder.items?.map((it, idx) => (
-                  <div key={idx} className="py-2 flex justify-between">
-                    <span className="text-gray-300">{it.quantity} × {it.name}</span>
-                    <span className="font-mono text-white font-bold">
-                      ₹{((Number(it.selling_price) || 0) * it.quantity).toLocaleString("en-IN")}
+                  <div key={idx} className="py-2.5 flex justify-between">
+                    <span className="text-secondary-token">{formatQty(it.quantity)} × {it.name}</span>
+                    <span className="font-mono text-primary-token font-bold">
+                      {formatCurrency((Number(it.selling_price) || 0) * it.quantity)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-2 border-t border-white/10 flex justify-between text-sm font-bold text-white">
+              <div className="pt-2 border-t border-token flex justify-between text-sm font-bold text-primary-token">
                 <span>Total Amount:</span>
-                <span className="text-[var(--brand-primary)]">
-                  ₹{Number(selectedOrder.total_amount || 0).toLocaleString("en-IN")}
+                <span className="text-brand-token">
+                  {formatCurrency(selectedOrder.total_amount)}
                 </span>
               </div>
             </div>
 
-            <button
+            <Button
+              variant="outline"
+              size="sm"
+              fullWidth
               onClick={() => setSelectedOrder(null)}
-              className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all mt-2"
+              className="mt-2"
             >
               Close
-            </button>
+            </Button>
           </div>
         </div>
       )}

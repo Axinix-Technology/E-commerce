@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, CheckCircle2, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import Input from "../../../components/ui/Input";
+import Checkbox from "../../../components/ui/Checkbox";
+import Button from "../../../components/ui/Button";
 
 export default function AcknowledgeTermsPage() {
   const navigate = useNavigate();
@@ -38,100 +41,80 @@ export default function AcknowledgeTermsPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link
-          to="/help-policies/terms"
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
-        >
-          <ArrowLeft className="w-5 h-5" />
+        <Link to="/help-policies/terms">
+          <Button variant="outline" size="sm" icon={ArrowLeft} />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[var(--brand-primary)]" />
+          <h1 className="text-xl font-bold text-primary-token flex items-center gap-2">
+            <FileText className="w-5 h-5 text-brand-token" />
             <span>Statutory Commercial Acknowledgment</span>
           </h1>
-          <p className="text-xs text-gray-400">Formal agreement for enterprise B2B purchasing and GSTR compliance</p>
+          <p className="text-xs text-muted-token mt-0.5">Formal agreement for enterprise B2B purchasing and GSTR compliance</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
+      <form onSubmit={handleSubmit} className="card-surface p-5 sm:p-6 rounded-2xl border border-token space-y-5">
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Company / Entity Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Mercer Retail Pvt Ltd"
-                value={formData.business_name}
-                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+            <Input
+              label="Company / Entity Name"
+              required
+              placeholder="e.g. Mercer Retail Pvt Ltd"
+              value={formData.business_name}
+              onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Authorized Signatory Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Alex Mercer"
-                value={formData.representative_name}
-                onChange={(e) => setFormData({ ...formData, representative_name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">GSTIN Identifier (Optional)</label>
-            <input
-              type="text"
-              maxLength={15}
-              placeholder="33AAACM1234F1Z5"
-              value={formData.gstin}
-              onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono uppercase"
+            <Input
+              label="Authorized Signatory Name"
+              required
+              placeholder="e.g. Alex Mercer"
+              value={formData.representative_name}
+              onChange={(e) => setFormData({ ...formData, representative_name: e.target.value })}
             />
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-white/[0.08]">
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-300">
-              <input
-                type="checkbox"
-                required
-                checked={formData.agreed_to_terms}
-                onChange={(e) => setFormData({ ...formData, agreed_to_terms: e.target.checked })}
-                className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-0"
-              />
-              <span>I agree to statutory commercial terms and exclusive Coimbatore jurisdiction</span>
-            </label>
+          <Input
+            label="GSTIN Identifier (Optional)"
+            maxLength={15}
+            placeholder="33AAACM1234F1Z5"
+            value={formData.gstin}
+            onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+            className="font-mono uppercase"
+          />
 
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-300">
-              <input
-                type="checkbox"
-                checked={formData.agreed_to_itc}
-                onChange={(e) => setFormData({ ...formData, agreed_to_itc: e.target.checked })}
-                className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-0"
-              />
-              <span>I confirm GSTIN supplied is active and entitled to Input Tax Credit</span>
-            </label>
+          <div className="space-y-2.5 pt-2 border-t border-token">
+            <Checkbox
+              id="agreed-terms"
+              required
+              checked={formData.agreed_to_terms}
+              onChange={(e) => setFormData({ ...formData, agreed_to_terms: e.target.checked })}
+              label="I agree to statutory commercial terms and exclusive Coimbatore jurisdiction"
+            />
+
+            <Checkbox
+              id="agreed-itc"
+              checked={formData.agreed_to_itc}
+              onChange={(e) => setFormData({ ...formData, agreed_to_itc: e.target.checked })}
+              label="I confirm GSTIN supplied is active and entitled to Input Tax Credit"
+            />
           </div>
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/help-policies/terms"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
-          >
-            Cancel
+        <div className="pt-4 border-t border-token flex items-center justify-end gap-3">
+          <Link to="/help-policies/terms">
+            <Button variant="ghost" size="sm">
+              Cancel
+            </Button>
           </Link>
-          <button
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50"
+            variant="secondary"
+            size="sm"
+            loading={submitting}
+            icon={CheckCircle2}
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{submitting ? "Signing..." : "Acknowledge Terms"}</span>
-          </button>
+            {submitting ? "Signing..." : "Acknowledge Terms"}
+          </Button>
         </div>
       </form>
     </div>

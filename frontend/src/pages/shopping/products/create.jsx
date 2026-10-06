@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ShoppingBag, Save, Sparkles, Layers } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Save } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select } from "../../../components/ui";
 
 export default function CreateProductPage() {
   const navigate = useNavigate();
@@ -118,161 +119,132 @@ export default function CreateProductPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/shopping/products"
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-[var(--brand-primary)]" />
-              <span>Add New Product</span>
-            </h1>
-            <p className="text-xs text-gray-400">Catalogue a new product type and initial variant</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <Link
+          to="/shopping/products"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        <div>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-brand-token" />
+            Add New Product
+          </h1>
+          <p className="text-xs text-muted-token mt-0.5">
+            Catalogue a new product type and initial variant with barcode
+          </p>
         </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-[var(--brand-primary)] uppercase tracking-wider">
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-6">
+        <div>
+          <h3 className="text-xs font-bold text-brand-token uppercase tracking-wider mb-4">
             General Specifications
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Product Title *</label>
-              <input
-                type="text"
+              <Input
+                label="Product Title"
                 required
                 placeholder="e.g. Royal Oxford Button-Down Shirt"
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Category *</label>
-              <select
-                required
-                value={formData.category_id}
-                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-gray-900 text-white">
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Category"
+              required
+              value={formData.category_id}
+              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+              options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Brand Name</label>
-              <input
-                type="text"
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+            <Input
+              label="Brand Name"
+              value={formData.brand}
+              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Retail Selling Price (M.R.P. ₹) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                placeholder="2499.00"
-                value={formData.selling_price}
-                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+            <Input
+              label="Retail Selling Price (M.R.P. ₹)"
+              type="number"
+              step="0.01"
+              min="0"
+              required
+              placeholder="2499.00"
+              value={formData.selling_price}
+              onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Textile Material</label>
-              <input
-                type="text"
-                placeholder="e.g. 100% Giza Cotton"
-                value={formData.material}
-                onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+            <Input
+              label="Textile Material"
+              placeholder="e.g. 100% Giza Cotton"
+              value={formData.material}
+              onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+            />
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Primary Image URL</label>
-              <input
+              <Input
+                label="Primary Image URL"
                 type="url"
                 placeholder="https://images.unsplash.com/..."
                 value={formData.image_url}
                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
-
-          <h3 className="text-xs font-bold text-[var(--brand-primary)] uppercase tracking-wider pt-4 border-t border-white/[0.08]">
-            Initial Variant & Statutory Barcode
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">SKU Code</label>
-              <input
-                type="text"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Size</label>
-              <input
-                type="text"
-                value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Color</label>
-              <input
-                type="text"
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
               />
             </div>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/shopping/products"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
+        <div className="pt-4 border-t border-token">
+          <h3 className="text-xs font-bold text-brand-token uppercase tracking-wider mb-4">
+            Initial Variant & Statutory Barcode
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="SKU Code"
+              value={formData.sku}
+              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+            />
+
+            <Input
+              label="Size"
+              value={formData.size}
+              onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+            />
+
+            <Input
+              label="Color"
+              value={formData.color}
+              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/shopping/products")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : "Save Product"}</span>
-          </button>
+            Save Product
+          </Button>
         </div>
       </form>
     </div>

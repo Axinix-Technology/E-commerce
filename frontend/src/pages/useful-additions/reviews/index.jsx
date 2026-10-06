@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Star, ShieldCheck, CheckCircle2, ThumbsUp, Plus, ArrowRight } from "lucide-react";
+import { Star, ShieldCheck, CheckCircle2, ThumbsUp, Plus } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Badge } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function CustomerReviewsPage() {
   const [reviews, setReviews] = useState([]);
@@ -58,41 +64,37 @@ export default function CustomerReviewsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-            <span>Verified Customer Reviews</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Authentic customer testimonials from verified retail consumers and commercial buyers
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-amber-500">
+            <Star className="w-5 h-5 fill-amber-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Verified Customer Reviews
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Authentic customer testimonials from verified retail consumers and commercial buyers
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/useful-additions/reviews/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Write a Review</span>
+        <Link to="/useful-additions/reviews/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Write a Review
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Average Rating: <strong className="text-amber-400">4.9 / 5.0 ★</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Total Verified Reviews: <strong className="text-white">{reviews.length || "—"}</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Integrity: <strong className="text-emerald-400">100% Verified Purchases</strong>
-        </span>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Average Rating: <strong className="text-amber-500 font-semibold">4.9 / 5.0 ★</strong></span>
+        <span>•</span>
+        <span>Total Verified Reviews: <strong className="text-primary-token font-medium">{formatQty(reviews.length)}</strong></span>
+        <span>•</span>
+        <span>Integrity: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">100% Verified Purchases</strong></span>
       </div>
 
       {/* Reviews List */}
@@ -100,47 +102,52 @@ export default function CustomerReviewsPage() {
         {reviews.map((rev) => (
           <div
             key={rev.id}
-            className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3"
+            className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-3 shadow-xs"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center text-amber-400">
-                    {[...Array(rev.rating || 5)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                    ))}
-                  </div>
-                  <h4 className="text-xs font-bold text-white">{rev.title}</h4>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-surface-elevated/80 border border-token flex items-center justify-center font-bold text-xs text-brand-token">
+                  {rev.reviewer_name?.slice(0, 1) || "U"}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  Reviewed by <strong className="text-gray-200">{rev.reviewer_name}</strong>
-                  {rev.product && ` on ${rev.product.name}`}
-                  {rev.product_name && ` on ${rev.product_name}`}
-                </p>
+                <div>
+                  <h4 className="text-xs font-bold text-primary-token flex items-center gap-1.5">
+                    <span>{rev.reviewer_name}</span>
+                    {rev.verified_purchase && (
+                      <Badge variant="success" size="sm" icon={CheckCircle2}>
+                        Verified Purchase
+                      </Badge>
+                    )}
+                  </h4>
+                  <span className="text-[10px] text-muted-token">
+                    Reviewed on {new Date(rev.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
 
-              {rev.verified_purchase && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 self-start sm:self-auto">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Verified Buyer</span>
-                </span>
-              )}
+              <div className="flex items-center gap-1 text-amber-500">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-3.5 h-3.5 ${
+                      i < (rev.rating || 5) ? "fill-amber-500" : "text-muted-token"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
 
-            <p className="text-xs text-gray-300 leading-relaxed">{rev.content}</p>
+            <div>
+              <h5 className="text-xs font-bold text-primary-token">{rev.title}</h5>
+              <p className="text-xs text-secondary-token mt-1 leading-relaxed">
+                {rev.content}
+              </p>
+            </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] text-[11px] text-gray-400">
-              <span className="font-mono">
-                {new Date(rev.created_at).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-
+            <div className="flex items-center justify-between pt-2 border-t border-token text-[11px] text-muted-token">
+              <span>Item: <strong className="text-primary-token">{rev.product_name || "Artisan Line"}</strong></span>
               <button
                 onClick={() => handleHelpful(rev.id)}
-                className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 hover:text-brand-token transition-colors cursor-pointer"
               >
                 <ThumbsUp className="w-3.5 h-3.5" />
                 <span>Helpful ({rev.helpful_votes || 0})</span>

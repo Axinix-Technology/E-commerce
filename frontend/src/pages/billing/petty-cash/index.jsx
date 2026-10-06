@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Wallet, Plus, Search, CheckCircle2, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { Wallet, Plus, RefreshCw, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -10,13 +11,16 @@ const formatQty = (val) => {
 
 const formatCurrency = (val) => {
   const num = Number(val);
-  return !num || num === 0 ? "—" : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+  return !num || num === 0
+    ? "—"
+    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function PettyCashIndex() {
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   const fetchVouchers = async () => {
     setLoading(true);
@@ -40,11 +44,19 @@ export default function PettyCashIndex() {
     fetchVouchers();
   }, []);
 
-  const filtered = vouchers.filter((v) =>
-    (v.voucher_no || "").toLowerCase().includes(search.toLowerCase()) ||
-    (v.purpose || "").toLowerCase().includes(search.toLowerCase()) ||
-    (v.paid_to || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setTypeFilter("all");
+  };
+
+  const filtered = vouchers.filter((v) => {
+    const matchesSearch =
+      (v.voucher_no || "").toLowerCase().includes(search.toLowerCase()) ||
+      (v.purpose || "").toLowerCase().includes(search.toLowerCase()) ||
+      (v.paid_to || "").toLowerCase().includes(search.toLowerCase());
+    const matchesType = typeFilter === "all" || v.voucher_type === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   const totalPayments = filtered
     .filter((v) => v.voucher_type === "payment")
@@ -56,108 +68,130 @@ export default function PettyCashIndex() {
 
   const netBalance = totalReceipts - totalPayments;
 
+  const columns = [
+    {
+      header: "Voucher #",
+      render: (v) => (
+        <span className="font-mono font-bold text-brand-token text-xs">
+          {v.voucher_no}
+        </span>
+      ),
+    },
+    {
+      header: "Type",
+      render: (v) => (
+        <Badge variant={v.voucher_type === "receipt" ? "success" : "danger"} size="sm">
+          {v.voucher_type === "receipt" ? "Replenishment" : "Payment"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Particulars / Purpose",
+      accessor: "purpose",
+      className: "text-primary-token text-xs max-w-sm",
+    },
+    {
+      header: "Paid To / From",
+      accessor: "paid_to",
+      className: "text-secondary-token text-xs",
+    },
+    {
+      header: "Amount",
+      render: (v) => (
+        <span className={`font-mono font-semibold text-xs ${v.voucher_type === "receipt" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+          {v.voucher_type === "receipt" ? "+" : "-"}{formatCurrency(v.amount)}
+        </span>
+      ),
+    },
+    {
+      header: "Approved By",
+      accessor: "approved_by",
+      className: "text-muted-token text-xs",
+    },
+    {
+      header: "Date",
+      render: (v) => (
+        <span className="text-[11px] text-muted-token font-mono">
+          {v.created_at || "—"}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-accent-primary" />
-            Petty Cash Register & Vouchers
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Manage daily store cash expenses, replenishments, and voucher approvals</p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Wallet className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight">
+              Petty Cash Drawer & Expense Vouchers
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Daily cashier drawer float, incidental operational expenses, and replenishment audit
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/billing/petty-cash/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Create Voucher
-          </Link>
-        </div>
+
+        <Link to="/billing/petty-cash/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            New Cash Voucher
+          </Button>
+        </Link>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Vouchers Count: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Vouchers: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Cash Receipts: <strong className="text-emerald-400 font-medium">{formatCurrency(totalReceipts)}</strong></span>
+        <span>Receipts In: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(totalReceipts)}</strong></span>
         <span>•</span>
-        <span>Cash Payments: <strong className="text-rose-400 font-medium">{formatCurrency(totalPayments)}</strong></span>
+        <span>Disbursements Out: <strong className="text-rose-600 dark:text-rose-400 font-semibold">{formatCurrency(totalPayments)}</strong></span>
         <span>•</span>
-        <span>Net Cash in Hand: <strong className="text-accent-primary font-medium">{formatCurrency(netBalance)}</strong></span>
+        <span>Net Drawer Balance: <strong className="text-brand-token font-medium">{formatCurrency(netBalance)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by voucher number, purpose, or recipient..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by voucher #, purpose, or payee..."
+        onReset={handleResetFilters}
+        filters={
+          <Select
+            size="xs"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            options={[
+              { value: "all", label: "All Voucher Types" },
+              { value: "payment", label: "Expenses / Payments" },
+              { value: "receipt", label: "Cash Replenishment" },
+            ]}
+          />
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchVouchers}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Voucher No</th>
-                <th className="px-4 py-2.5">Type</th>
-                <th className="px-4 py-2.5">Purpose / Description</th>
-                <th className="px-4 py-2.5">Paid To / From</th>
-                <th className="px-4 py-2.5">Amount</th>
-                <th className="px-4 py-2.5">Approved By</th>
-                <th className="px-4 py-2.5">Date</th>
-                <th className="px-4 py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading petty cash vouchers...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No vouchers recorded.</td>
-                </tr>
-              ) : (
-                filtered.map((v) => (
-                  <tr key={v.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-semibold text-text-primary">{v.voucher_no}</td>
-                    <td className="px-4 py-3">
-                      {v.voucher_type === "receipt" ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400">
-                          <ArrowDownRight className="w-3.5 h-3.5" />
-                          Receipt
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-400">
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          Payment
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary max-w-xs">{v.purpose}</td>
-                    <td className="px-4 py-3 text-text-primary">{v.paid_to || "—"}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-text-primary">{formatCurrency(v.amount)}</td>
-                    <td className="px-4 py-3 text-text-secondary">{v.approved_by || "Store Manager"}</td>
-                    <td className="px-4 py-3 text-text-muted">{v.created_at || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Approved
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No petty cash vouchers recorded."
+      />
     </div>
   );
 }

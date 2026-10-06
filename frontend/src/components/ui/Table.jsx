@@ -41,11 +41,11 @@ export default function Table({
   };
 
   return (
-    <div className={`glass-panel rounded-2xl border border-token overflow-hidden shadow-xs ${className}`}>
+    <div className={`glass-panel rounded-2xl overflow-hidden ${className}`}>
       {(headerTitle || headerAction) && (
-        <div className="p-3.5 sm:p-4 bg-surface-elevated/60 border-b border-token flex items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-surface-elevated/60 border-b border-slate-200 dark:border-token flex items-center justify-between gap-3 text-xs">
           {headerTitle && (
-            <div className="font-bold text-primary-token flex items-center gap-2">
+            <div className="font-bold text-slate-800 dark:text-primary-token flex items-center gap-2">
               {headerTitle}
             </div>
           )}
@@ -55,7 +55,7 @@ export default function Table({
 
       <div className="overflow-x-auto">
         <table className="w-full text-left">
-          <thead className={`bg-surface-elevated border-b border-token text-muted-token uppercase tracking-wider font-semibold ${headerSizes[size] || headerSizes.md}`}>
+          <thead className={`bg-slate-50 dark:bg-surface-elevated/80 border-b border-slate-200 dark:border-token text-slate-700 dark:text-secondary-token uppercase tracking-wider font-bold ${headerSizes[size] || headerSizes.md}`}>
             <tr>
               {columns.map((col, idx) => (
                 <th
@@ -69,19 +69,19 @@ export default function Table({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-token font-normal">
+          <tbody className="divide-y divide-slate-100 dark:divide-token font-normal">
             {loading ? (
               <tr>
-                <td colSpan={columns.length || 1} className="py-12 text-center text-muted-token text-xs">
+                <td colSpan={columns.length || 1} className="py-12 text-center text-slate-500 dark:text-muted-token text-xs">
                   <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-brand-token" />
                   Loading records...
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length || 1} className="py-12 text-center text-muted-token text-xs">
-                  <EmptyIcon className="w-7 h-7 mx-auto mb-2 opacity-30 text-muted-token" />
-                  {emptyMessage}
+                <td colSpan={columns.length || 1} className="py-14 text-center text-slate-500 dark:text-muted-token text-xs">
+                  <EmptyIcon className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-400 dark:text-muted-token" />
+                  <span className="font-medium">{emptyMessage}</span>
                 </td>
               </tr>
             ) : (
@@ -90,11 +90,12 @@ export default function Table({
                   key={row.id ?? rowIdx}
                   onClick={() => onRowClick && onRowClick(row, rowIdx)}
                   className={`transition-colors ${
-                    onRowClick ? "cursor-pointer hover:bg-surface-elevated" : "hover:bg-surface-elevated/40"
-                  } ${striped && rowIdx % 2 === 1 ? "bg-surface-elevated/20" : ""}`}
+                    onRowClick ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-elevated" : "hover:bg-slate-50/80 dark:hover:bg-surface-elevated/40"
+                  } ${striped && rowIdx % 2 === 1 ? "bg-slate-50/50 dark:bg-surface-elevated/20" : ""}`}
                 >
                   {columns.map((col, colIdx) => {
-                    const val = col.key ? row[col.key] : undefined;
+                    const key = col.key || col.accessor;
+                    const val = key ? row[key] : undefined;
                     const alignClass =
                       col.align === "center"
                         ? "text-center"
@@ -102,10 +103,16 @@ export default function Table({
                         ? "text-right"
                         : "text-left";
 
-                    // Default render handles Rule 15: zero values as dash "—"
+                    // Default render handles Rule 1: zero values as dash "—"
                     let content;
                     if (col.render) {
-                      content = col.render(val, row, rowIdx);
+                      try {
+                        const cellVal = key !== undefined ? val : row;
+                        content = col.render(cellVal, row, rowIdx);
+                      } catch (renderErr) {
+                        console.error("Table column render error:", renderErr);
+                        content = "—";
+                      }
                     } else if (val === 0 || val === "0" || val === 0.0) {
                       content = "—";
                     } else if (val === null || val === undefined || val === "") {

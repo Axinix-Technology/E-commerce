@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Tag } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
 import { Button, Input, Select } from "../../../components/ui";
+import { validateField } from "../../../utils/validation";
 
 export default function BrandCreate() {
   const navigate = useNavigate();
@@ -51,6 +52,26 @@ export default function BrandCreate() {
     if (!form.name.trim() || !form.code.trim()) {
       toast.error("Brand Name and Code are mandatory");
       return;
+    }
+
+    const nameValidation = validateField("name", form.name);
+    if (!nameValidation.isValid) {
+      toast.error(nameValidation.error);
+      return;
+    }
+
+    const codeValidation = validateField("code", form.code);
+    if (!codeValidation.isValid) {
+      toast.error(codeValidation.error);
+      return;
+    }
+
+    if (form.website.trim()) {
+      const urlValidation = validateField("url", form.website);
+      if (!urlValidation.isValid) {
+        toast.error(urlValidation.error);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -114,22 +135,27 @@ export default function BrandCreate() {
         <Input
           label="Brand Name"
           required
+          fieldType="name"
           placeholder="e.g. Axinix Couture"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          helperText="Letters, numbers, and spaces only. No special characters."
         />
 
         <Input
           label="Brand Code"
           required
+          fieldType="code"
           placeholder="e.g. BRD-AX-01"
           value={form.code}
           onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+          helperText="Alphanumeric, uppercase, and hyphens."
         />
 
         <Input
           label="Brand Official Website"
           type="url"
+          fieldType="url"
           placeholder="https://..."
           value={form.website}
           onChange={(e) => setForm({ ...form, website: e.target.value })}
@@ -138,6 +164,7 @@ export default function BrandCreate() {
         <Input
           label="Brand Logo Image URL"
           type="url"
+          fieldType="url"
           placeholder="https://images.../logo.png"
           value={form.logo_url}
           onChange={(e) => setForm({ ...form, logo_url: e.target.value })}

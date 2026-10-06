@@ -10,8 +10,13 @@ import {
   Calendar,
   AlertCircle,
   BellRing,
-  ArrowRight
 } from "lucide-react";
+import { Button, Input, Badge } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function TrackOrderPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,83 +61,74 @@ export default function TrackOrderPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Truck className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Live Order Tracking</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Real-time logistics scans and milestone stepper via BlueDart Express & Delhivery Air
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Truck className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Live Order Tracking
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Real-time logistics scans and milestone stepper via BlueDart Express & Delhivery Air
+            </p>
+          </div>
         </div>
 
-        <Link
-          to={`/useful-additions/track-order/create?tracking=${encodeURIComponent(inputCode)}`}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <BellRing className="w-4 h-4 text-[var(--brand-primary)]" />
-          <span>Subscribe to Alerts</span>
+        <Link to={`/useful-additions/track-order/create?tracking=${encodeURIComponent(inputCode)}`}>
+          <Button variant="secondary" size="sm" icon={BellRing}>
+            Subscribe to Alerts
+          </Button>
         </Link>
       </div>
 
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Tracking Target: <strong className="text-primary-token font-mono font-medium">{activeTracking?.order_number || "—"}</strong></span>
+        <span>•</span>
+        <span>Carrier Partner: <strong className="text-brand-token font-medium">{activeTracking?.carrier || "—"}</strong></span>
+        <span>•</span>
+        <span>Live State: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{activeTracking?.current_status || "—"}</strong></span>
+      </div>
+
       {/* Tracking Search Input */}
-      <form onSubmit={handleSubmit} className="relative">
-        <input
-          type="text"
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
           placeholder="Enter Sale Order Number (e.g. SO-20261003-8491) or Carrier AWB..."
           value={inputCode}
           onChange={(e) => setInputCode(e.target.value)}
-          className="w-full pl-11 pr-28 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[var(--brand-primary)] font-mono"
+          className="font-mono text-xs flex-1"
         />
-        <Search className="w-5 h-5 text-gray-400 absolute left-4 top-3.5" />
-        <button
-          type="submit"
-          className="absolute right-2 top-2 px-4 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-        >
+        <Button type="submit" variant="primary" size="md" icon={Search}>
           Track Now
-        </button>
+        </Button>
       </form>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Tracking Target: <strong className="text-white">{activeTracking?.order_number || "—"}</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Carrier Partner: <strong className="text-[var(--brand-primary)]">{activeTracking?.carrier || "—"}</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Live State: <strong className="text-emerald-400">{activeTracking?.current_status || "—"}</strong>
-        </span>
-      </div>
-
       {activeTracking && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Tracking Summary Card */}
-          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+          <div className="p-5 md:p-6 rounded-2xl bg-surface-elevated/40 border border-token space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <div>
-                <span className="text-[10px] font-bold text-[var(--brand-primary)] uppercase tracking-wider block">
+                <span className="text-[10px] font-bold text-brand-token uppercase tracking-wider block">
                   Carrier Air Consignment
                 </span>
-                <h3 className="text-sm font-mono font-bold text-white mt-0.5">
+                <h3 className="text-sm font-mono font-bold text-primary-token mt-0.5">
                   AWB: {activeTracking.awb_number}
                 </h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  Destination: <strong className="text-gray-200">{activeTracking.destination}</strong>
+                <p className="text-xs text-muted-token mt-1">
+                  Destination: <strong className="text-secondary-token">{activeTracking.destination}</strong>
                 </p>
               </div>
 
               <div className="text-left sm:text-right">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
                   Expected Delivery
                 </span>
-                <span className="text-sm font-bold text-white mt-0.5 block">
+                <span className="text-sm font-bold text-primary-token mt-0.5 block">
                   {activeTracking.estimated_delivery}
                 </span>
               </div>
@@ -140,8 +136,8 @@ export default function TrackOrderPage() {
           </div>
 
           {/* Stepper Milestone Timeline */}
-          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-6">
-            <h3 className="text-xs font-bold text-[var(--brand-primary)] uppercase tracking-wider">
+          <div className="p-5 md:p-6 rounded-2xl bg-surface-elevated/40 border border-token space-y-6 shadow-xs">
+            <h3 className="text-xs font-bold text-brand-token uppercase tracking-wider">
               Transit Milestones
             </h3>
 
@@ -152,7 +148,7 @@ export default function TrackOrderPage() {
                   {idx < activeTracking.milestones.length - 1 && (
                     <div
                       className={`absolute left-2.5 top-6 bottom-0 w-0.5 -mb-6 ${
-                        m.done ? "bg-emerald-500/40" : "bg-white/10"
+                        m.done ? "bg-emerald-500/40" : "bg-token"
                       }`}
                     />
                   )}
@@ -160,25 +156,25 @@ export default function TrackOrderPage() {
                   <div
                     className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10 ${
                       m.done
-                        ? "bg-emerald-500 text-black shadow-xs shadow-emerald-500/50"
-                        : "bg-white/10 text-gray-500"
+                        ? "bg-emerald-500 text-white shadow-xs"
+                        : "bg-surface-elevated border border-token text-muted-token"
                     }`}
                   >
                     {m.done ? (
                       <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
                     ) : (
-                      <div className="w-2 h-2 rounded-full bg-gray-500" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-muted-token" />
                     )}
                   </div>
 
                   <div className="flex-1 -mt-0.5 space-y-0.5 text-xs">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <h4 className={`font-bold ${m.done ? "text-white" : "text-gray-400"}`}>
+                      <h4 className={`font-bold ${m.done ? "text-primary-token" : "text-muted-token"}`}>
                         {m.title}
                       </h4>
-                      <span className="text-[11px] font-mono text-gray-500">{m.time}</span>
+                      <span className="text-[11px] font-mono text-muted-token">{m.time}</span>
                     </div>
-                    <p className="text-[11px] text-gray-400">{m.location}</p>
+                    <p className="text-[11px] text-secondary-token">{m.location}</p>
                   </div>
                 </div>
               ))}

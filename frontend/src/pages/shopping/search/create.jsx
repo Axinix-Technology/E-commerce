@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, BellRing, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input, Checkbox } from "../../../components/ui";
 
 export default function CreateSearchAlertPage() {
   const navigate = useNavigate();
@@ -33,96 +34,85 @@ export default function CreateSearchAlertPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           to={`/shopping/search?q=${encodeURIComponent(queryParam)}`}
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <BellRing className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Create Saved Search Alert</span>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <BellRing className="w-5 h-5 text-brand-token" />
+            Create Saved Search Alert
           </h1>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-token mt-0.5">
             Get automated SMS and email notifications when matching inventory is restocked or discounted
           </p>
         </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Keywords / Product Search Term *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Linen Shirt, Pashmina Stole"
-              value={formData.keyword}
-              onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-            />
-          </div>
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <Input
+          label="Keywords / Product Search Term"
+          required
+          placeholder="e.g. Linen Shirt, Pashmina Stole"
+          value={formData.keyword}
+          onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
+        />
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Maximum Budget (₹)</label>
-            <input
-              type="number"
-              placeholder="e.g. 5000"
-              value={formData.max_price}
-              onChange={(e) => setFormData({ ...formData, max_price: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-            />
-          </div>
+        <Input
+          label="Maximum Budget (₹)"
+          type="number"
+          placeholder="e.g. 5000"
+          value={formData.max_price}
+          onChange={(e) => setFormData({ ...formData, max_price: e.target.value })}
+        />
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Email or Mobile Number for Alerts *</label>
-            <input
-              type="text"
-              required
-              placeholder="alex@example.com or +91 9876543210"
-              value={formData.email_or_phone}
-              onChange={(e) => setFormData({ ...formData, email_or_phone: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-            />
-          </div>
+        <Input
+          label="Email or Mobile Number for Alerts"
+          required
+          placeholder="alex@example.com or +91 9876543210"
+          value={formData.email_or_phone}
+          onChange={(e) => setFormData({ ...formData, email_or_phone: e.target.value })}
+        />
 
-          <div className="space-y-2 pt-2 border-t border-white/[0.08]">
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-300">
-              <input
-                type="checkbox"
-                checked={formData.notify_on_restock}
-                onChange={(e) => setFormData({ ...formData, notify_on_restock: e.target.checked })}
-                className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-0"
-              />
-              <span>Notify me immediately when new stock arrives</span>
-            </label>
+        <div className="space-y-2 pt-2 border-t border-token">
+          <Checkbox
+            label="Notify me immediately when new stock arrives"
+            checked={formData.notify_on_restock}
+            onChange={(e) => setFormData({ ...formData, notify_on_restock: e.target.checked })}
+          />
 
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-300">
-              <input
-                type="checkbox"
-                checked={formData.notify_on_discount}
-                onChange={(e) => setFormData({ ...formData, notify_on_discount: e.target.checked })}
-                className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-0"
-              />
-              <span>Notify me when matching items go on promotional sale</span>
-            </label>
-          </div>
+          <Checkbox
+            label="Notify me when matching items go on promotional sale"
+            checked={formData.notify_on_discount}
+            onChange={(e) => setFormData({ ...formData, notify_on_discount: e.target.checked })}
+          />
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <button
+        <div className="pt-3 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/shopping/search?q=${encodeURIComponent(queryParam)}`)}
+          >
+            Cancel
+          </Button>
+          <Button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : "Activate Search Alert"}</span>
-          </button>
+            Activate Search Alert
+          </Button>
         </div>
       </form>
     </div>

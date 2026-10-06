@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { PackageCheck, Plus, Search, Filter, Download, Building } from "lucide-react";
+import { PackageCheck, Plus, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function AvailableStockIndex() {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockLevelFilter, setStockLevelFilter] = useState("all");
 
   const fetchStocks = async () => {
     setLoading(true);
@@ -41,106 +36,193 @@ export default function AvailableStockIndex() {
     fetchStocks();
   }, []);
 
-  const filtered = stocks.filter((s) =>
-    (s.sku || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.product_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.category || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.branch || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setBranchFilter("all");
+    setCategoryFilter("all");
+    setStockLevelFilter("all");
+  };
+
+  const filtered = stocks.filter((s) => {
+    const matchesSearch =
+      (s.sku || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.product_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.category || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.branch || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesBranch = branchFilter === "all" || s.branch === branchFilter;
+    const matchesCategory = categoryFilter === "all" || s.category === categoryFilter;
+
+    let matchesStockLevel = true;
+    if (stockLevelFilter === "in_stock") matchesStockLevel = Number(s.available) > 0;
+    else if (stockLevelFilter === "low_stock") matchesStockLevel = Number(s.available) > 0 && Number(s.available) <= 15;
+    else if (stockLevelFilter === "out_of_stock") matchesStockLevel = Number(s.available) === 0;
+
+    return matchesSearch && matchesBranch && matchesCategory && matchesStockLevel;
+  });
 
   const totalOnHand = filtered.reduce((sum, s) => sum + (Number(s.on_hand) || 0), 0);
   const totalReserved = filtered.reduce((sum, s) => sum + (Number(s.reserved) || 0), 0);
   const totalAvailable = filtered.reduce((sum, s) => sum + (Number(s.available) || 0), 0);
   const totalInventoryValue = filtered.reduce((sum, s) => sum + (Number(s.total_value) || 0), 0);
 
+  const columns = [
+    {
+      key: "sku",
+      header: "SKU Code",
+      render: (val) => <span className="font-mono text-xs text-brand-token font-semibold">{val}</span>,
+    },
+    {
+      key: "product_name",
+      header: "Product / Description",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">{row.category}</span>
+        </div>
+      ),
+    },
+    {
+      key: "branch",
+      header: "Location / Branch",
+      render: (val) => <span className="text-secondary-token text-xs">{val}</span>,
+    },
+    {
+      key: "on_hand",
+      header: "On-Hand",
+      align: "center",
+      render: (val) => <span className="font-semibold">{formatQty(val)}</span>,
+    },
+    {
+      key: "reserved",
+      header: "Reserved",
+      align: "center",
+      render: (val) => (
+        <span className="font-mono text-amber-800 dark:text-amber-400">
+          {formatQty(val)}
+        </span>
+      ),
+    },
+    {
+      key: "available",
+      header: "Sellable Balance",
+      align: "center",
+      render: (val) => (
+        <Badge variant={val > 10 ? "emerald" : val > 0 ? "amber" : "neutral"} dot>
+          {formatQty(val)} Available
+        </Badge>
+      ),
+    },
+    {
+      key: "total_value",
+      header: "Valuation (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-bold text-primary-token font-mono">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <PackageCheck className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <PackageCheck className="w-5 h-5 text-brand-token" />
             Available Sellable Stock Registry
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Real-time inventory available for POS checkout and online storefront sales</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Real-time inventory available for POS checkout and online storefront sales
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/reports/available-stock/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Stock Audit Snapshot
+          <Link to="/reports/available-stock/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Audit Snapshot
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>On-Hand Pcs: <strong className="text-text-primary font-medium">{formatQty(totalOnHand)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>On-Hand Pcs: <strong className="text-primary-token font-medium">{formatQty(totalOnHand)}</strong></span>
         <span>•</span>
-        <span>Reserved / Memo Pcs: <strong className="text-amber-400 font-medium">{formatQty(totalReserved)}</strong></span>
+        <span>Reserved / Memo Pcs: <strong className="text-amber-800 dark:text-amber-400 font-medium">{formatQty(totalReserved)}</strong></span>
         <span>•</span>
-        <span>Available Sellable: <strong className="text-emerald-400 font-medium">{formatQty(totalAvailable)}</strong></span>
+        <span>Available Sellable: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatQty(totalAvailable)}</strong></span>
         <span>•</span>
-        <span>Sellable Valuation: <strong className="text-accent-primary font-medium">{formatCurrency(totalInventoryValue)}</strong></span>
+        <span>Sellable Valuation: <strong className="text-brand-token font-semibold">{formatCurrency(totalInventoryValue)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by SKU, product name, category, or branch..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search SKU, product name, or branch..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Branches" },
+                { value: "Chennai Flagship", label: "Chennai Flagship" },
+                { value: "T. Nagar Showroom", label: "T. Nagar Showroom" },
+                { value: "Central Warehouse", label: "Central Warehouse" },
+                { value: "Coimbatore Branch", label: "Coimbatore Branch" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Categories" },
+                { value: "Sarees", label: "Sarees" },
+                { value: "Dupattas", label: "Dupattas" },
+                { value: "Kurtis", label: "Kurtis" },
+                { value: "Accessories", label: "Accessories" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={stockLevelFilter}
+              onChange={(e) => setStockLevelFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Stock Statuses" },
+                { value: "in_stock", label: "In Stock (> 0)" },
+                { value: "low_stock", label: "Low Stock (≤ 15)" },
+                { value: "out_of_stock", label: "Out of Stock (—)" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchStocks}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">SKU</th>
-                <th className="px-4 py-2.5">Product Name</th>
-                <th className="px-4 py-2.5">Category</th>
-                <th className="px-4 py-2.5">Branch / Warehouse</th>
-                <th className="px-4 py-2.5">On-Hand</th>
-                <th className="px-4 py-2.5">Reserved</th>
-                <th className="px-4 py-2.5">Available Pcs</th>
-                <th className="px-4 py-2.5">Valuation</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading stock registry...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No stock records found.</td>
-                </tr>
-              ) : (
-                filtered.map((s) => (
-                  <tr key={s.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono font-medium text-accent-primary">{s.sku}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{s.product_name}</td>
-                    <td className="px-4 py-3 text-text-secondary">{s.category}</td>
-                    <td className="px-4 py-3 text-text-secondary flex items-center gap-1.5">
-                      <Building className="w-3 h-3 text-text-muted" />
-                      {s.branch}
-                    </td>
-                    <td className="px-4 py-3 font-mono">{formatQty(s.on_hand)}</td>
-                    <td className="px-4 py-3 font-mono text-amber-400">{formatQty(s.reserved)}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-emerald-400">{formatQty(s.available)}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-text-primary">{formatCurrency(s.total_value)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No inventory matching current criteria."
+      />
     </div>
   );
 }

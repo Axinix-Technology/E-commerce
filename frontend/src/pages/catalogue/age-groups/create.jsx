@@ -4,6 +4,7 @@ import { ArrowLeft, Save, UserCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
 import { Button, Input, Select, Textarea } from "../../../components/ui";
+import { validateField } from "../../../utils/validation";
 
 export default function AgeGroupCreate() {
   const navigate = useNavigate();
@@ -50,6 +51,17 @@ export default function AgeGroupCreate() {
     e.preventDefault();
     if (!form.name.trim()) {
       toast.error("Age Group Name is mandatory");
+      return;
+    }
+
+    const nameValidation = validateField("name", form.name);
+    if (!nameValidation.isValid) {
+      toast.error(nameValidation.error);
+      return;
+    }
+
+    if (Number(form.min_age) > Number(form.max_age)) {
+      toast.error(`Minimum age (${form.min_age}) cannot be greater than maximum age (${form.max_age})`);
       return;
     }
 
@@ -114,9 +126,11 @@ export default function AgeGroupCreate() {
         <Input
           label="Age Group Label"
           required
+          fieldType="name"
           placeholder="e.g. Kids & Pre-Teens"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          helperText="Letters, numbers, and spaces only. No special characters."
         />
 
         <div className="grid grid-cols-2 gap-4">

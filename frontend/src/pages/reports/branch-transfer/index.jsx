@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Truck, Plus, Search, CheckCircle2, Clock, Building, ArrowRight } from "lucide-react";
+import { Truck, Plus, ArrowRight, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function BranchTransferReportIndex() {
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceBranchFilter, setSourceBranchFilter] = useState("all");
+  const [destBranchFilter, setDestBranchFilter] = useState("all");
 
   const fetchTransfers = async () => {
     setLoading(true);
@@ -40,118 +35,182 @@ export default function BranchTransferReportIndex() {
     fetchTransfers();
   }, []);
 
-  const filtered = transfers.filter((t) =>
-    (t.transfer_no || "").toLowerCase().includes(search.toLowerCase()) ||
-    (t.from_branch || "").toLowerCase().includes(search.toLowerCase()) ||
-    (t.to_branch || "").toLowerCase().includes(search.toLowerCase()) ||
-    (t.status || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setSourceBranchFilter("all");
+    setDestBranchFilter("all");
+  };
+
+  const filtered = transfers.filter((t) => {
+    const matchesSearch =
+      (t.transfer_no || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.from_branch || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.to_branch || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.status || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    const matchesSource = sourceBranchFilter === "all" || t.from_branch === sourceBranchFilter;
+    const matchesDest = destBranchFilter === "all" || t.to_branch === destBranchFilter;
+
+    return matchesSearch && matchesStatus && matchesSource && matchesDest;
+  });
 
   const totalTransfers = filtered.length;
   const totalItems = filtered.reduce((sum, t) => sum + (Number(t.items_count) || 0), 0);
   const totalValue = filtered.reduce((sum, t) => sum + (Number(t.total_value) || 0), 0);
   const inTransitCount = filtered.filter((t) => t.status === "In Transit" || t.status === "Dispatched").length;
 
+  const columns = [
+    {
+      key: "transfer_no",
+      header: "Transfer Voucher #",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">Dispatched: {row.dispatch_date || "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "route",
+      header: "Dispatch Route",
+      render: (_, row) => (
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-secondary-token">{row.from_branch}</span>
+          <ArrowRight className="w-3 h-3 text-muted-token" />
+          <span className="font-semibold text-primary-token">{row.to_branch}</span>
+        </div>
+      ),
+    },
+    {
+      key: "items_count",
+      header: "Quantity",
+      align: "center",
+      render: (val) => <span className="font-semibold">{formatQty(val)} Pcs</span>,
+    },
+    {
+      key: "total_value",
+      header: "Valuation (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-bold text-primary-token font-mono">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Consignment Status",
+      render: (val) => {
+        const isReceived = val === "Received";
+        const isInTransit = val === "In Transit" || val === "Dispatched";
+        return (
+          <Badge variant={isReceived ? "emerald" : isInTransit ? "amber" : "neutral"} dot>
+            {val}
+          </Badge>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Truck className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Truck className="w-5 h-5 text-brand-token" />
             Branch Stock Transfer Ledger
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Audit inter-warehouse stock redistributions, transit verifications, and delivery receipts</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Audit inter-warehouse stock redistributions, transit verifications, and delivery receipts
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/reports/branch-transfer/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Log Transfer Audit
+          <Link to="/reports/branch-transfer/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Log Transfer
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Transfers Logged: <strong className="text-text-primary font-medium">{formatQty(totalTransfers)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Transfers Logged: <strong className="text-primary-token font-medium">{formatQty(totalTransfers)}</strong></span>
         <span>•</span>
-        <span>Units In-Transit: <strong className="text-amber-400 font-medium">{formatQty(totalItems)}</strong></span>
+        <span>Units In-Transit: <strong className="text-amber-800 dark:text-amber-400 font-medium">{formatQty(totalItems)}</strong></span>
         <span>•</span>
-        <span>Consignment Value: <strong className="text-accent-primary font-medium">{formatCurrency(totalValue)}</strong></span>
+        <span>Consignment Value: <strong className="text-brand-token font-semibold">{formatCurrency(totalValue)}</strong></span>
         <span>•</span>
-        <span>Active Shipments: <strong className="text-emerald-400 font-medium">{formatQty(inTransitCount)}</strong></span>
+        <span>Active Shipments: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatQty(inTransitCount)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by transfer number, source branch, or destination..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search transfer #, source, or destination..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Consignment Statuses" },
+                { value: "Received", label: "Received (Complete)" },
+                { value: "In Transit", label: "In Transit" },
+                { value: "Dispatched", label: "Dispatched" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={sourceBranchFilter}
+              onChange={(e) => setSourceBranchFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Origin Branches" },
+                { value: "Central Warehouse", label: "Central Warehouse" },
+                { value: "Chennai Flagship", label: "Chennai Flagship" },
+                { value: "T. Nagar Showroom", label: "T. Nagar Showroom" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={destBranchFilter}
+              onChange={(e) => setDestBranchFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Destination Branches" },
+                { value: "Chennai Flagship", label: "Chennai Flagship" },
+                { value: "T. Nagar Showroom", label: "T. Nagar Showroom" },
+                { value: "Coimbatore Branch", label: "Coimbatore Branch" },
+                { value: "Central Warehouse", label: "Central Warehouse" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchTransfers}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Transfer Ref</th>
-                <th className="px-4 py-2.5">Origin Branch</th>
-                <th className="px-4 py-2.5">Destination Branch</th>
-                <th className="px-4 py-2.5">Items</th>
-                <th className="px-4 py-2.5">Consignment Value</th>
-                <th className="px-4 py-2.5">Dispatch Date</th>
-                <th className="px-4 py-2.5">Received Date</th>
-                <th className="px-4 py-2.5">Transit Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading branch transfer ledger...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No transfer logs found.</td>
-                </tr>
-              ) : (
-                filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-semibold text-text-primary flex items-center gap-1.5">
-                      <Truck className="w-3.5 h-3.5 text-accent-primary" />
-                      {t.transfer_no}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{t.from_branch}</td>
-                    <td className="px-4 py-3 text-text-primary font-medium flex items-center gap-1">
-                      <ArrowRight className="w-3 h-3 text-text-muted" />
-                      {t.to_branch}
-                    </td>
-                    <td className="px-4 py-3 font-mono">{formatQty(t.items_count)}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">{formatCurrency(t.total_value)}</td>
-                    <td className="px-4 py-3 text-text-muted">{t.dispatch_date || "—"}</td>
-                    <td className="px-4 py-3 text-text-muted">{t.received_date || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        t.status === "Received" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                        t.status === "In Transit" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                        "bg-accent-primary/10 text-accent-primary border border-accent-primary/20"
-                      }`}>
-                        {t.status === "Received" ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                        {t.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No branch transfer records found."
+      />
     </div>
   );
 }

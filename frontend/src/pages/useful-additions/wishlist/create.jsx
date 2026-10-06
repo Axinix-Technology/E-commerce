@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input, Textarea } from "../../../components/ui";
 
 export default function AddToWishlistPage() {
   const navigate = useNavigate();
@@ -25,88 +26,79 @@ export default function AddToWishlistPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           to="/useful-additions/wishlist"
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Heart className="w-5 h-5 text-rose-400 fill-rose-400" />
-            <span>Add Custom Item to Wishlist</span>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
+            Add Custom Item to Wishlist
           </h1>
-          <p className="text-xs text-gray-400">Save bespoke apparel requests or future purchase goals</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Save bespoke apparel requests or future purchase goals
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Item Title *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Royal Oxford Button-Down (Sky Blue)"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-            />
-          </div>
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <Input
+          label="Item Title"
+          required
+          placeholder="e.g. Royal Oxford Button-Down (Sky Blue)"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">SKU or Reference</label>
-              <input
-                type="text"
-                placeholder="HL-OXF-BLU-L"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono"
-              />
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="SKU or Reference"
+            placeholder="HL-OXF-BLU-L"
+            value={formData.sku}
+            onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+            className="font-mono text-xs"
+          />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Target Price (₹)</label>
-              <input
-                type="number"
-                placeholder="2499.00"
-                value={formData.selling_price}
-                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Personal Notes</label>
-            <textarea
-              rows={3}
-              placeholder="e.g. Buy before Diwali wedding; check for discount vouchers..."
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] resize-none"
-            />
-          </div>
+          <Input
+            label="Target Price (₹)"
+            type="number"
+            placeholder="2499.00"
+            value={formData.selling_price}
+            onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+          />
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/useful-additions/wishlist"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
+        <Textarea
+          label="Personal Notes"
+          rows={3}
+          placeholder="e.g. Buy before Diwali wedding; check for discount vouchers..."
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+        />
+
+        <div className="pt-3 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/useful-additions/wishlist")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+            variant="primary"
+            size="sm"
+            icon={Heart}
           >
-            <Heart className="w-4 h-4 fill-white" />
-            <span>Save to Wishlist</span>
-          </button>
+            Save to Wishlist
+          </Button>
         </div>
       </form>
     </div>

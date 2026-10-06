@@ -3,7 +3,6 @@ from typing import Any
 from rest_framework.request import Request
 from rest_framework.response import Response
 from core.pipeline.context import RequestContext, Action
-from core.validation.validator import RequestValidator
 from core.security.sanitizer import SecuritySanitizer
 from core.policy.engine import PolicyEngine
 from core.query.parser import DeveloperDSLParser
@@ -151,6 +150,7 @@ class ValidationStage:
 
     @classmethod
     def execute(cls, context: RequestContext) -> RequestContext:
+        from core.validation.validator import RequestValidator
         return RequestValidator.validate(context)
 
 

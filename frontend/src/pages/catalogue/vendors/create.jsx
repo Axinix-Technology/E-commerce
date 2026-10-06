@@ -5,13 +5,13 @@ import {
   Building2,
   Save,
   Phone,
-  Mail,
   MapPin,
   Landmark,
   ShieldCheck
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function VendorFormPage() {
   const navigate = useNavigate();
@@ -127,12 +127,12 @@ export default function VendorFormPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Top Bar with Breadcrumb */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-token">
         <div className="flex items-center gap-3">
           <Link
             to="/catalogue/vendors"
-            className="p-2 rounded-xl bg-surface-elevated hover:bg-surface border border-token text-secondary-token hover:text-primary-token transition-colors"
+            className="p-2 rounded-xl bg-surface-elevated/40 hover:bg-surface-elevated/80 border border-token text-muted-token hover:text-primary-token transition-colors"
             title="Back to Vendors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -142,7 +142,7 @@ export default function VendorFormPage() {
               <span>Catalogue Master</span>
               <span>/</span>
               <Link to="/catalogue/vendors" className="hover:text-primary-token">
-                Vendor Registration
+                Vendors
               </Link>
               <span>/</span>
               <span className="text-brand-token font-medium">
@@ -156,27 +156,31 @@ export default function VendorFormPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/catalogue/vendors"
-            className="px-4 py-2 rounded-xl border border-token hover:bg-surface-elevated text-secondary-token text-xs font-semibold transition-colors"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/vendors")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
             onClick={handleSubmit}
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Register Vendor"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Register Vendor"}
+          </Button>
         </div>
       </div>
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Supplier Identity */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <Building2 className="w-4 h-4 text-brand-token" />
@@ -187,44 +191,32 @@ export default function VendorFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Vendor / Supplier Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Vendor / Supplier Name"
                 required
                 placeholder="e.g. Apex Apparels & Textiles Pvt Ltd"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Vendor Code
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Vendor Code"
                 placeholder="e.g. VEND-APEX-01"
                 value={formData.vendor_code}
                 onChange={(e) => setFormData({ ...formData, vendor_code: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
 
             <div className="md:col-span-3">
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Contact Person / Representative
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Contact Person / Representative"
                 placeholder="e.g. Mr. Rajesh Sharma (Procurement Head)"
                 value={formData.contact_person}
                 onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
           </div>
@@ -233,78 +225,57 @@ export default function VendorFormPage() {
         {/* Contact & Tax Compliance */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Communication Channels */}
-          <div className="glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+          <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2 pb-2 border-b border-token">
               <Phone className="w-4 h-4 text-brand-token" />
               Communication Channels
             </h2>
 
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">Phone Number</label>
-                <input
-                  type="text"
-                  placeholder="+91 98765 43210"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="orders@apexapparels.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
+            <div className="space-y-3">
+              <Input
+                label="Phone Number"
+                placeholder="+91 98765 43210"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+              <Input
+                label="Email Address"
+                type="email"
+                placeholder="orders@apexapparels.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
           </div>
 
           {/* Tax Credentials */}
-          <div className="glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+          <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2 pb-2 border-b border-token">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Tax Compliance Credentials
             </h2>
 
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">
-                  GSTIN (15 Digits)
-                </label>
-                <input
-                  type="text"
-                  maxLength={15}
-                  placeholder="e.g. 33AAAAA0000A1Z5"
-                  value={formData.gstin}
-                  onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono uppercase focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">
-                  PAN Number (10 Digits)
-                </label>
-                <input
-                  type="text"
-                  maxLength={10}
-                  placeholder="e.g. ABCDE1234F"
-                  value={formData.pan_number}
-                  onChange={(e) => setFormData({ ...formData, pan_number: e.target.value.toUpperCase() })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono uppercase focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
+            <div className="space-y-3">
+              <Input
+                label="GSTIN (15 Digits)"
+                maxLength={15}
+                placeholder="e.g. 33AAAAA0000A1Z5"
+                value={formData.gstin}
+                onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+              />
+              <Input
+                label="PAN Number (10 Digits)"
+                maxLength={10}
+                placeholder="e.g. ABCDE1234F"
+                value={formData.pan_number}
+                onChange={(e) => setFormData({ ...formData, pan_number: e.target.value.toUpperCase() })}
+              />
             </div>
           </div>
         </div>
 
         {/* Address Details */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <MapPin className="w-4 h-4 text-brand-token" />
@@ -315,48 +286,41 @@ export default function VendorFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-3">
-              <label className="block font-semibold text-secondary-token mb-1.5">Street Address</label>
-              <textarea
-                rows="2"
+              <Textarea
+                label="Street Address"
+                rows={2}
                 placeholder="Plot No, Street, Industrial Area..."
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs resize-none"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">City</label>
-              <input
-                type="text"
+              <Input
+                label="City"
                 placeholder="e.g. Tiruppur"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">State</label>
-              <input
-                type="text"
+              <Input
+                label="State"
                 placeholder="e.g. Tamil Nadu"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">PIN Code</label>
-              <input
-                type="text"
+              <Input
+                label="PIN Code"
                 placeholder="641601"
                 value={formData.pincode}
                 onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
           </div>
@@ -364,87 +328,74 @@ export default function VendorFormPage() {
 
         {/* Banking & Status */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+          <div className="md:col-span-2 p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2 pb-2 border-b border-token">
               <Landmark className="w-4 h-4 text-brand-token" />
               Settlement & Banking (Optional)
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">Bank Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. HDFC Bank"
-                  value={formData.bank_name}
-                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">Account Number</label>
-                <input
-                  type="text"
-                  placeholder="50200012345678"
-                  value={formData.account_number}
-                  onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-secondary-token mb-1.5">IFSC Code</label>
-                <input
-                  type="text"
-                  placeholder="HDFC0001234"
-                  value={formData.ifsc_code}
-                  onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono uppercase focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Input
+                label="Bank Name"
+                placeholder="e.g. HDFC Bank"
+                value={formData.bank_name}
+                onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+              />
+              <Input
+                label="Account Number"
+                placeholder="50200012345678"
+                value={formData.account_number}
+                onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+              />
+              <Input
+                label="IFSC Code"
+                placeholder="HDFC0001234"
+                value={formData.ifsc_code}
+                onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
+              />
             </div>
           </div>
 
           {/* Master Status */}
-          <div className="glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+          <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-3">
             <h2 className="text-sm font-bold text-primary-token pb-2 border-b border-token">
               Master Status
             </h2>
 
-            <div className="text-xs space-y-2">
-              <label className="block font-semibold text-secondary-token">Record Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              >
-                <option value={1}>Active (Authorized Supplier)</option>
-                <option value={0}>Inactive (Deactivated)</option>
-              </select>
-              <p className="text-[10px] text-muted-token">
-                Inactive vendors cannot be selected in new Purchase Orders or Inward entries.
-              </p>
-            </div>
+            <Select
+              label="Record Status"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
+              options={[
+                { value: 1, label: "Active (Authorized Supplier)" },
+                { value: 0, label: "Inactive (Deactivated)" },
+              ]}
+            />
+            <p className="text-[11px] text-muted-token">
+              Inactive vendors cannot be selected in new Purchase Orders or Inward entries.
+            </p>
           </div>
         </div>
 
         {/* Bottom Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link
-            to="/catalogue/vendors"
-            className="px-5 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/vendors")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Register Vendor"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Register Vendor"}
+          </Button>
         </div>
       </form>
     </div>

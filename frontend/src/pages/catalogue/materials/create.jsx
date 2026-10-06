@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Layers } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function MaterialCreate() {
   const navigate = useNavigate();
@@ -43,94 +44,85 @@ export default function MaterialCreate() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/catalogue/materials" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/catalogue/materials"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Layers className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Layers className="w-5 h-5 text-brand-token" />
             Add New Fabric / Material
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Register textile composition, yarn properties, and garment care instructions</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Register textile composition, yarn properties, and garment care instructions
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
-            Material Name <span className="text-rose-400">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Pure Kanchipuram Mulberry Silk"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <Input
+          label="Material Name"
+          required
+          placeholder="e.g. Pure Kanchipuram Mulberry Silk"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
-            Material Code <span className="text-rose-400">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. MAT-SILK-01"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary uppercase focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+        <Input
+          label="Material Code"
+          required
+          placeholder="e.g. MAT-SILK-01"
+          value={form.code}
+          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Fabric Description</label>
-          <textarea
-            rows={3}
-            placeholder="Describe fabric weave, texture, GSM weight, and origins..."
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+        <Textarea
+          label="Fabric Description"
+          rows={3}
+          placeholder="Describe fabric weave, texture, GSM weight, and origins..."
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Care & Washing Guidelines</label>
-          <input
-            type="text"
-            placeholder="e.g. Dry clean only, keep in muslin wrap"
-            value={form.care_instructions}
-            onChange={(e) => setForm({ ...form, care_instructions: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
+        <Input
+          label="Care & Washing Guidelines"
+          placeholder="e.g. Dry clean only, keep in muslin wrap"
+          value={form.care_instructions}
+          onChange={(e) => setForm({ ...form, care_instructions: e.target.value })}
+        />
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Status</label>
-          <select
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+        <Select
+          label="Status"
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
+          options={[
+            { value: 1, label: "Active" },
+            { value: 0, label: "Inactive" },
+          ]}
+        />
+
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-token">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/materials")}
           >
-            <option value={1}>Active</option>
-            <option value={0}>Inactive</option>
-          </select>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/catalogue/materials" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Save Material"}
-          </button>
+            Save Material
+          </Button>
         </div>
       </form>
     </div>

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Textarea } from "../../../components/ui";
 
 export default function GstFormPage() {
   const navigate = useNavigate();
@@ -113,7 +114,7 @@ export default function GstFormPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/catalogue/gst-slabs"
-            className="p-2 rounded-xl bg-surface-elevated hover:bg-surface border border-token text-secondary-token hover:text-primary-token transition-colors"
+            className="p-2 rounded-xl bg-surface-elevated/40 hover:bg-surface-elevated/80 border border-token text-muted-token hover:text-primary-token transition-colors"
             title="Back to GST Slabs"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -123,7 +124,7 @@ export default function GstFormPage() {
               <span>Catalogue Master</span>
               <span>/</span>
               <Link to="/catalogue/gst-slabs" className="hover:text-primary-token">
-                GST Master
+                GST Slabs
               </Link>
               <span>/</span>
               <span className="text-brand-token font-medium">
@@ -137,28 +138,31 @@ export default function GstFormPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
-            to="/catalogue/gst-slabs"
-            className="px-4 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold transition-colors"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/gst-slabs")}
           >
             Cancel
-          </Link>
-          <button
-            type="button"
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
             onClick={handleSubmit}
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Slab"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Create Slab"}
+          </Button>
         </div>
       </div>
 
       {/* Main Form Body */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Tax Slab Configuration Card */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <BadgePercent className="w-4 h-4 text-brand-token" />
@@ -169,121 +173,93 @@ export default function GstFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Slab Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. GST 18%, GST 12%, GST Exempt"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-              <p className="text-[11px] text-muted-token mt-1">Friendly identifier used across invoice and catalog dropdowns.</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Slab Name"
+              required
+              placeholder="e.g. GST 18%, GST 12%, GST Exempt"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
 
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Total Tax Rate (%) <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  required
-                  placeholder="e.g. 18.00"
-                  value={formData.rate}
-                  onChange={(e) => handleRateChange(e.target.value)}
-                  className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-token font-mono font-bold">%</span>
-              </div>
-              <p className="text-[11px] text-muted-token mt-1">Entering the rate automatically calculates 50/50 CGST & SGST splits below.</p>
-            </div>
-          </div>
-
-          {/* Tax Split Breakdown */}
-          <div className="p-4 rounded-xl bg-surface-elevated/40 border border-token space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-secondary-token">
-              <Calculator className="w-3.5 h-3.5 text-brand-token" />
-              Tax Split Breakdown (Auto-Calculated)
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block font-medium text-muted-token mb-1">
-                  CGST (Central) %
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.cgst_rate}
-                  onChange={(e) => setFormData({ ...formData, cgst_rate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-muted-token mb-1">
-                  SGST (State) %
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.sgst_rate}
-                  onChange={(e) => setFormData({ ...formData, sgst_rate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-muted-token mb-1">
-                  IGST (Integrated) %
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.igst_rate}
-                  onChange={(e) => setFormData({ ...formData, igst_rate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-surface border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-secondary-token mb-1.5">Description</label>
-            <textarea
-              rows="3"
-              placeholder="Optional notes or references for this tax slab..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs resize-none"
+            <Input
+              label="Total Tax Rate (%)"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              required
+              placeholder="e.g. 18.00"
+              value={formData.rate}
+              onChange={(e) => handleRateChange(e.target.value)}
             />
           </div>
+
+          {/* Automatic Split Info Box */}
+          <div className="p-4 rounded-xl bg-surface-elevated/60 border border-token">
+            <div className="flex items-center gap-2 text-xs font-semibold text-primary-token mb-3">
+              <Calculator className="w-4 h-4 text-brand-token" />
+              <span>Statutory Rate Split Matrix</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Input
+                label="CGST (Central Tax %)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.cgst_rate}
+                onChange={(e) => setFormData({ ...formData, cgst_rate: e.target.value })}
+              />
+
+              <Input
+                label="SGST (State Tax %)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.sgst_rate}
+                onChange={(e) => setFormData({ ...formData, sgst_rate: e.target.value })}
+              />
+
+              <Input
+                label="IGST (Inter-State Tax %)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.igst_rate}
+                onChange={(e) => setFormData({ ...formData, igst_rate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <Textarea
+            label="Tax Specification / Notes"
+            rows={3}
+            placeholder="HSN categories or garment pricing ranges this slab applies to..."
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
         </div>
 
         {/* Bottom Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link
-            to="/catalogue/gst-slabs"
-            className="px-5 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/gst-slabs")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Slab"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Create Slab"}
+          </Button>
         </div>
       </form>
     </div>

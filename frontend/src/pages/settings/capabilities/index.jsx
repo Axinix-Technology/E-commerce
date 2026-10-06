@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Key, Plus, Search, ShieldCheck, CheckCircle2, Lock } from "lucide-react";
+import { Key, Plus, ShieldCheck, CheckCircle2, Lock, Shield, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -13,6 +14,7 @@ export default function CapabilitiesIndex() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
+  const [actionFilter, setActionFilter] = useState("all");
 
   const fetchCapabilities = async () => {
     setLoading(true);
@@ -38,126 +40,157 @@ export default function CapabilitiesIndex() {
     fetchCapabilities();
   }, []);
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setModuleFilter("all");
+    setActionFilter("all");
+  };
+
   const filtered = capabilities.filter((c) => {
     const matchesSearch =
       (c.key || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.label || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.module || "").toLowerCase().includes(search.toLowerCase());
     const matchesModule = moduleFilter === "all" || c.module === moduleFilter;
-    return matchesSearch && matchesModule;
+    const matchesAction = actionFilter === "all" || (c.action || "").toLowerCase() === actionFilter.toLowerCase();
+    return matchesSearch && matchesModule && matchesAction;
   });
 
   const modules = Array.from(new Set(capabilities.map((c) => c.module).filter(Boolean)));
 
+  const columns = [
+    {
+      header: "Capability Key",
+      render: (c) => (
+        <span className="font-mono font-medium text-brand-token flex items-center gap-1.5 text-xs">
+          <Lock className="w-3.5 h-3.5 text-muted-token shrink-0" />
+          {c.key}
+        </span>
+      ),
+    },
+    {
+      header: "Action",
+      render: (c) => (
+        <Badge variant="neutral" size="sm">
+          {c.action?.toUpperCase() || "—"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Label",
+      accessor: "label",
+      className: "font-medium text-primary-token text-xs",
+    },
+    {
+      header: "Module",
+      render: (c) => (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-elevated border border-token text-secondary-token uppercase tracking-wide">
+          {c.module}
+        </span>
+      ),
+    },
+    {
+      header: "Description",
+      accessor: "description",
+      className: "text-muted-token text-xs max-w-sm",
+    },
+    {
+      header: "Status",
+      render: (c) => (
+        <Badge variant={c.status === 1 ? "success" : "neutral"} size="sm">
+          {c.status === 1 ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Key className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Key className="w-5 h-5 text-brand-token" />
             System Capabilities & Permissions Registry
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Define granular functional privileges mapped to roles and staff access levels</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Define granular functional privileges mapped to roles and staff access levels
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/settings/roles-permissions"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition"
-          >
-            Role Assignments
+          <Link to="/settings/roles-permissions">
+            <Button variant="secondary" size="sm" icon={Shield}>
+              Role Assignments
+            </Button>
           </Link>
-          <Link
-            to="/settings/capabilities/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Capability
+          <Link to="/settings/capabilities/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Add Capability
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Registered Capabilities: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Registered Capabilities: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Covered Modules: <strong className="text-accent-primary font-medium">{formatQty(modules.length)}</strong></span>
+        <span>Covered Modules: <strong className="text-brand-token font-medium">{formatQty(modules.length)}</strong></span>
         <span>•</span>
-        <span>RBAC Enforcement: <strong className="text-emerald-400 font-medium">Strict (Active)</strong></span>
+        <span>RBAC Enforcement: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Strict (Active)</strong></span>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search by key, action, or module..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
-        <select
-          value={moduleFilter}
-          onChange={(e) => setModuleFilter(e.target.value)}
-          className="px-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by key, action, or module..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={moduleFilter}
+              onChange={(e) => setModuleFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Modules" },
+                ...modules.map((m) => ({ value: m, label: m.toUpperCase() })),
+              ]}
+            />
+            <Select
+              size="xs"
+              value={actionFilter}
+              onChange={(e) => setActionFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Actions" },
+                { value: "read", label: "Read / View" },
+                { value: "create", label: "Create / Write" },
+                { value: "update", label: "Update / Edit" },
+                { value: "delete", label: "Delete / Drop" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchCapabilities}
+          title="Refresh List"
         >
-          <option value="all">All Modules</option>
-          {modules.map((m) => (
-            <option key={m} value={m}>{m.toUpperCase()}</option>
-          ))}
-        </select>
-      </div>
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Capability Key</th>
-                <th className="px-4 py-2.5">Action</th>
-                <th className="px-4 py-2.5">Label</th>
-                <th className="px-4 py-2.5">Module</th>
-                <th className="px-4 py-2.5">Description</th>
-                <th className="px-4 py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">Loading capabilities...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">No capabilities found.</td>
-                </tr>
-              ) : (
-                filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono font-medium text-accent-primary flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-text-muted" />
-                      {c.key}
-                    </td>
-                    <td className="px-4 py-3 uppercase text-[11px] font-semibold text-text-primary">{c.action}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{c.label}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-ground border border-border/50 text-text-secondary uppercase">
-                        {c.module}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-text-muted max-w-sm">{c.description}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Active
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Standard Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No capabilities found matching the filter criteria."
+      />
     </div>
   );
 }

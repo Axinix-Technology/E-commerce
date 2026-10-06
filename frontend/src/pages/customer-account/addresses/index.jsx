@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   MapPin,
@@ -10,6 +10,9 @@ import {
   Home
 } from "lucide-react";
 import toast from "react-hot-toast";
+import Button from "../../../components/ui/Button";
+import Badge from "../../../components/ui/Badge";
+import { formatQty } from "../../../utils/formatters";
 
 export default function SavedAddressesPage() {
   const [addresses, setAddresses] = useState([
@@ -55,46 +58,44 @@ export default function SavedAddressesPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-[var(--brand-primary)]" />
+          <h1 className="text-xl font-bold tracking-tight text-primary-token flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-brand-token" />
             <span>Saved Addresses & Payment Methods</span>
           </h1>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-token mt-0.5">
             Configure delivery destinations with statutory Place of Supply tax determination
           </p>
         </div>
 
-        <Link
-          to="/customer-account/addresses/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Address</span>
+        <Link to="/customer-account/addresses/create" className="self-start sm:self-auto">
+          <Button variant="secondary" size="sm" icon={Plus}>
+            Add New Address
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
+      {/* Minimalist Metrics Bar (UI Rule 2 & UI Rule 1) */}
+      <div className="glass-panel py-2 px-3.5 rounded-xl border border-token text-xs font-mono flex flex-wrap items-center gap-2.5 sm:gap-3 text-secondary-token">
         <span>
-          Active Addresses: <strong className="text-white">{addresses.length || "—"}</strong>
+          Active Addresses: <strong className="text-primary-token font-medium">{formatQty(addresses.length)}</strong>
         </span>
-        <span className="text-gray-600">•</span>
+        <span className="text-muted-token">•</span>
         <span>
-          Payment Instruments: <strong className="text-white">{paymentMethods.length || "—"}</strong>
+          Payment Instruments: <strong className="text-primary-token font-medium">{formatQty(paymentMethods.length)}</strong>
         </span>
-        <span className="text-gray-600">•</span>
+        <span className="text-muted-token">•</span>
         <span>
-          Security: <strong className="text-emerald-400">256-Bit Encrypted</strong>
+          Security: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">256-Bit Encrypted</strong>
         </span>
       </div>
 
       {/* Saved Addresses Grid */}
       <div className="space-y-4">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+        <h2 className="text-xs font-bold text-primary-token uppercase tracking-wider">
           Delivery Addresses
         </h2>
 
@@ -102,60 +103,63 @@ export default function SavedAddressesPage() {
           {addresses.map((a) => (
             <div
               key={a.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
+              className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
                 a.is_default
-                  ? "bg-[rgba(0,210,210,0.05)] border-[var(--brand-primary)] shadow-xs"
-                  : "bg-white/[0.03] border-white/[0.08] hover:border-white/20"
+                  ? "bg-brand-token/5 border-brand-token/40 shadow-xs"
+                  : "card-surface border-token hover:border-brand-token/30"
               }`}
             >
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {a.title === "Home" ? (
-                      <Home className="w-4 h-4 text-[var(--brand-primary)]" />
+                      <Home className="w-4 h-4 text-brand-token" />
                     ) : (
-                      <Building2 className="w-4 h-4 text-[var(--brand-primary)]" />
+                      <Building2 className="w-4 h-4 text-brand-token" />
                     )}
-                    <span className="font-bold text-white">{a.title}</span>
+                    <span className="font-bold text-primary-token">{a.title}</span>
                   </div>
 
                   {a.is_default && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[rgba(0,210,210,0.15)] text-[var(--brand-primary)] border border-[rgba(0,210,210,0.3)]">
+                    <Badge variant="brand" size="xs">
                       Default
-                    </span>
+                    </Badge>
                   )}
                 </div>
 
-                <p className="font-semibold text-gray-200">{a.recipient_name}</p>
-                <p className="text-gray-300">{a.address_line}</p>
-                <p className="text-gray-400">
+                <p className="font-semibold text-primary-token">{a.recipient_name}</p>
+                <p className="text-secondary-token">{a.address_line}</p>
+                <p className="text-muted-token">
                   {a.city}, {a.state_name} - {a.pincode}
                 </p>
-                <p className="font-mono text-gray-400">Ph: {a.phone}</p>
+                <p className="font-mono text-muted-token">Ph: {a.phone}</p>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] text-xs">
+              <div className="flex items-center justify-between pt-3 border-t border-token text-xs">
                 {!a.is_default ? (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="xs"
                     onClick={() => handleSetDefaultAddress(a.id)}
-                    className="text-[var(--brand-primary)] hover:underline font-semibold cursor-pointer"
+                    className="text-brand-token"
                   >
                     Set as Default
-                  </button>
+                  </Button>
                 ) : (
-                  <span className="text-emerald-400 flex items-center gap-1 font-semibold text-[11px]">
+                  <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold text-[11px]">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Primary Destination</span>
                   </span>
                 )}
 
-                <button
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={() => handleDeleteAddress(a.id)}
-                  className="text-gray-400 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                  className="text-muted-token hover:text-rose-600 dark:hover:text-rose-400 p-1"
                   title="Delete Address"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  icon={Trash2}
+                />
               </div>
             </div>
           ))}
@@ -163,8 +167,8 @@ export default function SavedAddressesPage() {
       </div>
 
       {/* Saved Payment Methods */}
-      <div className="space-y-4 pt-4 border-t border-white/[0.08]">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+      <div className="space-y-4 pt-4 border-t border-token">
+        <h2 className="text-xs font-bold text-primary-token uppercase tracking-wider">
           Saved Payment Methods
         </h2>
 
@@ -172,22 +176,22 @@ export default function SavedAddressesPage() {
           {paymentMethods.map((pm) => (
             <div
               key={pm.id}
-              className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between"
+              className="card-surface p-4 rounded-2xl border border-token flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-white/5 text-[var(--brand-primary)]">
+                <div className="p-2.5 rounded-xl bg-surface-elevated text-brand-token border border-token">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white">{pm.provider}</h4>
-                  <p className="text-[11px] font-mono text-gray-400">{pm.identifier}</p>
+                  <h4 className="text-xs font-bold text-primary-token">{pm.provider}</h4>
+                  <p className="text-[11px] font-mono text-muted-token">{pm.identifier}</p>
                 </div>
               </div>
 
               {pm.is_default && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-gray-300 border border-white/10">
+                <Badge variant="neutral" size="xs">
                   Default
-                </span>
+                </Badge>
               )}
             </div>
           ))}

@@ -7,23 +7,10 @@ import {
   Building2,
   MapPin,
   Globe,
-  Receipt
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { Button, Input } from "../../../components/ui";
 
 export default function EditStoreSettingsPage() {
   const navigate = useNavigate();
@@ -49,8 +36,9 @@ export default function EditStoreSettingsPage() {
     const loadCompany = async () => {
       try {
         const res = await populateApi.read("company", { limit: 1 });
-        if (res?.data && res.data.length > 0) {
-          const comp = res.data[0];
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const comp = list[0];
           setCompanyId(comp.id);
           setFormData({
             name: comp.name || "",
@@ -76,7 +64,7 @@ export default function EditStoreSettingsPage() {
   }, []);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSubmitting(true);
     try {
       if (companyId) {
@@ -94,189 +82,158 @@ export default function EditStoreSettingsPage() {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 max-w-4xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           <Link
             to="/settings/store"
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
+            className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">Edit Store Profile</h1>
-            <p className="text-xs text-text-muted">Update legal corporate details, brand name, and operating locations</p>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+              <Store className="w-5 h-5 text-brand-token" />
+              Configure Store & Company
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Update legal organization credentials, tax numbers, and communication channels
+            </p>
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Save}
+          loading={submitting}
           onClick={handleSubmit}
-          disabled={submitting}
-          className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          {submitting ? "Saving..." : "Save Store Details"}
-        </button>
+          Save Configuration
+        </Button>
       </div>
 
-      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Store Brand: <strong className="text-primary font-medium">{formData.name || "—"}</strong></span>
-        <span>•</span>
-        <span>Location: <strong className="text-text-primary font-medium">{formData.city || "—"}, {formData.state || "—"}</strong></span>
-        <span>•</span>
-        <span>Tax Status: <strong className="text-emerald-400 font-medium">{formData.gst_no ? "GSTIN Verified" : "—"}</strong></span>
-      </div>
-
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-5">
-        <div className="p-5 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-            <Building2 className="w-4 h-4 text-primary" />
-            Identification & Brand
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Basic Brand Identity */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+            <Building2 className="w-4 h-4 text-brand-token" />
+            Brand & Legal Identity
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Display Brand Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g. Axinix Luxury Boutique"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <Input
+              label="Store Display Name"
+              required
+              fieldType="name"
+              placeholder="e.g. Axinix Couture"
+              value={formData.name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Legal Entity Registered Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.legal_name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, legal_name: e.target.value }))}
-                placeholder="e.g. Axinix Retail Private Limited"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+            <Input
+              label="Official Legal Entity Name"
+              placeholder="e.g. Axinix Retail Private Limited"
+              fieldType="name"
+              value={formData.legal_name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, legal_name: e.target.value }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                GSTIN / Tax Registration ID
-              </label>
-              <input
-                type="text"
-                value={formData.gst_no}
-                onChange={(e) => setFormData((prev) => ({ ...prev, gst_no: e.target.value }))}
-                placeholder="27AADCA1122B1Z8"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary font-mono focus:outline-none"
-              />
-            </div>
+            <Input
+              label="Brand Short Code"
+              placeholder="e.g. AXN"
+              fieldType="code"
+              value={formData.short_name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, short_name: e.target.value.toUpperCase() }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Official Website URL
-              </label>
-              <input
-                type="url"
-                value={formData.website_url}
-                onChange={(e) => setFormData((prev) => ({ ...prev, website_url: e.target.value }))}
-                placeholder="https://axinix.store"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+            <Input
+              label="GSTIN / Corporate Tax ID"
+              placeholder="e.g. 33AAAAA0000A1Z5"
+              fieldType="gstin"
+              value={formData.gst_no}
+              onChange={(e) => setFormData((prev) => ({ ...prev, gst_no: e.target.value.toUpperCase() }))}
+            />
           </div>
         </div>
 
-        {/* Address Card */}
-        <div className="p-5 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-            <MapPin className="w-4 h-4 text-primary" />
-            Operating Store Address
+        {/* Operating Address */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+            <MapPin className="w-4 h-4 text-brand-token" />
+            Registered Business Address
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Address Line 1 *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.address_line_1}
-                onChange={(e) => setFormData((prev) => ({ ...prev, address_line_1: e.target.value }))}
-                placeholder="Shop No. 101, Silk Palace"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <Input
+              label="Address Line 1"
+              placeholder="Door No., Street..."
+              value={formData.address_line_1}
+              onChange={(e) => setFormData((prev) => ({ ...prev, address_line_1: e.target.value }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                City *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.city}
-                onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
-                placeholder="Mumbai"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+            <Input
+              label="Address Line 2"
+              placeholder="Locality, Landmark..."
+              value={formData.address_line_2}
+              onChange={(e) => setFormData((prev) => ({ ...prev, address_line_2: e.target.value }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                State *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.state}
-                onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value }))}
-                placeholder="Maharashtra"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+            <Input
+              label="City / Town"
+              placeholder="e.g. Chennai"
+              value={formData.city}
+              onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Pincode / Postal Code *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.pincode}
-                onChange={(e) => setFormData((prev) => ({ ...prev, pincode: e.target.value }))}
-                placeholder="400001"
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+            <Input
+              label="State / Province"
+              placeholder="e.g. Tamil Nadu"
+              value={formData.state}
+              onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value }))}
+            />
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Country
-              </label>
-              <input
-                type="text"
-                value={formData.country}
-                onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value }))}
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-              />
-            </div>
+            <Input
+              label="Postal Pincode"
+              placeholder="600006"
+              fieldType="pincode"
+              value={formData.pincode}
+              onChange={(e) => setFormData((prev) => ({ ...prev, pincode: e.target.value }))}
+            />
+
+            <Input
+              label="Country"
+              value={formData.country}
+              onChange={(e) => setFormData((prev) => ({ ...prev, country: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {/* Digital Channels */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+            <Globe className="w-4 h-4 text-brand-token" />
+            Online Web & Social Channels
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
-          >
-            {submitting ? "Updating Store..." : "Confirm & Update Profile"}
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <Input
+              label="Official Website URL"
+              type="url"
+              fieldType="url"
+              placeholder="https://axinix.com"
+              value={formData.website_url}
+              onChange={(e) => setFormData((prev) => ({ ...prev, website_url: e.target.value }))}
+            />
+
+            <Input
+              label="Instagram Profile"
+              placeholder="https://instagram.com/axinix"
+              value={formData.instagram_url}
+              onChange={(e) => setFormData((prev) => ({ ...prev, instagram_url: e.target.value }))}
+            />
+          </div>
         </div>
       </form>
     </div>

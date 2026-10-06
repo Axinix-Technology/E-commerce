@@ -4,29 +4,15 @@ import {
   RotateCcw,
   ArrowLeft,
   Save,
-  Search,
   Package,
-  AlertCircle,
-  CheckCircle2,
-  DollarSign,
   User,
-  ShoppingBag
+  ShoppingBag,
+  CheckCircle2,
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Input, Select, Textarea, Checkbox, Badge } from "../../../components/ui";
 
 export default function CreateReturnRequestPage() {
   const navigate = useNavigate();
@@ -49,7 +35,6 @@ export default function CreateReturnRequestPage() {
   const [returnLines, setReturnLines] = useState([]);
 
   useEffect(() => {
-    // Load recent completed sales for selection
     const loadRecentSales = async () => {
       try {
         const res = await populateApi.read("sale", {
@@ -60,12 +45,11 @@ export default function CreateReturnRequestPage() {
           },
           sort: ["-sold_at"],
         });
-        if (res?.data) {
-          setSalesList(res.data);
-          if (prefillSaleId) {
-            const found = res.data.find((s) => String(s.id) === String(prefillSaleId));
-            if (found) selectSale(found);
-          }
+        const list = Array.isArray(res) ? res : res?.data || [];
+        setSalesList(list);
+        if (prefillSaleId) {
+          const found = list.find((s) => String(s.id) === String(prefillSaleId));
+          if (found) selectSale(found);
         }
       } catch (err) {
         console.error("Failed loading sales for returns", err);
@@ -79,7 +63,6 @@ export default function CreateReturnRequestPage() {
     setSelectedSale(sale);
     setSelectedSaleId(sale.id);
 
-    // Populate returnLines from sale items
     const lines = (sale.items || []).map((it) => ({
       sale_item_id: it.id,
       product_name: it.product_name,
@@ -106,228 +89,225 @@ export default function CreateReturnRequestPage() {
     }
   };
 
-  const toggleLineSelect = (index) => {
+  const updateLine = (index, field, value) => {
     setReturnLines((prev) => {
       const next = [...prev];
-      next[index].selected = !next[index].selected;
+      next[index] = {
+        ...next[index],
+        [field]: value,
+      };
+
+      if (field === "return_quantity") {
+        const qty = Math.max(1, Math.min(Number(value) || 1, next[index].sold_quantity));
+        next[index].return_quantity = qty;
+        next[index].refund_amount = qty * next[index].unit_price;
+      }
+
       return next;
     });
   };
 
-  const updateLineQty = (index, qty) => {
-    setReturnLines((prev) => {
-      const next = [...prev];
-      const maxQty = next[index].sold_quantity;
-      const validQty = Math.max(1, Math.min(Number(qty) || 1, maxQty));
-      next[index].return_quantity = validQty;
-      next[index].refund_amount = validQty * next[index].unit_price;
-      return next;
-    });
-  };
-
-  const toggleRestockable = (index) => {
-    setReturnLines((prev) => {
-      const next = [...prev];
-      next[index].restockable = !next[index].restockable;
-      return next;
-    });
-  };
-
-  // Compute total refund
-  const totalRefund = returnLines
-    .filter((l) => l.selected)
-    .reduce((sum, l) => sum + (Number(l.refund_amount) || 0), 0);
-
-  const selectedCount = returnLines.filter((l) => l.selected).length;
+  const selectedLines = returnLines.filter((l) => l.selected);
+  const totalRefund = selectedLines.reduce((sum, l) => sum + (Number(l.refund_amount) || 0), 0);
+  const totalReturnUnits = selectedLines.reduce((sum, l) => sum + (Number(l.return_quantity) || 0), 0);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!selectedSaleId) {
       toast.error("Please select a valid sale order");
       return;
     }
 
-    const itemsToReturn = returnLines.filter((l) => l.selected);
-    if (itemsToReturn.length === 0) {
+    if (selectedLines.length === 0) {
       toast.error("Please select at least one item to return");
       return;
     }
 
     setSubmitting(true);
     try {
-      const returnNumber = `RET-${Date.now().toString().slice(-6)}`;
+      const rmaNumber = `RMA-${Date.now().toString().slice(-6)}`;
+      const now = new Date().toISOString();
 
-      // 1. Create SalesReturn header
-      const returnPayload = {
-        return_number: returnNumber,
+      const payload = {
+        return_number: rmaNumber,
         sale_id: selectedSaleId,
-        customer_id: selectedSale?.customer?.id || null,
+        customer_id: selectedSale?.customer_id || null,
         status,
         reason,
         total_refund_amount: totalRefund,
-        notes: notes || "",
+        notes,
+        requested_at: now,
       };
 
-      const res = await populateApi.create("sales_return", returnPayload);
+      const res = await populateApi.create("sales_return", payload);
       const createdReturn = res?.data || res;
 
-      // 2. Create SalesReturnItem lines
       if (createdReturn?.id) {
-        for (const item of itemsToReturn) {
+        for (const line of selectedLines) {
           await populateApi.create("sales_return_item", {
-            sales_return_id: createdReturn.id,
-            sale_item_id: item.sale_item_id,
-            quantity: item.return_quantity,
-            refund_amount: item.refund_amount,
-            restockable: item.restockable,
-            notes: item.restockable ? "Eligible for restock" : "Damaged / Write-off",
+            return_id: createdReturn.id,
+            sale_item_id: line.sale_item_id,
+            quantity: line.return_quantity,
+            refund_amount: line.refund_amount,
+            condition: "good",
+            restocked: line.restockable,
           });
         }
       }
 
-      toast.success(`Return request ${returnNumber} submitted successfully!`);
+      toast.success(`Return request ${rmaNumber} created successfully!`);
       navigate("/returns/index");
     } catch (err) {
-      toast.error(err?.response?.data?.error?.message || "Failed to submit return request");
+      toast.error(err?.response?.data?.error?.message || "Failed to record return request");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           <Link
             to="/returns/index"
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
+            className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">Initiate Return (RMA)</h1>
-            <p className="text-xs text-text-muted">Create a return request against an original customer sale order</p>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-brand-token" />
+              Issue Return & RMA
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Initiate customer product returns, item inspection, and refund processing
+            </p>
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Save}
+          loading={submitting}
           onClick={handleSubmit}
-          disabled={submitting}
-          className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          {submitting ? "Submitting..." : "Submit Return Request"}
-        </button>
+          Submit RMA
+        </Button>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Selected Sale: <strong className="text-primary font-medium">{selectedSale?.sale_number || "—"}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Selected Order: <strong className="text-primary-token font-mono font-medium">{selectedSale ? selectedSale.sale_number : "—"}</strong></span>
         <span>•</span>
-        <span>Items to Return: <strong className="text-text-primary font-medium">{formatQty(selectedCount)}</strong></span>
+        <span>Return Units: <strong className="text-primary-token font-medium">{formatQty(totalReturnUnits)}</strong></span>
         <span>•</span>
-        <span>Original Total: <strong className="text-text-primary font-medium">{formatCurrency(selectedSale?.total_amount)}</strong></span>
+        <span>Calculated Refund: <strong className="text-rose-700 dark:text-rose-400 font-semibold">{formatCurrency(totalRefund)}</strong></span>
         <span>•</span>
-        <span>Estimated Refund: <strong className="text-rose-400 font-semibold">{formatCurrency(totalRefund)}</strong></span>
+        <span>RMA Status: <strong className="text-brand-token capitalize font-medium">{status}</strong></span>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left Column: Select Sale & Pick Items */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Sale Picker Card */}
-          <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-              <ShoppingBag className="w-4 h-4 text-primary" />
-              Reference Sale Order
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left Column: Sale & Items */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Sale Picker */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+              <ShoppingBag className="w-4 h-4 text-brand-token" />
+              Select Sale Order
             </div>
 
-            <div>
-              <label className="block text-[11px] font-medium text-text-muted mb-1">
-                Select Completed Sale Order
-              </label>
-              <select
-                value={selectedSaleId}
-                onChange={handleSaleSelectChange}
-                className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
-              >
-                <option value="">-- Choose Sale Order --</option>
-                {salesList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.sale_number} - {s.customer_name || "Guest"} (₹{s.total_amount}) -{" "}
-                    {s.sold_at ? new Date(s.sold_at).toLocaleDateString() : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Associated Invoice"
+              value={selectedSaleId}
+              onChange={handleSaleSelectChange}
+              placeholder="-- Select a Sale Order to Return Items --"
+              options={salesList.map((s) => ({
+                value: s.id,
+                label: `${s.sale_number} - ${s.customer?.name || s.customer_name || "Guest"} (₹${s.total_amount || 0})`,
+              }))}
+            />
+
+            {selectedSale && (
+              <div className="p-3 rounded-xl bg-surface-elevated border border-token grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-token text-[10px] block">Customer</span>
+                  <span className="font-semibold text-primary-token">{selectedSale.customer?.name || selectedSale.customer_name || "Walk-in Guest"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-token text-[10px] block">Phone</span>
+                  <span className="font-semibold text-primary-token">{selectedSale.customer?.phone || selectedSale.customer_phone || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-token text-[10px] block">Order Amount</span>
+                  <span className="font-semibold font-mono text-primary-token">{formatCurrency(selectedSale.total_amount)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Items Selector Card */}
+          {/* Return Line Items */}
           {selectedSale && (
-            <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
+            <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-                  <Package className="w-4 h-4 text-primary" />
-                  Select Items for Return
+                <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+                  <Package className="w-4 h-4 text-brand-token" />
+                  Select Items for RMA
                 </div>
-                <span className="text-[11px] text-text-muted">
-                  Check items and specify quantity
+                <span className="text-xs text-muted-token">
+                  {selectedLines.length} of {returnLines.length} items selected
                 </span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-border/60 text-text-muted font-medium">
-                      <th className="pb-2 w-[8%] text-center">Return?</th>
-                      <th className="pb-2 w-[40%]">Item / SKU</th>
-                      <th className="pb-2 text-center w-[12%]">Sold</th>
-                      <th className="pb-2 text-center w-[15%]">Return Qty</th>
-                      <th className="pb-2 text-right w-[15%]">Refund Amount</th>
-                      <th className="pb-2 text-center w-[10%]">Restock?</th>
+                    <tr className="border-b border-token text-muted-token font-semibold uppercase text-[10px]">
+                      <th className="pb-2 w-[8%] text-center">Return</th>
+                      <th className="pb-2 w-[40%]">Item & SKU</th>
+                      <th className="pb-2 w-[12%] text-center">Sold Qty</th>
+                      <th className="pb-2 w-[15%]">Return Qty</th>
+                      <th className="pb-2 w-[15%] text-right">Refund (₹)</th>
+                      <th className="pb-2 w-[10%] text-center">Restock</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/40 text-text-primary">
+                  <tbody className="divide-y divide-token">
                     {returnLines.map((line, idx) => (
-                      <tr key={idx} className={line.selected ? "bg-white/[0.02]" : "opacity-50"}>
+                      <tr key={idx} className={line.selected ? "bg-surface-elevated/30" : "opacity-60"}>
                         <td className="py-2.5 text-center">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={line.selected}
-                            onChange={() => toggleLineSelect(idx)}
-                            className="rounded accent-primary"
+                            onChange={(e) => updateLine(idx, "selected", e.target.checked)}
                           />
                         </td>
-                        <td className="py-2.5">
-                          <div className="font-medium">{line.product_name}</div>
-                          <div className="text-[11px] font-mono text-text-muted">{line.sku}</div>
+                        <td className="py-2.5 pr-2">
+                          <span className="font-semibold text-primary-token block">{line.product_name}</span>
+                          <span className="text-[10px] text-brand-token font-mono">{line.sku}</span>
                         </td>
-                        <td className="py-2.5 text-center text-text-muted">
+                        <td className="py-2.5 text-center font-semibold">
                           {formatQty(line.sold_quantity)}
                         </td>
-                        <td className="py-2.5 text-center">
-                          <input
+                        <td className="py-2.5 pr-2">
+                          <Input
+                            size="xs"
                             type="number"
                             min="1"
                             max={line.sold_quantity}
                             value={line.return_quantity}
-                            onChange={(e) => updateLineQty(idx, e.target.value)}
                             disabled={!line.selected}
-                            className="w-16 px-2 py-1 bg-surface-card border border-border/60 rounded text-center text-xs focus:outline-none"
+                            onChange={(e) => updateLine(idx, "return_quantity", e.target.value)}
                           />
                         </td>
-                        <td className="py-2.5 text-right font-medium text-rose-400">
-                          {line.selected ? formatCurrency(line.refund_amount) : "—"}
+                        <td className="py-2.5 text-right font-mono font-bold text-rose-700 dark:text-rose-400">
+                          {formatCurrency(line.refund_amount)}
                         </td>
                         <td className="py-2.5 text-center">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={line.restockable}
-                            onChange={() => toggleRestockable(idx)}
                             disabled={!line.selected}
-                            title="Eligible for shelf restock"
-                            className="rounded accent-emerald-500"
+                            onChange={(e) => updateLine(idx, "restockable", e.target.checked)}
                           />
                         </td>
                       </tr>
@@ -339,83 +319,74 @@ export default function CreateReturnRequestPage() {
           )}
         </div>
 
-        {/* Right Column: Return Details & Status */}
-        <div className="space-y-5">
-          <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-              <RotateCcw className="w-4 h-4 text-primary" />
-              Return Specifications
+        {/* Right Column: Reason & Summary */}
+        <div className="space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+              <RotateCcw className="w-4 h-4 text-brand-token" />
+              RMA Details
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Return Reason
-                </label>
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-                >
-                  <option value="Defective or damaged in transit">Defective or damaged in transit</option>
-                  <option value="Incorrect size or variant shipped">Incorrect size or variant shipped</option>
-                  <option value="Customer changed mind / dissatisfied">Customer changed mind / dissatisfied</option>
-                  <option value="Product not as described on storefront">Product not as described on storefront</option>
-                  <option value="Counter exchange / size swap">Counter exchange / size swap</option>
-                </select>
-              </div>
+            <Select
+              label="Return Reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              options={[
+                { label: "Defective or damaged in transit", value: "Defective or damaged in transit" },
+                { label: "Wrong size or fit issue", value: "Wrong size or fit issue" },
+                { label: "Customer changed mind", value: "Customer changed mind" },
+                { label: "Incorrect item delivered", value: "Incorrect item delivered" },
+                { label: "Quality unsatisfactory", value: "Quality unsatisfactory" },
+              ]}
+            />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Initial Status
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-                >
-                  <option value="requested">Requested (Under Review)</option>
-                  <option value="approved">Approved (Issue RMA)</option>
-                  <option value="received">Received (At Counter / Warehouse)</option>
-                </select>
-              </div>
+            <Select
+              label="Initial Status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={[
+                { label: "Requested / Pending Review", value: "requested" },
+                { label: "Approved Immediately", value: "approved" },
+                { label: "Completed & Refunded", value: "completed" },
+              ]}
+            />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Internal Staff Notes
-                </label>
-                <textarea
-                  rows="3"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Reasoning, customer notes, condition on return..."
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-                />
-              </div>
-            </div>
+            <Textarea
+              label="Inspector / Customer Notes"
+              placeholder="State any observations or defects found..."
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
 
-            {/* Refund Total Summary */}
-            <div className="pt-3 border-t border-border/60 space-y-2 text-xs">
-              <div className="flex justify-between text-text-muted">
-                <span>Selected Items:</span>
-                <span>{formatQty(selectedCount)}</span>
+            <div className="pt-3 border-t border-token space-y-2 text-xs">
+              <div className="flex justify-between text-secondary-token">
+                <span>Selected Items</span>
+                <span className="font-semibold text-primary-token">{formatQty(selectedLines.length)}</span>
               </div>
-              <div className="flex justify-between text-sm font-bold text-text-primary pt-2 border-t border-border/40">
-                <span>Estimated Refund:</span>
-                <span className="text-rose-400">{formatCurrency(totalRefund)}</span>
+              <div className="flex justify-between text-secondary-token">
+                <span>Total Return Units</span>
+                <span className="font-semibold text-primary-token">{formatQty(totalReturnUnits)}</span>
+              </div>
+              <div className="pt-2 border-t border-token flex justify-between font-bold text-sm text-primary-token">
+                <span>Total Refund Amount</span>
+                <span className="font-mono text-base text-rose-700 dark:text-rose-400">{formatCurrency(totalRefund)}</span>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting || selectedCount === 0}
-              className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={Save}
+              loading={submitting}
+              onClick={handleSubmit}
             >
-              {submitting ? "Processing RMA..." : "Confirm & Create Return"}
-            </button>
+              Submit Return Authorization
+            </Button>
           </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

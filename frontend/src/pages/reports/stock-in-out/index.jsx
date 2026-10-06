@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRightLeft, Plus, Search, Calendar, Download } from "lucide-react";
+import { ArrowRightLeft, Plus, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
+import { formatQty } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function StockInOutIndex() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [movementFilter, setMovementFilter] = useState("all");
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -36,102 +35,173 @@ export default function StockInOutIndex() {
     fetchRecords();
   }, []);
 
-  const filtered = records.filter((r) =>
-    (r.sku || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.product_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.category || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setMovementFilter("all");
+  };
+
+  const filtered = records.filter((r) => {
+    const matchesSearch =
+      (r.sku || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.product_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.category || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesCategory = categoryFilter === "all" || r.category === categoryFilter;
+
+    let matchesMovement = true;
+    if (movementFilter === "active_inward") matchesMovement = Number(r.inward_grn) > 0;
+    else if (movementFilter === "active_outward") matchesMovement = Number(r.outward_sale) > 0;
+    else if (movementFilter === "zero_movement") matchesMovement = Number(r.inward_grn) === 0 && Number(r.outward_sale) === 0;
+
+    return matchesSearch && matchesCategory && matchesMovement;
+  });
 
   const totalOpening = filtered.reduce((sum, r) => sum + (Number(r.opening_stock) || 0), 0);
   const totalInward = filtered.reduce((sum, r) => sum + ((Number(r.inward_grn) || 0) + (Number(r.inward_return) || 0)), 0);
   const totalOutward = filtered.reduce((sum, r) => sum + ((Number(r.outward_sale) || 0) + (Number(r.outward_return) || 0)), 0);
   const totalClosing = filtered.reduce((sum, r) => sum + (Number(r.closing_stock) || 0), 0);
 
+  const columns = [
+    {
+      key: "sku",
+      header: "SKU Code",
+      render: (val) => <span className="font-mono text-xs text-brand-token font-semibold">{val}</span>,
+    },
+    {
+      key: "product_name",
+      header: "Product / Description",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">{row.category}</span>
+        </div>
+      ),
+    },
+    {
+      key: "opening_stock",
+      header: "Opening Balance",
+      align: "center",
+      render: (val) => <span className="font-mono text-secondary-token">{formatQty(val)}</span>,
+    },
+    {
+      key: "inward_grn",
+      header: "Inward (GRN)",
+      align: "center",
+      render: (val) => (
+        <span className="font-mono text-emerald-700 dark:text-emerald-400">
+          +{formatQty(val)}
+        </span>
+      ),
+    },
+    {
+      key: "outward_sale",
+      header: "Outward (Sales)",
+      align: "center",
+      render: (val) => (
+        <span className="font-mono text-rose-700 dark:text-rose-400">
+          -{formatQty(val)}
+        </span>
+      ),
+    },
+    {
+      key: "closing_stock",
+      header: "Closing Stock",
+      align: "center",
+      render: (val) => (
+        <Badge variant={val > 10 ? "emerald" : val > 0 ? "amber" : "neutral"} dot>
+          {formatQty(val)} Pcs
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <ArrowRightLeft className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <ArrowRightLeft className="w-5 h-5 text-brand-token" />
             Stock In / Out Movement Ledger
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Track volumetric goods inflow from vendors versus outflow to customers and branch transfers</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Track volumetric goods inflow from vendors versus outflow to customers and branch transfers
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/reports/stock-in-out/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Periodic Reconciliation
+          <Link to="/reports/stock-in-out/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Reconciliation
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Opening Stock: <strong className="text-text-primary font-medium">{formatQty(totalOpening)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Opening Stock: <strong className="text-primary-token font-medium">{formatQty(totalOpening)}</strong></span>
         <span>•</span>
-        <span>Total Inward: <strong className="text-emerald-400 font-medium">+{formatQty(totalInward)}</strong></span>
+        <span>Total Inward: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">+{formatQty(totalInward)}</strong></span>
         <span>•</span>
-        <span>Total Outward: <strong className="text-rose-400 font-medium">-{formatQty(totalOutward)}</strong></span>
+        <span>Total Outward: <strong className="text-rose-700 dark:text-rose-400 font-medium">-{formatQty(totalOutward)}</strong></span>
         <span>•</span>
-        <span>Closing Stock: <strong className="text-accent-primary font-medium">{formatQty(totalClosing)}</strong></span>
+        <span>Closing Stock: <strong className="text-brand-token font-semibold">{formatQty(totalClosing)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by SKU, product name, or category..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by SKU, product name, or category..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Categories" },
+                { value: "Sarees", label: "Sarees" },
+                { value: "Dupattas", label: "Dupattas" },
+                { value: "Kurtis", label: "Kurtis" },
+                { value: "Accessories", label: "Accessories" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={movementFilter}
+              onChange={(e) => setMovementFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Movements" },
+                { value: "active_inward", label: "Inward Intake (> 0)" },
+                { value: "active_outward", label: "Outward Sales (> 0)" },
+                { value: "zero_movement", label: "Zero Movement (Dormant)" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchRecords}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">SKU</th>
-                <th className="px-4 py-2.5">Product Name</th>
-                <th className="px-4 py-2.5">Category</th>
-                <th className="px-4 py-2.5">Opening</th>
-                <th className="px-4 py-2.5">Inward (GRN)</th>
-                <th className="px-4 py-2.5">Inward (RMA)</th>
-                <th className="px-4 py-2.5">Outward (Sales)</th>
-                <th className="px-4 py-2.5">Closing Stock</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading stock movements...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No records found.</td>
-                </tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono font-medium text-accent-primary">{r.sku}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{r.product_name}</td>
-                    <td className="px-4 py-3 text-text-secondary">{r.category}</td>
-                    <td className="px-4 py-3 font-mono text-text-muted">{formatQty(r.opening_stock)}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-400 font-medium">+{formatQty(r.inward_grn)}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-300">+{formatQty(r.inward_return)}</td>
-                    <td className="px-4 py-3 font-mono text-rose-400 font-medium">-{formatQty(r.outward_sale)}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-text-primary">{formatQty(r.closing_stock)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No stock movements matching your criteria."
+      />
     </div>
   );
 }

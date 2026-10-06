@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ShieldAlert, Plus, Search, ShieldCheck, User, Calendar, Activity } from "lucide-react";
+import { ShieldAlert, Plus, RefreshCw, User } from "lucide-react";
 import populateApi from "../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -13,6 +14,7 @@ export default function AuditLogIndex() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("all");
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -31,6 +33,12 @@ export default function AuditLogIndex() {
     fetchLogs();
   }, []);
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setActionFilter("all");
+    setModuleFilter("all");
+  };
+
   const filtered = logs.filter((l) => {
     const uName = (l.user_name || (typeof l.user === 'object' ? l.user?.username : l.user) || "").toLowerCase();
     const mod = (l.module || l.entity || "").toLowerCase();
@@ -47,122 +55,176 @@ export default function AuditLogIndex() {
       reqId.includes(term);
 
     const matchesAction = actionFilter === "all" || (l.action || "").toUpperCase() === actionFilter.toUpperCase();
-    return matchesSearch && matchesAction;
+    const matchesModule = moduleFilter === "all" || mod.toUpperCase().includes(moduleFilter.toUpperCase());
+
+    return matchesSearch && matchesAction && matchesModule;
   });
+
+  const getActionBadgeVariant = (action) => {
+    switch (action?.toUpperCase()) {
+      case "CREATE":
+      case "INSERT":
+        return "success";
+      case "UPDATE":
+      case "EDIT":
+        return "primary";
+      case "DELETE":
+      case "DROP":
+        return "danger";
+      case "LOGIN":
+      case "AUTH":
+        return "warning";
+      default:
+        return "neutral";
+    }
+  };
+
+  const columns = [
+    {
+      header: "Action",
+      render: (l) => (
+        <Badge variant={getActionBadgeVariant(l.action)} size="sm">
+          {(l.action || "INFO").toUpperCase()}
+        </Badge>
+      ),
+    },
+    {
+      header: "Module / Entity",
+      render: (l) => (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-elevated border border-token text-secondary-token uppercase tracking-wide">
+          {l.module || l.entity || "SYSTEM"}
+        </span>
+      ),
+    },
+    {
+      header: "Description / Event Details",
+      accessor: "description",
+      render: (l) => (
+        <span className="text-secondary-token text-xs max-w-md line-clamp-2">
+          {l.description || l.details || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Actor",
+      render: (l) => {
+        const u = l.user_name || (typeof l.user === 'object' ? l.user?.username : l.user) || "System";
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-primary-token font-medium">
+            <User className="w-3.5 h-3.5 text-muted-token shrink-0" />
+            {u}
+          </div>
+        );
+      },
+    },
+    {
+      header: "IP Address",
+      render: (l) => (
+        <span className="font-mono text-xs text-muted-token">
+          {l.ip_address || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Timestamp",
+      render: (l) => (
+        <span className="text-[11px] text-muted-token font-mono">
+          {l.created_at ? new Date(l.created_at).toLocaleString("en-IN") : "—"}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-accent-primary" />
-            System Audit & Security Logs
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Immutable audit trail of user access, data mutations, and administrative actions</p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight">
+              System Audit & Security Logs
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Comprehensive tamper-evident record of database transactions, user actions, and administrative overrides
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/audit-log/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Record Audit Entry
-          </Link>
-        </div>
+
+        <Link to="/audit-log/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Append Event
+          </Button>
+        </Link>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Logged Events: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Logged Events: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Integrity Verification: <strong className="text-emerald-400 font-medium">100% Tamper Proof</strong></span>
+        <span>Audit Trail: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Active & Immutable</strong></span>
         <span>•</span>
-        <span>Audit Retention: <strong className="text-accent-primary font-medium">365 Days</strong></span>
-        <span>•</span>
-        <span>Compliance: <strong className="text-emerald-400 font-medium">ISO / SOC2 Compliant</strong></span>
+        <span>Chain Integrity: <strong className="text-brand-token font-medium">Verified</strong></span>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search by username, module, IP address, or activity description..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-          />
-        </div>
-        <select
-          value={actionFilter}
-          onChange={(e) => setActionFilter(e.target.value)}
-          className="px-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search audit log by user, module, IP, or details..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={actionFilter}
+              onChange={(e) => setActionFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Actions" },
+                { value: "CREATE", label: "CREATE" },
+                { value: "UPDATE", label: "UPDATE" },
+                { value: "DELETE", label: "DELETE" },
+                { value: "LOGIN", label: "LOGIN" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={moduleFilter}
+              onChange={(e) => setModuleFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Modules" },
+                { value: "CATALOGUE", label: "Catalogue" },
+                { value: "INVENTORY", label: "Inventory" },
+                { value: "ORDERS", label: "Orders" },
+                { value: "BILLING", label: "Billing" },
+                { value: "AUTH", label: "Authentication" },
+                { value: "SETTINGS", label: "Settings" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchLogs}
+          title="Refresh List"
         >
-          <option value="all">All Actions</option>
-          <option value="CREATE">CREATE</option>
-          <option value="UPDATE">UPDATE</option>
-          <option value="DELETE">DELETE</option>
-          <option value="APPROVE">APPROVE</option>
-          <option value="TRANSFER">TRANSFER</option>
-        </select>
-      </div>
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Request ID</th>
-                <th className="px-4 py-2.5">User</th>
-                <th className="px-4 py-2.5">Action</th>
-                <th className="px-4 py-2.5">Module</th>
-                <th className="px-4 py-2.5">Description</th>
-                <th className="px-4 py-2.5">IP Address</th>
-                <th className="px-4 py-2.5">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">Loading audit log events...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-muted">No audit events match criteria.</td>
-                </tr>
-              ) : (
-                filtered.map((l) => (
-                  <tr key={l.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-muted" title={l.request_id || "—"}>
-                      {l.request_id ? `${l.request_id.slice(0, 8)}...` : "—"}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-text-primary flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-accent-primary" />
-                      {l.user_name || (typeof l.user === 'object' ? l.user?.username : l.user) || 'System'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        l.action === "CREATE" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                        l.action === "UPDATE" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
-                        l.action === "DELETE" ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
-                        l.action === "LOGIN" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                        l.action === "LOGOUT" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                        "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                      }`}>
-                        {l.action}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 uppercase text-[11px] font-mono text-text-secondary">{l.module || l.entity || "—"}</td>
-                    <td className="px-4 py-3 text-text-primary max-w-md">{l.description || l.details || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-muted">{l.ip_address || "—"}</td>
-                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleString() : "—"}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No audit log entries recorded."
+      />
     </div>
   );
 }

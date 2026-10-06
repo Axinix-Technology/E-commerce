@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Ruler } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
 import { Button, Input, Select } from "../../../components/ui";
+import { validateField } from "../../../utils/validation";
 
 export default function SizeCreate() {
   const navigate = useNavigate();
@@ -50,6 +51,18 @@ export default function SizeCreate() {
     e.preventDefault();
     if (!form.name.trim() || !form.code.trim()) {
       toast.error("Size Label and Code are mandatory");
+      return;
+    }
+
+    const nameValidation = validateField("name", form.name);
+    if (!nameValidation.isValid) {
+      toast.error(nameValidation.error);
+      return;
+    }
+
+    const codeValidation = validateField("code", form.code);
+    if (!codeValidation.isValid) {
+      toast.error(codeValidation.error);
       return;
     }
 
@@ -114,17 +127,21 @@ export default function SizeCreate() {
         <Input
           label="Size Label"
           required
+          fieldType="name"
           placeholder="e.g. Medium (M / 38)"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          helperText="Letters, numbers, and spaces only. No special characters."
         />
 
         <Input
           label="Size Code"
           required
+          fieldType="code"
           placeholder="e.g. SZ-M-38"
           value={form.code}
           onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+          helperText="Alphanumeric, uppercase, and hyphens."
         />
 
         <Select

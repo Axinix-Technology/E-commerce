@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ShoppingBag, Plus, Save } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input } from "../../../components/ui";
 
 export default function QuickAddToCartPage() {
   const navigate = useNavigate();
@@ -45,104 +46,87 @@ export default function QuickAddToCartPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           to="/shopping/cart"
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Plus className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Quick Add Custom Line to Cart</span>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Plus className="w-5 h-5 text-brand-token" />
+            Quick Add Custom Line to Cart
           </h1>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-token mt-0.5">
             Directly insert a custom tailored line item or wholesale sample into the active cart session
           </p>
         </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Item Title *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Custom Monogram Linen Tunic"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-            />
-          </div>
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <Input
+          label="Item Title"
+          required
+          placeholder="e.g. Custom Monogram Linen Tunic"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">SKU / Item Code</label>
-              <input
-                type="text"
-                placeholder="CUST-001"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono"
-              />
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="SKU / Item Code"
+            placeholder="CUST-001"
+            value={formData.sku}
+            onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+          />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Price per unit (₹) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                placeholder="1999.00"
-                value={formData.selling_price}
-                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+          <Input
+            label="Price per unit (₹)"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            placeholder="1999.00"
+            value={formData.selling_price}
+            onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+          />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Size Specification</label>
-              <input
-                type="text"
-                value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+          <Input
+            label="Size Specification"
+            value={formData.size}
+            onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+          />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Initial Quantity</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
+          <Input
+            label="Initial Quantity"
+            type="number"
+            min="1"
+            value={formData.quantity}
+            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+          />
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/shopping/cart"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
+        <div className="pt-3 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/shopping/cart")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+            variant="primary"
+            size="sm"
+            icon={ShoppingBag}
           >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Add to Cart</span>
-          </button>
+            Add to Cart
+          </Button>
         </div>
       </form>
     </div>

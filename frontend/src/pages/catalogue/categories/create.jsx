@@ -8,6 +8,7 @@ import {
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
 import { Button, Input, Select, Textarea } from "../../../components/ui";
+import { validateField } from "../../../utils/validation";
 
 export default function CategoryFormPage() {
   const navigate = useNavigate();
@@ -70,6 +71,20 @@ export default function CategoryFormPage() {
     if (!formData.name.trim()) {
       toast.error("Category name is required");
       return;
+    }
+
+    const nameValidation = validateField("name", formData.name);
+    if (!nameValidation.isValid) {
+      toast.error(nameValidation.error);
+      return;
+    }
+
+    if (formData.hsn_code.trim()) {
+      const hsnValidation = validateField("hsn", formData.hsn_code);
+      if (!hsnValidation.isValid) {
+        toast.error(hsnValidation.error);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -173,10 +188,11 @@ export default function CategoryFormPage() {
             <Input
               label="Category Name"
               required
+              fieldType="name"
               placeholder="e.g. Footwear, Electronics, Men's Apparel"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              helperText="Unique display name shown in menus and catalog trees."
+              helperText="Letters, numbers, and spaces only. No special characters."
             />
 
             <Select
@@ -214,10 +230,11 @@ export default function CategoryFormPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
             <Input
               label="HSN Code"
+              fieldType="hsn"
               placeholder="e.g. 6403, 8517"
               value={formData.hsn_code}
               onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-              helperText="4 to 8 digit Indian GST tariff classification code."
+              helperText="2 to 8 digit Indian GST tariff classification code."
             />
 
             <Select

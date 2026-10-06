@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, ShoppingBag, Trash2, ArrowRight, Plus, Layers } from "lucide-react";
+import { Heart, ShoppingBag, Trash2, ArrowRight, Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Badge } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function WishlistPage() {
   const [wishlist, setWishlist] = useState([
@@ -48,62 +54,60 @@ export default function WishlistPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Heart className="w-5 h-5 text-rose-400 fill-rose-400" />
-            <span>Saved Wishlist</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Keep track of your favorite apparel pieces and transfer directly to your cart
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-rose-500">
+            <Heart className="w-5 h-5 fill-rose-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Saved Wishlist
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Keep track of your favorite apparel pieces and transfer directly to your cart
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/useful-additions/wishlist/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4 text-[var(--brand-primary)]" />
-          <span>Add Custom Item</span>
+        <Link to="/useful-additions/wishlist/create">
+          <Button variant="secondary" size="sm" icon={Plus}>
+            Add Custom Item
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Saved Items: <strong className="text-white">{wishlist.length || "—"}</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Inventory Alert: <strong className="text-emerald-400">All Items In Stock</strong>
-        </span>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Saved Items: <strong className="text-primary-token font-medium">{formatQty(wishlist.length)}</strong></span>
+        <span>•</span>
+        <span>Inventory Alert: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">All Items In Stock</strong></span>
+        <span>•</span>
+        <span>Sync Status: <strong className="text-brand-token font-medium">Synced Across Devices</strong></span>
       </div>
 
       {wishlist.length === 0 ? (
-        <div className="p-16 text-center rounded-3xl bg-white/[0.02] border border-white/[0.06] space-y-4">
-          <Heart className="w-12 h-12 mx-auto text-gray-500" />
-          <h3 className="text-sm font-bold text-white">Your wishlist is empty</h3>
-          <p className="text-xs text-gray-400 max-w-sm mx-auto">
+        <div className="p-16 text-center rounded-2xl bg-surface-elevated/40 border border-token space-y-4">
+          <Heart className="w-12 h-12 mx-auto text-muted-token" />
+          <h3 className="text-sm font-bold text-primary-token">Your wishlist is empty</h3>
+          <p className="text-xs text-muted-token max-w-sm mx-auto">
             Browse our catalogue to save handcrafted linen shirts, pashmina stoles, and derby footwear.
           </p>
-          <Link
-            to="/shopping/products"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[var(--brand-primary)] text-white text-xs font-semibold shadow-md"
-          >
-            <span>Explore Catalogue</span>
-            <ArrowRight className="w-4 h-4" />
+          <Link to="/shopping/products">
+            <Button variant="primary" size="sm" icon={ArrowRight}>
+              Explore Catalogue
+            </Button>
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {wishlist.map((item) => (
             <div
               key={item.id}
-              className="rounded-2xl bg-white/[0.03] border border-white/[0.08] overflow-hidden flex flex-col justify-between group hover:border-[rgba(0,210,210,0.3)] transition-all"
+              className="rounded-2xl bg-surface-elevated/40 border border-token overflow-hidden flex flex-col justify-between group hover:border-brand-token/40 transition-all shadow-xs"
             >
-              <div className="relative h-44 bg-gray-900 overflow-hidden">
+              <div className="relative h-44 bg-surface-elevated/80 overflow-hidden">
                 <img
                   src={item.image_url}
                   alt={item.name}
@@ -111,7 +115,7 @@ export default function WishlistPage() {
                 />
                 <button
                   onClick={() => handleRemove(item.id)}
-                  className="absolute top-2.5 right-2.5 p-2 rounded-xl bg-black/60 hover:bg-red-500/80 text-white backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
+                  className="absolute top-2.5 right-2.5 p-2 rounded-xl bg-surface/80 hover:bg-rose-500 text-primary-token hover:text-white backdrop-blur-md border border-token transition-colors cursor-pointer shadow-xs"
                   title="Remove from Wishlist"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -120,25 +124,28 @@ export default function WishlistPage() {
 
               <div className="p-4 space-y-3">
                 <div>
-                  <span className="text-[10px] font-bold text-[var(--brand-primary)] uppercase">
+                  <span className="text-[10px] font-bold text-brand-token uppercase">
                     {item.brand}
                   </span>
-                  <h3 className="text-xs font-bold text-white truncate mt-0.5">{item.name}</h3>
-                  <span className="text-[10px] font-mono text-gray-400">{item.sku}</span>
+                  <h3 className="text-xs font-bold text-primary-token truncate mt-0.5">{item.name}</h3>
+                  <span className="text-[10px] font-mono text-muted-token">{item.sku}</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
-                  <span className="text-sm font-extrabold text-white">
-                    ₹{item.selling_price.toLocaleString("en-IN")}
+                <div className="flex items-center justify-between pt-2 border-t border-token">
+                  <span className="text-sm font-extrabold text-brand-token">
+                    {item.selling_price && Number(item.selling_price) > 0
+                      ? `₹${Number(item.selling_price).toLocaleString("en-IN")}`
+                      : "—"}
                   </span>
 
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={ShoppingBag}
                     onClick={() => handleMoveToCart(item)}
-                    className="px-3 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>Move to Cart</span>
-                  </button>
+                    Move to Cart
+                  </Button>
                 </div>
               </div>
             </div>

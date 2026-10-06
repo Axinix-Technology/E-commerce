@@ -1,29 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { DollarSign, Plus, Search, Building2, Phone, ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { DollarSign, Plus, Building2, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function SupplierOutstandingIndex() {
   const [outstandings, setOutstandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [payableStatusFilter, setPayableStatusFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
 
   const fetchOutstandings = async () => {
     setLoading(true);
     try {
-      const res = await populateApi.read("supplier", { limit: 100 });
+      const res = await populateApi.read("vendor_master", { limit: 100 });
       const data = Array.isArray(res) ? res : res.data || [];
       const mapped = data.map((s) => ({
         id: s.id,
@@ -52,108 +44,168 @@ export default function SupplierOutstandingIndex() {
     fetchOutstandings();
   }, []);
 
-  const filtered = outstandings.filter((o) =>
-    (o.supplier_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (o.city || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const cityOptions = [
+    { label: "All Cities / Clusters", value: "all" },
+    ...Array.from(new Set(outstandings.map((o) => o.city).filter(Boolean))).map((c) => ({
+      label: c,
+      value: c,
+    })),
+  ];
+
+  const filtered = outstandings.filter((o) => {
+    if (payableStatusFilter === "pending" && Number(o.outstanding) <= 0) return false;
+    if (payableStatusFilter === "settled" && Number(o.outstanding) > 0) return false;
+    if (cityFilter !== "all" && o.city !== cityFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (o.supplier_name || "").toLowerCase().includes(term) ||
+      (o.city || "").toLowerCase().includes(term)
+    );
+  });
 
   const totalOutstanding = filtered.reduce((acc, o) => acc + (Number(o.outstanding) || 0), 0);
   const totalBilled = filtered.reduce((acc, o) => acc + (Number(o.total_billed) || 0), 0);
   const totalPaid = filtered.reduce((acc, o) => acc + (Number(o.total_paid) || 0), 0);
 
+  const columns = [
+    {
+      key: "supplier_name",
+      header: "Supplier / Mill",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">{row.city || "Tamil Nadu"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "phone",
+      header: "Contact",
+      render: (val) => <span className="text-secondary-token text-xs">{val || "—"}</span>,
+    },
+    {
+      key: "total_billed",
+      header: "Total Billed (₹)",
+      align: "right",
+      render: (val) => <span className="font-mono text-secondary-token">{formatCurrency(val)}</span>,
+    },
+    {
+      key: "total_paid",
+      header: "Disbursed (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-mono text-emerald-700 dark:text-emerald-400">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+    {
+      key: "outstanding",
+      header: "Net Payable (₹)",
+      align: "right",
+      render: (val) => (
+        <span
+          className={`font-mono font-bold ${
+            Number(val) > 0 ? "text-amber-800 dark:text-amber-400" : "text-muted-token"
+          }`}
+        >
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Payable Status",
+      render: (_, row) => (
+        <Badge variant={Number(row.outstanding) > 0 ? "amber" : "emerald"} dot>
+          {Number(row.outstanding) > 0 ? "Pending Dues" : "Settled"}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-brand-token" />
             Supplier Outstanding & Payables Ledger
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Track procurement bills, settled payments, and aging payables per supplier</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Track procurement bills, settled payments, and aging payables per supplier
+          </p>
         </div>
-        <Link
-          to="/purchase/supplier-outstanding/create"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Record Supplier Payout
+        <Link to="/purchase/supplier-outstanding/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Record Payout
+          </Button>
         </Link>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Suppliers Listed: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Suppliers Listed: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Cumulative Billed: <strong className="text-text-primary font-medium">{formatCurrency(totalBilled)}</strong></span>
+        <span>Cumulative Billed: <strong className="text-primary-token font-medium">{formatCurrency(totalBilled)}</strong></span>
         <span>•</span>
-        <span>Total Disbursed: <strong className="text-emerald-400 font-medium">{formatCurrency(totalPaid)}</strong></span>
+        <span>Total Disbursed: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatCurrency(totalPaid)}</strong></span>
         <span>•</span>
-        <span>Net Outstanding: <strong className="text-amber-400 font-medium">{formatCurrency(totalOutstanding)}</strong></span>
+        <span>Net Outstanding: <strong className="text-amber-800 dark:text-amber-400 font-bold">{formatCurrency(totalOutstanding)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by supplier name or location..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by supplier name or location..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={payableStatusFilter}
+              onChange={(e) => setPayableStatusFilter(e.target.value)}
+              options={[
+                { label: "All Payable Statuses", value: "all" },
+                { label: "Pending Dues", value: "pending" },
+                { label: "Settled / No Dues", value: "settled" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              options={cityOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setPayableStatusFilter("all");
+          setCityFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchOutstandings}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Supplier / Vendor</th>
-                <th className="px-4 py-2.5">City</th>
-                <th className="px-4 py-2.5 text-right">Total Billed</th>
-                <th className="px-4 py-2.5 text-right">Settled Amount</th>
-                <th className="px-4 py-2.5 text-right">Net Payable</th>
-                <th className="px-4 py-2.5 text-right">0-30 Days</th>
-                <th className="px-4 py-2.5 text-right">30+ Days</th>
-                <th className="px-4 py-2.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Calculating supplier outstandings...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No outstandings found.</td>
-                </tr>
-              ) : (
-                filtered.map((o) => (
-                  <tr key={o.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-medium text-text-primary">
-                      {o.supplier_name}
-                      <span className="block text-[11px] text-text-muted">{o.phone || "—"}</span>
-                    </td>
-                    <td className="px-4 py-3 text-text-primary">{o.city || "—"}</td>
-                    <td className="px-4 py-3 text-right font-medium text-text-primary">{formatCurrency(o.total_billed)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-emerald-400">{formatCurrency(o.total_paid)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-amber-400">{formatCurrency(o.outstanding)}</td>
-                    <td className="px-4 py-3 text-right text-text-muted">{formatCurrency(o.aging_30)}</td>
-                    <td className="px-4 py-3 text-right text-text-muted">{formatCurrency(o.aging_60)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        to={`/purchase/supplier-outstanding/create?supplier_id=${o.id}`}
-                        className="text-[11px] font-medium text-accent-primary hover:underline"
-                      >
-                        Settle
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No supplier payables records found."
+      />
     </div>
   );
 }

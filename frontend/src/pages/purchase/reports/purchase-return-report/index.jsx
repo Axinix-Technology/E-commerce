@@ -1,24 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { RotateCcw, Download, Search, CheckCircle2, Filter } from "lucide-react";
+import { RotateCcw, Download, RefreshCw } from "lucide-react";
 import populateApi from "../../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../../components/ui";
 
 export default function PurchaseReturnReportIndex() {
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [reasonFilter, setReasonFilter] = useState("all");
 
   const fetchReturns = async () => {
     setLoading(true);
@@ -36,11 +28,33 @@ export default function PurchaseReturnReportIndex() {
     fetchReturns();
   }, []);
 
-  const filtered = returns.filter((r) =>
-    (r.rtv_number || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.supplier_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.reason || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const supplierOptions = [
+    { label: "All Suppliers", value: "all" },
+    ...Array.from(new Set(returns.map((r) => r.supplier_name).filter(Boolean))).map((sn) => ({
+      label: sn,
+      value: sn,
+    })),
+  ];
+
+  const reasonOptions = [
+    { label: "All Rejection Reasons", value: "all" },
+    ...Array.from(new Set(returns.map((r) => r.reason).filter(Boolean))).map((rn) => ({
+      label: rn,
+      value: rn,
+    })),
+  ];
+
+  const filtered = returns.filter((r) => {
+    if (supplierFilter !== "all" && r.supplier_name !== supplierFilter) return false;
+    if (reasonFilter !== "all" && r.reason !== reasonFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (r.rtv_number || "").toLowerCase().includes(term) ||
+      (r.supplier_name || "").toLowerCase().includes(term) ||
+      (r.reason || "").toLowerCase().includes(term)
+    );
+  });
 
   const totalReturnedUnits = filtered.reduce((acc, r) => acc + (Number(r.returned_units) || 0), 0);
   const totalDebitNoteVal = filtered.reduce((acc, r) => acc + (Number(r.debit_note_amount) || 0), 0);
@@ -58,94 +72,137 @@ export default function PurchaseReturnReportIndex() {
     a.click();
   };
 
+  const columns = [
+    {
+      key: "rtv_number",
+      header: "RTV Voucher # / Date",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">Returned: {row.return_date || "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "grn_ref",
+      header: "Origin GRN Ref",
+      render: (val) => (
+        <span className="font-mono text-xs text-brand-token font-semibold">{val}</span>
+      ),
+    },
+    {
+      key: "supplier_name",
+      header: "Vendor / Supplier",
+      render: (val) => <span className="font-medium text-primary-token">{val}</span>,
+    },
+    {
+      key: "returned_units",
+      header: "Returned Units",
+      align: "center",
+      render: (val) => <span className="font-semibold">{formatQty(val)} Pcs</span>,
+    },
+    {
+      key: "debit_note_amount",
+      header: "Debit Note Amount (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-bold text-rose-700 dark:text-rose-400 font-mono">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+    {
+      key: "reason",
+      header: "Rejection Reason",
+      render: (val) => <span className="text-secondary-token text-xs">{val}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: () => <Badge variant="emerald" dot>Completed</Badge>,
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <RotateCcw className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-brand-token" />
             Purchase Return (RTV) Report
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Return to vendor logs, damaged consignment write-offs, and debit notes issued</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Return to vendor logs, damaged consignment write-offs, and debit notes issued
+          </p>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
+          icon={Download}
           onClick={exportCsv}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-primary hover:bg-surface-card transition shadow-sm"
         >
-          <Download className="w-3.5 h-3.5" />
           Export CSV
-        </button>
+        </Button>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>RTV Vouchers: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>RTV Vouchers: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Units Returned: <strong className="text-rose-400 font-medium">{formatQty(totalReturnedUnits)}</strong></span>
+        <span>Units Returned: <strong className="text-rose-700 dark:text-rose-400 font-medium">{formatQty(totalReturnedUnits)}</strong></span>
         <span>•</span>
-        <span>Debit Note Value: <strong className="text-emerald-400 font-medium">{formatCurrency(totalDebitNoteVal)}</strong></span>
+        <span>Debit Note Value: <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(totalDebitNoteVal)}</strong></span>
         <span>•</span>
-        <span>QC Reconciliation: <strong className="text-accent-primary font-medium">100% Settled</strong></span>
+        <span>QC Reconciliation: <strong className="text-brand-token font-medium">100% Settled</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by RTV number, supplier, or reason..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by RTV number, supplier, or reason..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              options={supplierOptions}
+            />
+            <Select
+              size="xs"
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+              options={reasonOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setSupplierFilter("all");
+          setReasonFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchReturns}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">RTV Number</th>
-                <th className="px-4 py-2.5">GRN Ref</th>
-                <th className="px-4 py-2.5">Supplier Name</th>
-                <th className="px-4 py-2.5">Return Date</th>
-                <th className="px-4 py-2.5 text-right">Units Returned</th>
-                <th className="px-4 py-2.5 text-right">Debit Note Amount</th>
-                <th className="px-4 py-2.5">Return Reason</th>
-                <th className="px-4 py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading returns...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No purchase returns recorded.</td>
-                </tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono font-medium text-accent-primary">{r.rtv_number}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-muted">{r.grn_ref || "—"}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{r.supplier_name}</td>
-                    <td className="px-4 py-3 text-text-muted">{r.return_date || "—"}</td>
-                    <td className="px-4 py-3 text-right font-medium text-rose-400">-{formatQty(r.returned_units)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-emerald-400">{formatCurrency(r.debit_note_amount)}</td>
-                    <td className="px-4 py-3 text-text-muted max-w-xs">{r.reason}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Debit Adjusted
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No purchase returns recorded."
+      />
     </div>
   );
 }

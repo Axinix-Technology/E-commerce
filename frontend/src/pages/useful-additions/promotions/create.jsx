@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Tag, Save } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function CreateCouponPage() {
   const navigate = useNavigate();
@@ -56,141 +57,122 @@ export default function CreateCouponPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           to="/useful-additions/promotions"
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Tag className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Create Promotional Coupon</span>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Tag className="w-5 h-5 text-brand-token" />
+            Create Promotional Coupon
           </h1>
-          <p className="text-xs text-gray-400">Configure discount vouchers, thresholds, and campaign validity</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Configure discount vouchers, thresholds, and campaign validity
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Coupon Code *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. FESTIVE20"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono uppercase"
-              />
-            </div>
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Coupon Code"
+            required
+            placeholder="e.g. FESTIVE20"
+            value={formData.code}
+            onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+            className="font-mono uppercase text-xs"
+          />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Campaign Title *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Festive Season 20% Off"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Campaign Description</label>
-            <textarea
-              rows={2}
-              placeholder="Valid across all items for festive celebrations..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] resize-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Discount Type</label>
-              <select
-                value={formData.discount_type}
-                onChange={(e) => setFormData({ ...formData, discount_type: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              >
-                <option value="percentage" className="bg-gray-900">Percentage (%)</option>
-                <option value="fixed" className="bg-gray-900">Flat Amount (₹)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Discount Value *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                placeholder="20"
-                value={formData.discount_value}
-                onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Max Discount Cap (₹)</label>
-              <input
-                type="number"
-                placeholder="1000"
-                value={formData.max_discount_amount}
-                onChange={(e) => setFormData({ ...formData, max_discount_amount: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Minimum Order Value (₹)</label>
-              <input
-                type="number"
-                placeholder="1000"
-                value={formData.min_order_value}
-                onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Valid Until</label>
-              <input
-                type="date"
-                value={formData.valid_until}
-                onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
+          <Input
+            label="Campaign Title"
+            required
+            placeholder="e.g. Festive Season 20% Off"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          />
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/useful-additions/promotions"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
+        <Textarea
+          label="Campaign Description"
+          rows={2}
+          placeholder="Valid across all items for festive celebrations..."
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Select
+            label="Discount Type"
+            value={formData.discount_type}
+            onChange={(e) => setFormData({ ...formData, discount_type: e.target.value })}
+            options={[
+              { value: "percentage", label: "Percentage (%)" },
+              { value: "fixed", label: "Flat Amount (₹)" },
+            ]}
+          />
+
+          <Input
+            label="Discount Value"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            placeholder="20"
+            value={formData.discount_value}
+            onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
+          />
+
+          <Input
+            label="Max Discount Cap (₹)"
+            type="number"
+            placeholder="1000"
+            value={formData.max_discount_amount}
+            onChange={(e) => setFormData({ ...formData, max_discount_amount: e.target.value })}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Minimum Order Value (₹)"
+            type="number"
+            placeholder="1000"
+            value={formData.min_order_value}
+            onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
+          />
+
+          <Input
+            label="Valid Until"
+            type="date"
+            value={formData.valid_until}
+            onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
+          />
+        </div>
+
+        <div className="pt-3 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/useful-additions/promotions")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Publishing..." : "Publish Voucher"}</span>
-          </button>
+            Publish Voucher
+          </Button>
         </div>
       </form>
     </div>

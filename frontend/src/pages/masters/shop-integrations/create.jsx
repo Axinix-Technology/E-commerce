@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, ShoppingBag, Globe, Key } from "lucide-react";
+import { ArrowLeft, Save, ShoppingBag } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Select } from "../../../components/ui";
 
 export default function ShopIntegrationCreate() {
   const navigate = useNavigate();
@@ -45,128 +46,122 @@ export default function ShopIntegrationCreate() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/masters/shop-integrations" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/masters/shop-integrations"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-brand-token" />
             Connect Online Store / Marketplace
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Link Shopify, WooCommerce, or Amazon seller accounts for automatic bidirectional catalog sync</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Link Shopify, WooCommerce, or Amazon seller accounts for automatic bidirectional catalog sync
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Store / Channel Display Name <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Axinix Shopify Online Store"
-              value={form.store_name}
-              onChange={(e) => setForm({ ...form, store_name: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Store / Channel Display Name"
+            required
+            placeholder="e.g. Axinix Shopify Online Store"
+            value={form.store_name}
+            onChange={(e) => setForm({ ...form, store_name: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Platform</label>
-            <select
-              value={form.platform}
-              onChange={(e) => setForm({ ...form, platform: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="shopify">Shopify</option>
-              <option value="woocommerce">WooCommerce</option>
-              <option value="amazon">Amazon Seller Central</option>
-              <option value="flipkart">Flipkart Marketplace</option>
-              <option value="custom">Custom REST API Endpoint</option>
-            </select>
-          </div>
+          <Select
+            label="Platform"
+            value={form.platform}
+            onChange={(e) => setForm({ ...form, platform: e.target.value })}
+            options={[
+              { value: "shopify", label: "Shopify" },
+              { value: "woocommerce", label: "WooCommerce" },
+              { value: "amazon", label: "Amazon Seller Central" },
+              { value: "flipkart", label: "Flipkart Marketplace" },
+              { value: "custom", label: "Custom REST API Endpoint" },
+            ]}
+          />
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Store Base URL <span className="text-rose-400">*</span>
-            </label>
-            <input
+            <Input
+              label="Store Base URL"
               type="url"
               required
               placeholder="https://your-store.myshopify.com"
               value={form.store_url}
               onChange={(e) => setForm({ ...form, store_url: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              API Access Token / Key <span className="text-rose-400">*</span>
-            </label>
-            <input
+            <Input
+              label="API Access Token / Key"
               type="password"
               required
               placeholder="shpat_..."
               value={form.api_key}
               onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">API Shared Secret (Optional)</label>
-            <input
+            <Input
+              label="API Shared Secret (Optional)"
               type="password"
               placeholder="shpss_..."
               value={form.api_secret}
               onChange={(e) => setForm({ ...form, api_secret: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Sync Interval</label>
-            <select
-              value={form.sync_interval_minutes}
-              onChange={(e) => setForm({ ...form, sync_interval_minutes: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value={5}>Every 5 minutes</option>
-              <option value={15}>Every 15 minutes</option>
-              <option value={30}>Every 30 minutes</option>
-              <option value={60}>Every hour</option>
-            </select>
-          </div>
+          <Select
+            label="Sync Interval"
+            value={form.sync_interval_minutes}
+            onChange={(e) => setForm({ ...form, sync_interval_minutes: Number(e.target.value) })}
+            options={[
+              { value: 5, label: "Every 5 minutes" },
+              { value: 15, label: "Every 15 minutes" },
+              { value: 30, label: "Every 30 minutes" },
+              { value: 60, label: "Every hour" },
+            ]}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Status</label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value={1}>Connected / Active</option>
-              <option value={0}>Paused</option>
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
+            options={[
+              { value: 1, label: "Connected / Active" },
+              { value: 0, label: "Paused" },
+            ]}
+          />
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/masters/shop-integrations" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-token">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/masters/shop-integrations")}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Connect Channel"}
-          </button>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
+          >
+            Connect Channel
+          </Button>
         </div>
       </form>
     </div>

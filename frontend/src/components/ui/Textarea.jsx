@@ -36,8 +36,8 @@ export default function Textarea({
   return (
     <div className={`space-y-1.5 ${containerClassName}`}>
       {label && (
-        <label className={`block font-semibold text-secondary-token ${labelSizes[size] || labelSizes.sm}`}>
-          {label} {required && <span className="text-rose-400">*</span>}
+        <label className={`block font-semibold text-slate-800 dark:text-secondary-token ${labelSizes[size] || labelSizes.sm}`}>
+          {label} {required && <span className="text-rose-600 dark:text-rose-400 font-bold">*</span>}
         </label>
       )}
 
@@ -48,9 +48,9 @@ export default function Textarea({
         disabled={disabled}
         placeholder={placeholder}
         required={required}
-        className={`w-full bg-surface-elevated border transition-all text-primary-token placeholder-muted-token focus:outline-none focus:border-[var(--brand-secondary)] focus:ring-1 focus:ring-[var(--brand-secondary)]/30 disabled:opacity-50 disabled:cursor-not-allowed resize-y ${
+        className={`w-full bg-white dark:bg-surface-elevated border shadow-xs transition-all text-slate-900 dark:text-primary-token placeholder:text-slate-400 dark:placeholder:text-muted-token hover:border-slate-400 dark:hover:border-[var(--brand-secondary)]/60 focus:outline-none focus:border-[var(--brand-secondary)] focus:ring-2 focus:ring-[var(--brand-secondary)]/25 disabled:opacity-50 disabled:cursor-not-allowed resize-y ${
           sizeStyles[size] || sizeStyles.sm
-        } ${error ? "border-rose-500/80 focus:border-rose-500" : "border-token"} ${className}`}
+        } ${error ? "border-rose-500 focus:border-rose-500" : "border-slate-300 dark:border-token"} ${className}`}
         {...props}
       />
 

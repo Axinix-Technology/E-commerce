@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Tag, Plus, Search, ExternalLink, Edit2 } from "lucide-react";
+import { Tag, Plus, ExternalLink, Edit2, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import { formatQty } from "../../../utils/formatters";
-import { Button, Input, Table, Badge } from "../../../components/ui";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function BrandsIndex() {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [websiteFilter, setWebsiteFilter] = useState("all");
 
   const fetchBrands = async () => {
     setLoading(true);
@@ -31,16 +33,29 @@ export default function BrandsIndex() {
     fetchBrands();
   }, []);
 
-  const filtered = brands.filter((b) =>
-    (b.name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (b.code || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = brands.filter((b) => {
+    const term = search.toLowerCase();
+    const matchesSearch =
+      (b.name || "").toLowerCase().includes(term) ||
+      (b.code || "").toLowerCase().includes(term) ||
+      (b.website || "").toLowerCase().includes(term);
+    const matchesStatus =
+      statusFilter === "all" ? true : String(b.status) === String(statusFilter);
+    const matchesWebsite =
+      websiteFilter === "all"
+        ? true
+        : websiteFilter === "has_url"
+        ? Boolean(b.website)
+        : !b.website;
+
+    return matchesSearch && matchesStatus && matchesWebsite;
+  });
 
   const columns = [
     {
       key: "name",
       header: "Brand / Label Name",
-      render: (val) => <span className="font-semibold text-primary-token">{val}</span>,
+      render: (val) => <span className="font-semibold text-primary-token text-xs">{val}</span>,
     },
     {
       key: "code",
@@ -69,7 +84,7 @@ export default function BrandsIndex() {
       key: "status",
       header: "Status",
       render: (val) => (
-        <Badge variant={val === 1 ? "emerald" : "rose"} dot>
+        <Badge variant={val === 1 ? "emerald" : "rose"} size="sm" dot>
           {val === 1 ? "Active" : "Inactive"}
         </Badge>
       ),
@@ -92,14 +107,18 @@ export default function BrandsIndex() {
     <div className="space-y-4">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
-            <Tag className="w-5 h-5 text-brand-token" />
-            Brands & Labels Master
-          </h1>
-          <p className="text-xs text-muted-token mt-0.5">
-            Manage in-house couture lines and third-party designer label licensing
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-surface-elevated/40 border border-teal-200/80 dark:border-token text-brand-token shadow-xs">
+            <Tag className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-primary-token tracking-tight">
+              Brands & Labels Master
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-muted-token mt-0.5">
+              Manage in-house couture lines and third-party designer label licensing
+            </p>
+          </div>
         </div>
         <Link to="/catalogue/brands/create">
           <Button variant="primary" size="sm" icon={Plus}>
@@ -109,31 +128,67 @@ export default function BrandsIndex() {
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
-        <span>Registered Brands: <strong className="text-primary-token font-medium">{formatQty(brands.length)}</strong></span>
+      <div className="glass-panel flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 rounded-xl text-xs text-secondary-token shadow-xs">
+        <span>Registered Brands: <strong className="text-primary-token font-bold">{formatQty(brands.length)}</strong></span>
         <span>•</span>
-        <span>Active Labels: <strong className="text-emerald-400 font-medium">{formatQty(brands.filter(b => b.status === 1).length)}</strong></span>
+        <span>Active Labels: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{formatQty(brands.filter(b => b.status === 1).length)}</strong></span>
         <span>•</span>
-        <span>Catalogue Filtration: <strong className="text-brand-token font-medium">Facet Enabled</strong></span>
+        <span>Catalogue Filtration: <strong className="text-teal-600 dark:text-cyan-400 font-bold">Facet Enabled</strong></span>
       </div>
 
-      {/* Search Input Bar */}
-      <div className="w-full sm:max-w-md">
-        <Input
-          icon={Search}
-          placeholder="Search by brand name or code..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onClear={() => setSearch("")}
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by brand name, code, or website..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Active", value: "1" },
+                { label: "Inactive", value: "0" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={websiteFilter}
+              onChange={(e) => setWebsiteFilter(e.target.value)}
+              options={[
+                { label: "All Presence", value: "all" },
+                { label: "With Official URL", value: "has_url" },
+                { label: "Offline Labels Only", value: "offline" },
+              ]}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setStatusFilter("all");
+          setWebsiteFilter("all");
+        }}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchBrands}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      {/* Reusable Data Table */}
+      {/* Table */}
       <Table
         columns={columns}
         data={filtered}
         loading={loading}
-        emptyMessage="No brands found."
+        emptyMessage="No brands found matching your criteria."
       />
     </div>
   );

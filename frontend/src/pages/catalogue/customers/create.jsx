@@ -5,14 +5,13 @@ import {
   Users,
   Save,
   Phone,
-  Mail,
   MapPin,
   Building2,
-  ShieldCheck,
-  CreditCard
+  ShieldCheck
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Textarea } from "../../../components/ui";
 
 export default function CustomerFormPage() {
   const navigate = useNavigate();
@@ -48,7 +47,6 @@ export default function CustomerFormPage() {
         if (res?.data) {
           setStates(res.data);
           if (!isEditing && res.data.length > 0 && !formData.state_id) {
-            // Default to Tamil Nadu (33) or first state
             const tn = res.data.find((s) => s.code === "33") || res.data[0];
             setFormData((prev) => ({ ...prev, state_id: String(tn.id) }));
           }
@@ -146,7 +144,7 @@ export default function CustomerFormPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/catalogue/customers"
-            className="p-2 rounded-xl bg-surface-elevated hover:bg-surface border border-token text-secondary-token hover:text-primary-token transition-colors"
+            className="p-2 rounded-xl bg-surface-elevated/40 hover:bg-surface-elevated/80 border border-token text-muted-token hover:text-primary-token transition-colors"
             title="Back to Customers"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -156,7 +154,7 @@ export default function CustomerFormPage() {
               <span>Catalogue Master</span>
               <span>/</span>
               <Link to="/catalogue/customers" className="hover:text-primary-token">
-                Customer Master
+                Customers
               </Link>
               <span>/</span>
               <span className="text-brand-token font-medium">
@@ -170,27 +168,31 @@ export default function CustomerFormPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/catalogue/customers"
-            className="px-4 py-2 rounded-xl border border-token hover:bg-surface-elevated text-secondary-token text-xs font-semibold transition-colors"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/customers")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
             onClick={handleSubmit}
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Save Customer"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Save Customer"}
+          </Button>
         </div>
       </div>
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Account Classification Card */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+        {/* Account Classification */}
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <h2 className="text-sm font-bold text-primary-token flex items-center gap-2 pb-2 border-b border-token">
             <Users className="w-4 h-4 text-brand-token" />
             Account Classification
@@ -200,8 +202,8 @@ export default function CustomerFormPage() {
             <label
               className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
                 formData.customer_type === "b2c"
-                  ? "bg-brand-token/10 border-[var(--brand-secondary)] shadow-xs"
-                  : "bg-surface-elevated border-token hover:border-token-hover"
+                  ? "bg-brand-token/10 border-brand-token"
+                  : "bg-surface-elevated border-token hover:border-token"
               }`}
             >
               <input
@@ -214,7 +216,7 @@ export default function CustomerFormPage() {
               />
               <div>
                 <span className="block text-xs font-bold text-primary-token">Retail Consumer (B2C)</span>
-                <span className="block text-[11px] text-secondary-token mt-0.5">
+                <span className="block text-[11px] text-muted-token mt-0.5">
                   Standard consumer billing, walk-in shoppers, and e-commerce orders.
                 </span>
               </div>
@@ -223,8 +225,8 @@ export default function CustomerFormPage() {
             <label
               className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
                 formData.customer_type === "b2b"
-                  ? "bg-brand-token/10 border-[var(--brand-secondary)] shadow-xs"
-                  : "bg-surface-elevated border-token hover:border-token-hover"
+                  ? "bg-brand-token/10 border-brand-token"
+                  : "bg-surface-elevated border-token hover:border-token"
               }`}
             >
               <input
@@ -237,7 +239,7 @@ export default function CustomerFormPage() {
               />
               <div>
                 <span className="block text-xs font-bold text-primary-token">Registered Business (B2B)</span>
-                <span className="block text-[11px] text-secondary-token mt-0.5">
+                <span className="block text-[11px] text-muted-token mt-0.5">
                   Corporate tax invoice with GSTIN for input tax credit claims.
                 </span>
               </div>
@@ -246,7 +248,7 @@ export default function CustomerFormPage() {
         </div>
 
         {/* Primary Contact Details */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <Phone className="w-4 h-4 text-brand-token" />
@@ -257,103 +259,78 @@ export default function CustomerFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className={formData.customer_type === "b2b" ? "md:col-span-1" : "md:col-span-2"}>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Customer Name <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Customer Name"
                 required
                 placeholder="e.g. Arun Kumar"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
 
             {formData.customer_type === "b2b" && (
               <div className="md:col-span-2">
-                <label className="block font-semibold text-secondary-token mb-1.5">
-                  Company / Trade Name <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
+                <Input
+                  label="Company / Trade Name"
+                  required
                   placeholder="e.g. Axinix Textiles Private Limited"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
                 />
               </div>
             )}
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                Phone Number <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
+              <Input
+                label="Phone Number"
                 required
                 placeholder="+91 98765 43210"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">Email Address</label>
-              <input
+              <Input
+                label="Email Address"
                 type="email"
                 placeholder="customer@domain.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
           </div>
         </div>
 
-        {/* GST & Tax Compliance (Shown for B2B or optional PAN) */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+        {/* GST & Tax Compliance */}
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <h2 className="text-sm font-bold text-primary-token flex items-center gap-2 pb-2 border-b border-token">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             Tax Compliance Credentials
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                GSTIN Number (15 Digits) {formData.customer_type === "b2b" && <span className="text-rose-400">*</span>}
-              </label>
-              <input
-                type="text"
-                maxLength={15}
-                placeholder="e.g. 33AAAAA0000A1Z5"
-                value={formData.gstin}
-                onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono uppercase focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                PAN Number (10 Digits)
-              </label>
-              <input
-                type="text"
-                maxLength={10}
-                placeholder="e.g. ABCDE1234F"
-                value={formData.pan_number}
-                onChange={(e) => setFormData({ ...formData, pan_number: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono uppercase focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label={`GSTIN Number (15 Digits) ${formData.customer_type === "b2b" ? "*" : ""}`}
+              maxLength={15}
+              placeholder="e.g. 33AAAAA0000A1Z5"
+              value={formData.gstin}
+              onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+            />
+            <Input
+              label="PAN Number (10 Digits)"
+              maxLength={10}
+              placeholder="e.g. ABCDE1234F"
+              value={formData.pan_number}
+              onChange={(e) => setFormData({ ...formData, pan_number: e.target.value.toUpperCase() })}
+            />
           </div>
         </div>
 
         {/* Address & Statutory Place of Supply */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-5 shadow-xs">
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
               <MapPin className="w-4 h-4 text-brand-token" />
@@ -364,96 +341,91 @@ export default function CustomerFormPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-3">
-              <label className="block font-semibold text-secondary-token mb-1.5">Billing Address</label>
-              <textarea
-                rows="2"
+              <Textarea
+                label="Billing Address"
+                rows={2}
                 placeholder="Door No, Street, Landmark..."
                 value={formData.billing_address}
                 onChange={(e) => setFormData({ ...formData, billing_address: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs resize-none"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">
-                State (GST Place of Supply) <span className="text-rose-400">*</span>
-              </label>
-              <select
+              <Select
+                label="State (GST Place of Supply)"
                 required
                 value={formData.state_id}
                 onChange={(e) => setFormData({ ...formData, state_id: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs font-medium"
-              >
-                <option value="">— Select State —</option>
-                {states.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    [{s.code}] {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">City / Town</label>
-              <input
-                type="text"
-                placeholder="e.g. Chennai, Coimbatore"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
+                options={[
+                  { value: "", label: "— Select State —" },
+                  ...states.map((s) => ({
+                    value: String(s.id),
+                    label: `[${s.code}] ${s.name}`,
+                  })),
+                ]}
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-secondary-token mb-1.5">PIN Code</label>
-              <input
-                type="text"
+              <Input
+                label="City / Town"
+                placeholder="e.g. Chennai, Coimbatore"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="PIN Code"
                 placeholder="600001"
                 value={formData.pincode}
                 onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token font-mono focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
               />
             </div>
           </div>
         </div>
 
-        {/* Master Status */}
-        <div className="glass-panel p-6 rounded-2xl border border-token space-y-4 shadow-xs">
+        {/* Account Status */}
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
           <h2 className="text-sm font-bold text-primary-token pb-2 border-b border-token">
             Account Status
           </h2>
 
-          <div className="text-xs space-y-2 max-w-sm">
-            <label className="block font-semibold text-secondary-token">Record Status</label>
-            <select
+          <div className="max-w-xs">
+            <Select
+              label="Record Status"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-token text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] text-xs"
-            >
-              <option value={1}>Active Account</option>
-              <option value={0}>Inactive / Suspended</option>
-            </select>
+              options={[
+                { value: 1, label: "Active Account" },
+                { value: 0, label: "Inactive / Suspended" },
+              ]}
+            />
           </div>
         </div>
 
         {/* Bottom Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link
-            to="/catalogue/customers"
-            className="px-5 py-2 rounded-xl border border-token text-secondary-token hover:bg-surface-elevated text-xs font-semibold"
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/catalogue/customers")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all disabled:opacity-50 cursor-pointer"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-4 h-4" />
-            <span>{submitting ? "Saving..." : isEditing ? "Save Changes" : "Save Customer"}</span>
-          </button>
+            {isEditing ? "Save Changes" : "Save Customer"}
+          </Button>
         </div>
       </form>
     </div>

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BellRing, Save, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, BellRing, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input, Checkbox } from "../../../components/ui";
 
 export default function SubscribeTrackingAlertPage() {
   const navigate = useNavigate();
@@ -33,101 +34,89 @@ export default function SubscribeTrackingAlertPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           to={`/useful-additions/track-order?tracking=${encodeURIComponent(trackingParam)}`}
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <BellRing className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Subscribe to Live Tracking Alerts</span>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <BellRing className="w-5 h-5 text-brand-token" />
+            Subscribe to Live Tracking Alerts
           </h1>
-          <p className="text-xs text-gray-400">Receive instant milestone notifications on WhatsApp and SMS</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Receive instant milestone notifications on WhatsApp and SMS
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">Order or Tracking Number *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. SO-20261003-8491"
-              value={formData.tracking_code}
-              onChange={(e) => setFormData({ ...formData, tracking_code: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono uppercase"
-            />
-          </div>
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <Input
+          label="Order or Tracking Number"
+          required
+          placeholder="e.g. SO-20261003-8491"
+          value={formData.tracking_code}
+          onChange={(e) => setFormData({ ...formData, tracking_code: e.target.value })}
+          className="font-mono uppercase text-xs"
+        />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Mobile Phone (for WhatsApp/SMS) *</label>
-              <input
-                type="tel"
-                required
-                placeholder="+91 9876543210"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Mobile Phone (for WhatsApp/SMS)"
+            type="tel"
+            required
+            placeholder="+91 9876543210"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">Email Address (Optional)</label>
-              <input
-                type="email"
-                placeholder="alex@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2 pt-2 border-t border-white/[0.08]">
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-300">
-              <input
-                type="checkbox"
-                checked={formData.via_whatsapp}
-                onChange={(e) => setFormData({ ...formData, via_whatsapp: e.target.checked })}
-                className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-0"
-              />
-              <span>Send me real-time delivery dispatches via WhatsApp</span>
-            </label>
-
-            <label className="flex items-center gap-2.5 cursor-pointer text-xs text-gray-300">
-              <input
-                type="checkbox"
-                checked={formData.via_sms}
-                onChange={(e) => setFormData({ ...formData, via_sms: e.target.checked })}
-                className="w-4 h-4 rounded text-[var(--brand-primary)] focus:ring-0"
-              />
-              <span>Send me SMS alerts when the package is Out for Delivery</span>
-            </label>
-          </div>
+          <Input
+            label="Email Address (Optional)"
+            type="email"
+            placeholder="alex@example.com"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          />
         </div>
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/useful-additions/track-order"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
+        <div className="space-y-2 pt-2 border-t border-token">
+          <Checkbox
+            label="Send me real-time delivery dispatches via WhatsApp"
+            checked={formData.via_whatsapp}
+            onChange={(e) => setFormData({ ...formData, via_whatsapp: e.target.checked })}
+          />
+
+          <Checkbox
+            label="Send me SMS alerts when the package is Out for Delivery"
+            checked={formData.via_sms}
+            onChange={(e) => setFormData({ ...formData, via_sms: e.target.checked })}
+          />
+        </div>
+
+        <div className="pt-3 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/useful-additions/track-order")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={BellRing}
+            loading={submitting}
           >
-            <BellRing className="w-4 h-4" />
-            <span>{submitting ? "Subscribing..." : "Activate Alerts"}</span>
-          </button>
+            Activate Alerts
+          </Button>
         </div>
       </form>
     </div>

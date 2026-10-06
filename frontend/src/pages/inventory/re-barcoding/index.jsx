@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { QrCode, Plus, Search, CheckCircle2, History, AlertCircle } from "lucide-react";
+import { QrCode, Plus, History, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -12,6 +13,8 @@ export default function RebarcodingIndex() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [authorizerFilter, setAuthorizerFilter] = useState("all");
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -34,103 +37,163 @@ export default function RebarcodingIndex() {
     fetchRecords();
   }, []);
 
-  const filtered = records.filter((r) =>
-    (r.old_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.new_barcode || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.reason || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const authorizerOptions = [
+    { label: "All Authorizers", value: "all" },
+    ...Array.from(new Set(records.map((r) => r.authorized_by).filter(Boolean))).map((auth) => ({
+      label: auth,
+      value: auth,
+    })),
+  ];
+
+  const filtered = records.filter((r) => {
+    if (statusFilter !== "all" && String(r.status) !== statusFilter) return false;
+    if (authorizerFilter !== "all" && r.authorized_by !== authorizerFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      (r.old_barcode || "").toLowerCase().includes(term) ||
+      (r.new_barcode || "").toLowerCase().includes(term) ||
+      (r.reason || "").toLowerCase().includes(term) ||
+      (r.authorized_by || "").toLowerCase().includes(term)
+    );
+  });
+
+  const columns = [
+    {
+      header: "Old Barcode",
+      render: (r) => (
+        <span className="font-mono text-xs text-rose-600 dark:text-rose-400 line-through">
+          {r.old_barcode}
+        </span>
+      ),
+    },
+    {
+      header: "New Replacement Tag",
+      render: (r) => (
+        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+          {r.new_barcode}
+        </span>
+      ),
+    },
+    {
+      header: "Retagging Reason",
+      accessor: "reason",
+      className: "text-secondary-token text-xs max-w-sm",
+    },
+    {
+      header: "Authorized By",
+      accessor: "authorized_by",
+      className: "text-primary-token text-xs",
+    },
+    {
+      header: "Generated On",
+      render: (r) => (
+        <span className="text-[11px] text-muted-token font-mono">
+          {r.created_at || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (r) => (
+        <Badge variant={r.status === 1 ? "success" : "neutral"} size="sm">
+          {r.status === 1 ? "Applied" : "Pending"}
+        </Badge>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-accent-primary" />
-            Re-Barcoding Operations
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Retagging and barcode replacement lifecycle with chain-of-custody tracking</p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <QrCode className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight">
+              Re-Barcoding Operations
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Retagging and barcode replacement lifecycle with chain-of-custody tracking
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <Link
-            to="/reports/re-barcoding"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition"
-          >
-            <History className="w-3.5 h-3.5" />
-            Re-barcoding Report
+          <Link to="/reports/re-barcoding">
+            <Button variant="secondary" size="sm" icon={History}>
+              Re-barcoding Report
+            </Button>
           </Link>
-          <Link
-            to="/inventory/re-barcoding/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Generate New Tag
+          <Link to="/inventory/re-barcoding/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Re-barcode Item
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Re-Barcoded Items: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Replacement Operations: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Validation Status: <strong className="text-emerald-400 font-medium">100% Verified</strong></span>
+        <span>Chain-of-Custody: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Audited</strong></span>
         <span>•</span>
-        <span>Physical Tag Sync: <strong className="text-accent-primary font-medium">Active</strong></span>
+        <span>Tag Continuity: <strong className="text-brand-token font-medium">Synced</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by old barcode, new barcode, or reason..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by old barcode, new barcode, or reason..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Applied & Sealed", value: "1" },
+                { label: "Pending Processing", value: "0" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={authorizerFilter}
+              onChange={(e) => setAuthorizerFilter(e.target.value)}
+              options={authorizerOptions}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setStatusFilter("all");
+          setAuthorizerFilter("all");
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchRecords}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Original / Old Barcode</th>
-                <th className="px-4 py-2.5">Newly Generated Barcode</th>
-                <th className="px-4 py-2.5">Reason for Replacement</th>
-                <th className="px-4 py-2.5">Authorized By</th>
-                <th className="px-4 py-2.5">Date Processed</th>
-                <th className="px-4 py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">Loading re-barcoding records...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-text-muted">No re-barcoding actions logged.</td>
-                </tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-mono text-[11px] text-rose-400 line-through">{r.old_barcode}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-[11px] text-emerald-400">{r.new_barcode}</td>
-                    <td className="px-4 py-3 text-text-secondary max-w-sm">{r.reason}</td>
-                    <td className="px-4 py-3 text-text-primary">{r.authorized_by || "Store Admin"}</td>
-                    <td className="px-4 py-3 text-text-muted">{r.created_at || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Completed
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No re-barcoding operations logged."
+      />
     </div>
   );
 }

@@ -6,28 +6,14 @@ import {
   Plus,
   Trash2,
   Save,
-  Search,
   User,
   CreditCard,
-  Percent,
-  CheckCircle2,
-  Package
+  Package,
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Input, Select } from "../../../components/ui";
 
 export default function CreateSaleOrderPage() {
   const navigate = useNavigate();
@@ -64,7 +50,6 @@ export default function CreateSaleOrderPage() {
   ]);
 
   useEffect(() => {
-    // Load customers and available product variants
     const loadPrerequisites = async () => {
       setLoading(true);
       try {
@@ -77,8 +62,11 @@ export default function CreateSaleOrderPage() {
           }),
         ]);
 
-        if (custRes?.data) setCustomers(custRes.data);
-        if (varRes?.data) setVariants(varRes.data);
+        const custData = Array.isArray(custRes) ? custRes : custRes?.data || [];
+        const varData = Array.isArray(varRes) ? varRes : varRes?.data || [];
+
+        setCustomers(custData);
+        setVariants(varData);
       } catch (err) {
         console.error("Failed loading lookup data", err);
       } finally {
@@ -162,31 +150,31 @@ export default function CreateSaleOrderPage() {
 
   const removeItemRow = (index) => {
     if (items.length <= 1) {
-      toast.error("An order must have at least one line item");
+      toast.error("An order must contain at least one product row");
       return;
     }
-    setItems((prev) => prev.filter((_, idx) => idx !== index));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Calculations
   const calculateTotals = () => {
     let subtotal = 0;
     let totalTax = 0;
     let totalDiscount = 0;
     let totalUnits = 0;
 
-    items.forEach((item) => {
-      const qty = Math.max(1, Number(item.quantity) || 1);
-      const price = Number(item.unit_price) || 0;
-      const taxRate = Number(item.tax_rate) || 0;
-      const disc = Number(item.discount_amount) || 0;
+    items.forEach((it) => {
+      const qty = Number(it.quantity) || 0;
+      const price = Number(it.unit_price) || 0;
+      const taxRate = Number(it.tax_rate) || 0;
+      const disc = Number(it.discount_amount) || 0;
 
-      const lineNet = price * qty - disc;
-      const lineTax = (lineNet * taxRate) / 100;
+      const baseAmount = price * qty;
+      const taxable = Math.max(0, baseAmount - disc);
+      const tax = (taxable * taxRate) / 100;
 
-      subtotal += price * qty;
-      totalTax += lineTax;
+      subtotal += baseAmount;
       totalDiscount += disc;
+      totalTax += tax;
       totalUnits += qty;
     });
 
@@ -206,7 +194,7 @@ export default function CreateSaleOrderPage() {
   const { subtotal, totalTax, totalDiscount, grandTotal, totalUnits } = calculateTotals();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     const validItems = items.filter((it) => it.variant_id);
     if (validItems.length === 0) {
@@ -291,145 +279,129 @@ export default function CreateSaleOrderPage() {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           <Link
             to="/sales/index"
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
+            className="p-1.5 rounded-lg border border-token text-muted-token hover:text-primary-token transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">New Sale Order (POS)</h1>
-            <p className="text-xs text-text-muted">Instant point-of-sale checkout and invoice generation</p>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-brand-token" />
+              New Sale Order (POS)
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Instant point-of-sale checkout and invoice generation
+            </p>
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Save}
+          loading={submitting}
           onClick={handleSubmit}
-          disabled={submitting}
-          className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          {submitting ? "Processing..." : "Complete Order"}
-        </button>
+          Complete Order
+        </Button>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Cart Items: <strong className="text-text-primary font-medium">{formatQty(items.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Cart Items: <strong className="text-primary-token font-medium">{formatQty(items.length)}</strong></span>
         <span>•</span>
-        <span>Total Units: <strong className="text-text-primary font-medium">{formatQty(totalUnits)}</strong></span>
+        <span>Total Units: <strong className="text-primary-token font-medium">{formatQty(totalUnits)}</strong></span>
         <span>•</span>
-        <span>Subtotal: <strong className="text-text-primary font-medium">{formatCurrency(subtotal)}</strong></span>
+        <span>Subtotal: <strong className="text-primary-token font-medium">{formatCurrency(subtotal)}</strong></span>
         <span>•</span>
-        <span>GST Tax: <strong className="text-emerald-400 font-medium">{formatCurrency(totalTax)}</strong></span>
+        <span>GST Tax: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatCurrency(totalTax)}</strong></span>
         <span>•</span>
-        <span>Payable Total: <strong className="text-emerald-400 font-semibold">{formatCurrency(grandTotal)}</strong></span>
+        <span>Payable Total: <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(grandTotal)}</strong></span>
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left Column: Customer & Items */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 space-y-4">
           {/* Customer Selection Card */}
-          <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-              <User className="w-4 h-4 text-primary" />
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+              <User className="w-4 h-4 text-brand-token" />
               Customer Information
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Select Existing Customer
-                </label>
-                <select
-                  value={formData.customer_id}
-                  onChange={(e) => handleCustomerChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
-                >
-                  <option value="">-- Walk-in / Guest Customer --</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.phone || c.email || "No phone"})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <Select
+                label="Select Existing Customer"
+                value={formData.customer_id}
+                onChange={(e) => handleCustomerChange(e.target.value)}
+                placeholder="-- Walk-in / Guest Customer --"
+                options={customers.map((c) => ({
+                  value: c.id,
+                  label: `${c.name} (${c.phone || c.email || "No phone"})`,
+                }))}
+              />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Customer Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.customer_name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, customer_name: e.target.value }))}
-                  placeholder="e.g. John Doe"
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
-                />
-              </div>
+              <Input
+                label="Customer Name"
+                placeholder="e.g. John Doe"
+                fieldType="name"
+                value={formData.customer_name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, customer_name: e.target.value }))}
+              />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Customer Phone
-                </label>
-                <input
-                  type="text"
-                  value={formData.customer_phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, customer_phone: e.target.value }))}
-                  placeholder="+91 98765 43210"
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
-                />
-              </div>
+              <Input
+                label="Customer Phone"
+                placeholder="+91 98765 43210"
+                fieldType="phone"
+                value={formData.customer_phone}
+                onChange={(e) => setFormData((prev) => ({ ...prev, customer_phone: e.target.value }))}
+              />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Customer Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.customer_email}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, customer_email: e.target.value }))}
-                  placeholder="customer@domain.com"
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary/50"
-                />
-              </div>
+              <Input
+                label="Customer Email"
+                placeholder="customer@domain.com"
+                fieldType="email"
+                value={formData.customer_email}
+                onChange={(e) => setFormData((prev) => ({ ...prev, customer_email: e.target.value }))}
+              />
             </div>
           </div>
 
           {/* Line Items Table Card */}
-          <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-                <Package className="w-4 h-4 text-primary" />
+              <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+                <Package className="w-4 h-4 text-brand-token" />
                 Order Line Items
               </div>
-              <button
-                type="button"
+              <Button
+                size="xs"
+                variant="outline"
+                icon={Plus}
                 onClick={addItemRow}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium border border-primary/20 transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />
                 Add Item
-              </button>
+              </Button>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-border/60 text-text-muted font-medium">
+                  <tr className="border-b border-token text-muted-token font-semibold uppercase text-[10px]">
                     <th className="pb-2 w-[35%]">Product Variant</th>
                     <th className="pb-2 w-[15%]">Qty</th>
                     <th className="pb-2 w-[20%]">Price (₹)</th>
-                    <th className="pb-2 w-[15%]">Tax %</th>
-                    <th className="pb-2 w-[15%] text-right">Line Total</th>
+                    <th className="pb-2 w-[12%]">Tax %</th>
+                    <th className="pb-2 w-[13%] text-right">Line Total</th>
                     <th className="pb-2 w-[5%] text-center"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/40">
+                <tbody className="divide-y divide-token">
                   {items.map((item, idx) => {
                     const itemQty = Number(item.quantity) || 1;
                     const itemPrice = Number(item.unit_price) || 0;
@@ -441,58 +413,58 @@ export default function CreateSaleOrderPage() {
                     return (
                       <tr key={idx} className="group">
                         <td className="py-2.5 pr-2">
-                          <select
+                          <Select
+                            size="xs"
                             value={item.variant_id}
                             onChange={(e) => handleVariantSelect(idx, e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-text-primary focus:outline-none focus:border-primary/50"
-                          >
-                            <option value="">-- Choose Variant --</option>
-                            {variants.map((v) => (
-                              <option key={v.id} value={v.id}>
-                                {v.sku} - {v.product?.name || "Product"} (₹{v.selling_price || v.cost_price || 0})
-                              </option>
-                            ))}
-                          </select>
+                            placeholder="-- Choose Variant --"
+                            options={variants.map((v) => ({
+                              value: v.id,
+                              label: `${v.product?.name || "Product"} (${v.sku}) - ₹${v.selling_price || v.cost_price || 0}`,
+                            }))}
+                          />
                         </td>
                         <td className="py-2.5 pr-2">
-                          <input
+                          <Input
+                            size="xs"
                             type="number"
                             min="1"
                             value={item.quantity}
                             onChange={(e) => updateItem(idx, "quantity", e.target.value)}
-                            className="w-full px-2 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-text-primary focus:outline-none text-center"
                           />
                         </td>
                         <td className="py-2.5 pr-2">
-                          <input
+                          <Input
+                            size="xs"
                             type="number"
+                            min="0"
                             step="0.01"
                             value={item.unit_price}
                             onChange={(e) => updateItem(idx, "unit_price", e.target.value)}
-                            className="w-full px-2 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-text-primary focus:outline-none text-right"
                           />
                         </td>
                         <td className="py-2.5 pr-2">
-                          <select
+                          <Select
+                            size="xs"
                             value={item.tax_rate}
                             onChange={(e) => updateItem(idx, "tax_rate", e.target.value)}
-                            className="w-full px-2 py-1.5 bg-surface-card border border-border/60 rounded-lg text-xs text-text-primary focus:outline-none text-center"
-                          >
-                            <option value="0">0%</option>
-                            <option value="5">5%</option>
-                            <option value="12">12%</option>
-                            <option value="18">18%</option>
-                            <option value="28">28%</option>
-                          </select>
+                            options={[
+                              { label: "0%", value: 0 },
+                              { label: "5%", value: 5 },
+                              { label: "12%", value: 12 },
+                              { label: "18%", value: 18 },
+                              { label: "28%", value: 28 },
+                            ]}
+                          />
                         </td>
-                        <td className="py-2.5 pr-2 text-right font-medium text-emerald-400">
+                        <td className="py-2.5 text-right font-mono font-bold text-primary-token">
                           {formatCurrency(lineVal)}
                         </td>
-                        <td className="py-2.5 text-center">
+                        <td className="py-2.5 pl-2 text-center">
                           <button
                             type="button"
                             onClick={() => removeItemRow(idx)}
-                            className="p-1 rounded text-text-muted hover:text-rose-400 transition-colors"
+                            className="p-1 text-muted-token hover:text-rose-500 rounded-lg hover:bg-surface transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -506,109 +478,84 @@ export default function CreateSaleOrderPage() {
           </div>
         </div>
 
-        {/* Right Column: Checkout Summary & Payment */}
-        <div className="space-y-5">
-          <div className="p-4 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-              <CreditCard className="w-4 h-4 text-primary" />
+        {/* Right Column: Payment & Order Summary */}
+        <div className="space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3.5 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+              <CreditCard className="w-4 h-4 text-brand-token" />
               Settlement & Payment
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Payment Method
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["cash", "upi", "card", "bank_transfer"].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, payment_method: m }))}
-                      className={`px-3 py-2 rounded-xl text-xs font-medium border capitalize transition-all ${
-                        formData.payment_method === m
-                          ? "bg-primary/20 border-primary text-primary font-semibold"
-                          : "bg-surface-card border-border/60 text-text-muted hover:text-text-primary"
-                      }`}
-                    >
-                      {m.replace("_", " ")}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <Select
+              label="Payment Method"
+              value={formData.payment_method}
+              onChange={(e) => setFormData((prev) => ({ ...prev, payment_method: e.target.value }))}
+              options={[
+                { label: "Cash on Counter", value: "cash" },
+                { label: "UPI / QR Code", value: "upi" },
+                { label: "Debit / Credit Card", value: "card" },
+                { label: "Net Banking / Transfer", value: "bank_transfer" },
+              ]}
+            />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Payment Status
-                </label>
-                <select
-                  value={formData.payment_status}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, payment_status: e.target.value }))}
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-                >
-                  <option value="paid">Paid (Collected in Full)</option>
-                  <option value="partially_paid">Partially Paid</option>
-                  <option value="unpaid">Unpaid / Credit Memo</option>
-                </select>
-              </div>
+            <Select
+              label="Payment Status"
+              value={formData.payment_status}
+              onChange={(e) => setFormData((prev) => ({ ...prev, payment_status: e.target.value }))}
+              options={[
+                { label: "Paid in Full", value: "paid" },
+                { label: "Pending Payment", value: "pending" },
+              ]}
+            />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Shipping / Delivery Fee (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.shipping_fee}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, shipping_fee: e.target.value }))}
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none text-right"
-                />
-              </div>
+            <Input
+              label="Shipping / Delivery Fee (₹)"
+              type="number"
+              min="0"
+              value={formData.shipping_fee}
+              onChange={(e) => setFormData((prev) => ({ ...prev, shipping_fee: e.target.value }))}
+            />
 
-              <div>
-                <label className="block text-[11px] font-medium text-text-muted mb-1">
-                  Order Notes
-                </label>
-                <textarea
-                  rows="2"
-                  value={formData.notes}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Counter notes, delivery instructions..."
-                  className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-                />
+            <Input
+              label="Shipping Address"
+              placeholder="Door / street address..."
+              value={formData.shipping_address}
+              onChange={(e) => setFormData((prev) => ({ ...prev, shipping_address: e.target.value }))}
+            />
+
+            <div className="pt-3 border-t border-token space-y-2 text-xs">
+              <div className="flex justify-between text-secondary-token">
+                <span>Subtotal Items</span>
+                <span className="font-mono">{formatCurrency(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-secondary-token">
+                <span>Discount Total</span>
+                <span className="font-mono text-emerald-700 dark:text-emerald-400">-{formatCurrency(totalDiscount)}</span>
+              </div>
+              <div className="flex justify-between text-secondary-token">
+                <span>GST Tax</span>
+                <span className="font-mono">{formatCurrency(totalTax)}</span>
+              </div>
+              <div className="flex justify-between text-secondary-token">
+                <span>Delivery Fee</span>
+                <span className="font-mono">{formatCurrency(formData.shipping_fee)}</span>
+              </div>
+              <div className="pt-2 border-t border-token flex justify-between font-bold text-sm text-primary-token">
+                <span>Total Amount</span>
+                <span className="font-mono text-base text-brand-token">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
 
-            {/* Bill Breakdown */}
-            <div className="pt-3 border-t border-border/60 space-y-2 text-xs">
-              <div className="flex justify-between text-text-muted">
-                <span>Subtotal ({formatQty(totalUnits)} units):</span>
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-text-muted">
-                <span>Tax (GST):</span>
-                <span>{formatCurrency(totalTax)}</span>
-              </div>
-              {Number(formData.shipping_fee) > 0 && (
-                <div className="flex justify-between text-text-muted">
-                  <span>Shipping Fee:</span>
-                  <span>{formatCurrency(formData.shipping_fee)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm font-bold text-text-primary pt-2 border-t border-border/40">
-                <span>Grand Total:</span>
-                <span className="text-emerald-400">{formatCurrency(grandTotal)}</span>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={Save}
+              loading={submitting}
+              onClick={handleSubmit}
             >
-              {submitting ? "Finalizing Sale..." : "Confirm & Complete Sale"}
-            </button>
+              Confirm & Print Invoice
+            </Button>
           </div>
         </div>
       </form>

@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Barcode, Plus, Search, CheckCircle2, AlertCircle, Boxes } from "lucide-react";
+import { Barcode, Plus, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
+import { formatQty } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function LotVsBarcodeIndex() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
 
   const fetchData = async () => {
     setLoading(true);
@@ -35,113 +34,176 @@ export default function LotVsBarcodeIndex() {
     fetchData();
   }, []);
 
-  const filtered = data.filter((d) =>
-    (d.lot_number || "").toLowerCase().includes(search.toLowerCase()) ||
-    (d.supplier_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (d.sku || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setSupplierFilter("all");
+  };
+
+  const filtered = data.filter((d) => {
+    const matchesSearch =
+      (d.lot_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (d.supplier_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (d.sku || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || d.status === statusFilter;
+    const matchesSupplier = supplierFilter === "all" || d.supplier_name === supplierFilter;
+
+    return matchesSearch && matchesStatus && matchesSupplier;
+  });
 
   const totalLotQty = filtered.reduce((sum, d) => sum + (Number(d.lot_quantity) || 0), 0);
   const totalBarcoded = filtered.reduce((sum, d) => sum + (Number(d.barcoded_qty) || 0), 0);
   const totalPending = filtered.reduce((sum, d) => sum + (Number(d.pending_tagging) || 0), 0);
 
+  const columns = [
+    {
+      key: "lot_number",
+      header: "Lot # / Received Date",
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-primary-token">{val}</span>
+          <span className="text-[10px] text-muted-token">{row.created_at || "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "supplier_name",
+      header: "Procurement Vendor",
+      render: (val) => <span className="font-medium text-primary-token">{val}</span>,
+    },
+    {
+      key: "sku",
+      header: "Target SKU",
+      render: (val) => <span className="font-mono text-xs text-brand-token font-semibold">{val}</span>,
+    },
+    {
+      key: "lot_quantity",
+      header: "Lot Expected",
+      align: "center",
+      render: (val) => <span className="font-semibold">{formatQty(val)} Pcs</span>,
+    },
+    {
+      key: "barcoded_qty",
+      header: "Barcoded",
+      align: "center",
+      render: (val) => (
+        <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+          {formatQty(val)}
+        </span>
+      ),
+    },
+    {
+      key: "pending_tagging",
+      header: "Pending Tagging",
+      align: "center",
+      render: (val) => (
+        <span className={`font-mono ${Number(val) > 0 ? "text-rose-700 dark:text-rose-400 font-bold" : "text-muted-token"}`}>
+          {formatQty(val)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Tagging Status",
+      render: (val) => {
+        const isFull = val === "Fully Barcoded";
+        const isPartial = val === "Partially Barcoded";
+        return (
+          <Badge variant={isFull ? "emerald" : isPartial ? "amber" : "rose"} dot>
+            {val}
+          </Badge>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Barcode className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Barcode className="w-5 h-5 text-brand-token" />
             Lot vs Barcode Tagging Reconciliation
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Audit received procurement lots against serialized physical unit barcodes</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Audit received procurement lots against serialized physical unit barcodes
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/reports/lot-vs-barcode/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Reconciliation Snapshot
+          <Link to="/reports/lot-vs-barcode/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Snapshot
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Procured Lots: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Procured Lots: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Lot Units Expected: <strong className="text-text-primary font-medium">{formatQty(totalLotQty)}</strong></span>
+        <span>Lot Units Expected: <strong className="text-primary-token font-medium">{formatQty(totalLotQty)}</strong></span>
         <span>•</span>
-        <span>Barcoded & Tagged: <strong className="text-emerald-400 font-medium">{formatQty(totalBarcoded)}</strong></span>
+        <span>Barcoded & Tagged: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatQty(totalBarcoded)}</strong></span>
         <span>•</span>
-        <span>Pending Tagging: <strong className="text-rose-400 font-medium">{formatQty(totalPending)}</strong></span>
+        <span>Pending Tagging: <strong className="text-rose-700 dark:text-rose-400 font-medium">{formatQty(totalPending)}</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by lot number, supplier, or SKU..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by lot number, supplier, or SKU..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Tagging Statuses" },
+                { value: "Fully Barcoded", label: "Fully Barcoded" },
+                { value: "Partially Barcoded", label: "Partially Barcoded" },
+                { value: "Pending Tagging", label: "Pending Tagging" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Procurement Vendors" },
+                { value: "Sri Lakshmi Silks Weaving", label: "Sri Lakshmi Silks Weaving" },
+                { value: "Surat Brocade Hub", label: "Surat Brocade Hub" },
+                { value: "Jaipur Handloom Mills", label: "Jaipur Handloom Mills" },
+                { value: "Kolkata Fine Linens", label: "Kolkata Fine Linens" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchData}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Lot Number</th>
-                <th className="px-4 py-2.5">Supplier Name</th>
-                <th className="px-4 py-2.5">SKU</th>
-                <th className="px-4 py-2.5">Lot Pcs</th>
-                <th className="px-4 py-2.5">Barcoded Pcs</th>
-                <th className="px-4 py-2.5">Pending Pcs</th>
-                <th className="px-4 py-2.5">Tagging Status</th>
-                <th className="px-4 py-2.5">Created Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading reconciliation data...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No lot reconciliation records found.</td>
-                </tr>
-              ) : (
-                filtered.map((d) => (
-                  <tr key={d.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-semibold text-text-primary flex items-center gap-1.5">
-                      <Boxes className="w-3.5 h-3.5 text-accent-primary" />
-                      {d.lot_number}
-                    </td>
-                    <td className="px-4 py-3 text-text-primary font-medium">{d.supplier_name}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-secondary">{d.sku}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-text-primary">{formatQty(d.lot_quantity)}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-400 font-bold">{formatQty(d.barcoded_qty)}</td>
-                    <td className="px-4 py-3 font-mono text-rose-400 font-bold">{formatQty(d.pending_tagging)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        d.status === "Fully Barcoded" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                        d.status === "Partially Barcoded" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                        "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                      }`}>
-                        {d.status === "Fully Barcoded" ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                        {d.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-text-muted">{d.created_at || "—"}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No lot tagging records found matching criteria."
+      />
     </div>
   );
 }

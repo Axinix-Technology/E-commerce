@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Receipt, Plus, Search, CheckCircle2, CreditCard } from "lucide-react";
+import { Receipt, Plus, RefreshCw, ShoppingBag } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 const formatQty = (val) => {
   const num = Number(val);
@@ -10,13 +11,17 @@ const formatQty = (val) => {
 
 const formatCurrency = (val) => {
   const num = Number(val);
-  return !num || num === 0 ? "—" : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+  return !num || num === 0
+    ? "—"
+    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function BillingReceiptsIndex() {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [modeFilter, setModeFilter] = useState("all");
+  const [cashierFilter, setCashierFilter] = useState("all");
 
   const fetchReceipts = async () => {
     setLoading(true);
@@ -40,111 +45,174 @@ export default function BillingReceiptsIndex() {
     fetchReceipts();
   }, []);
 
-  const filtered = receipts.filter((r) =>
-    (r.receipt_no || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.order_no || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (r.payment_mode || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleResetFilters = () => {
+    setSearch("");
+    setModeFilter("all");
+    setCashierFilter("all");
+  };
+
+  const filtered = receipts.filter((r) => {
+    const matchesSearch =
+      (r.receipt_no || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.order_no || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (r.payment_mode || "").toLowerCase().includes(search.toLowerCase());
+    const matchesMode = modeFilter === "all" || r.payment_mode === modeFilter;
+    const matchesCashier = cashierFilter === "all" || r.cashier === cashierFilter;
+    return matchesSearch && matchesMode && matchesCashier;
+  });
 
   const totalCollected = filtered.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
+  const columns = [
+    {
+      header: "Receipt No",
+      render: (r) => (
+        <span className="font-mono font-bold text-brand-token text-xs">
+          {r.receipt_no}
+        </span>
+      ),
+    },
+    {
+      header: "Order No",
+      render: (r) => (
+        <span className="font-mono text-xs text-primary-token flex items-center gap-1">
+          <ShoppingBag className="w-3.5 h-3.5 text-muted-token shrink-0" />
+          {r.order_no || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Customer",
+      accessor: "customer_name",
+      className: "font-semibold text-primary-token text-xs",
+    },
+    {
+      header: "Amount Paid",
+      render: (r) => (
+        <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 text-xs">
+          {formatCurrency(r.amount)}
+        </span>
+      ),
+    },
+    {
+      header: "Payment Method",
+      render: (r) => (
+        <Badge variant="primary" size="sm">
+          {r.payment_mode}
+        </Badge>
+      ),
+    },
+    {
+      header: "Cashier",
+      accessor: "cashier",
+      className: "text-muted-token text-xs",
+    },
+    {
+      header: "Timestamp",
+      render: (r) => (
+        <span className="text-[11px] text-muted-token font-mono">
+          {r.created_at || "—"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: () => (
+        <Badge variant="success" size="sm">
+          Settled
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-accent-primary" />
-            Billing & Sales Receipts
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Counter sales payment acknowledgements and customer tax invoices</p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Receipt className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary-token tracking-tight">
+              Billing & Sales Receipts
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Counter sales payment acknowledgements and customer tax invoices
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/billing/receipts/create"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Receipt
-          </Link>
-        </div>
+
+        <Link to="/billing/receipts/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Issue Receipt
+          </Button>
+        </Link>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Receipts Count: <strong className="text-text-primary font-medium">{formatQty(filtered.length)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Receipts Issued: <strong className="text-primary-token font-medium">{formatQty(filtered.length)}</strong></span>
         <span>•</span>
-        <span>Total Collected: <strong className="text-emerald-400 font-medium">{formatCurrency(totalCollected)}</strong></span>
+        <span>Total Collected: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(totalCollected)}</strong></span>
         <span>•</span>
-        <span>Settlement Status: <strong className="text-accent-primary font-medium">Reconciled</strong></span>
+        <span>Audit Status: <strong className="text-brand-token font-medium">Reconciled</strong></span>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Search by receipt number, order, customer, or mode..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-surface-card border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-        />
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by receipt no, order no, or customer..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={modeFilter}
+              onChange={(e) => setModeFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Payment Modes" },
+                { value: "Cash", label: "Cash" },
+                { value: "UPI", label: "UPI" },
+                { value: "Credit Card", label: "Credit Card" },
+                { value: "NEFT/RTGS", label: "NEFT/RTGS" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={cashierFilter}
+              onChange={(e) => setCashierFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Cashiers" },
+                { value: "Admin", label: "Admin" },
+                { value: "Cashier-1", label: "Cashier-1" },
+                { value: "Cashier-2", label: "Cashier-2" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchReceipts}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-      <div className="rounded-xl border border-border/50 overflow-hidden bg-surface-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-muted">
-            <thead className="bg-surface-ground/50 border-b border-border/50 text-text-secondary uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5">Receipt No</th>
-                <th className="px-4 py-2.5">Order No</th>
-                <th className="px-4 py-2.5">Customer Name</th>
-                <th className="px-4 py-2.5">Amount</th>
-                <th className="px-4 py-2.5">Mode</th>
-                <th className="px-4 py-2.5">Cashier</th>
-                <th className="px-4 py-2.5">Date & Time</th>
-                <th className="px-4 py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">Loading billing receipts...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-text-muted">No receipts found.</td>
-                </tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-surface-ground/30 transition">
-                    <td className="px-4 py-3 font-semibold text-text-primary flex items-center gap-1.5">
-                      <Receipt className="w-3.5 h-3.5 text-accent-primary" />
-                      {r.receipt_no}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-text-secondary">{r.order_no}</td>
-                    <td className="px-4 py-3 text-text-primary font-medium">{r.customer_name}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-emerald-400">{formatCurrency(r.amount)}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-ground border border-border/50 text-text-secondary">
-                        <CreditCard className="w-3 h-3 text-accent-primary" />
-                        {r.payment_mode}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{r.cashier || "Counter"}</td>
-                    <td className="px-4 py-3 text-text-muted">{r.created_at || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Settled
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No billing receipts found."
+      />
     </div>
   );
 }

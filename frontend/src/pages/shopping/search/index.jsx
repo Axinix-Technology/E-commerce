@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, ShoppingBag, ArrowRight, BellRing, Plus, Layers } from "lucide-react";
+import { Search, ShoppingBag, ArrowRight, BellRing, Layers } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Badge } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,104 +55,114 @@ export default function SearchResultsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Search className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Search Catalogue</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Real-time keyword search across all indexed product types, materials, and brands
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Search className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Search Catalogue
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Real-time keyword search across all indexed product types, materials, and brands
+            </p>
+          </div>
         </div>
 
-        <Link
-          to={`/shopping/search/create?q=${encodeURIComponent(query)}`}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <BellRing className="w-4 h-4 text-[var(--brand-primary)]" />
-          <span>Save Search Alert</span>
+        <Link to={`/shopping/search/create?q=${encodeURIComponent(query)}`}>
+          <Button variant="secondary" size="sm" icon={BellRing}>
+            Save Search Alert
+          </Button>
         </Link>
       </div>
 
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Query: <strong className="text-primary-token font-medium">"{query || "All"}"</strong></span>
+        <span>•</span>
+        <span>Matched Records: <strong className="text-brand-token font-medium">{formatQty(results.length)}</strong></span>
+        <span>•</span>
+        <span>Index Scope: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Real-Time Search</strong></span>
+      </div>
+
       {/* Search Input Form */}
-      <form onSubmit={handleSearchSubmit} className="relative">
-        <input
-          type="text"
+      <form onSubmit={handleSearchSubmit} className="flex gap-2">
+        <Input
           placeholder="Search collections (e.g. Linen, Oxford, Pashmina, Derby)..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-11 pr-24 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[var(--brand-primary)]"
+          className="flex-1"
         />
-        <Search className="w-5 h-5 text-gray-400 absolute left-4 top-3.5" />
-        <button
-          type="submit"
-          className="absolute right-2 top-2 px-4 py-1.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-        >
+        <Button type="submit" variant="primary" size="md" icon={Search} loading={loading}>
           Search
-        </button>
+        </Button>
       </form>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Keyword: <strong className="text-white">"{query || "All"}"</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Matched Items: <strong className="text-[var(--brand-primary)]">{results.length || "—"}</strong>
-        </span>
-      </div>
-
-      {/* Results Grid */}
+      {/* Results View */}
       {loading ? (
-        <div className="py-12 text-center text-xs font-mono text-gray-400">
-          Searching catalogue...
+        <div className="p-12 text-center text-xs font-mono text-muted-token">
+          Searching catalogue index...
         </div>
       ) : results.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] text-gray-400 space-y-3">
-          <Layers className="w-10 h-10 mx-auto text-gray-500" />
-          <p className="text-sm font-semibold text-gray-300">
-            {query ? `No items found matching "${query}"` : "Enter a search query above"}
+        <div className="p-12 text-center rounded-2xl bg-surface-elevated/40 border border-token space-y-3">
+          <Layers className="w-10 h-10 mx-auto text-muted-token" />
+          <p className="text-sm font-semibold text-secondary-token">
+            {query ? `No items found matching "${query}"` : "Enter a search term to find products"}
           </p>
-          <p className="text-xs text-gray-500">
-            Try generic keywords like "Shirt", "Stole", "Derby", or "Watch".
+          <p className="text-xs text-muted-token max-w-sm mx-auto">
+            Try searching by fabric type like 'Cotton', garment type like 'Shirt', or brand name like 'Axinix'.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {results.map((p) => (
-            <Link
+            <div
               key={p.id}
-              to={`/shopping/product-details?id=${p.id}&slug=${p.slug || ""}`}
-              className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[rgba(0,210,210,0.3)] transition-all group flex flex-col justify-between space-y-3"
+              className="rounded-2xl bg-surface-elevated/40 border border-token hover:border-brand-token/40 transition-all overflow-hidden flex flex-col group shadow-xs"
             >
-              <div>
-                <span className="text-[10px] font-bold text-[var(--brand-primary)] uppercase tracking-wider">
-                  {p.brand || "Axinix"}
-                </span>
-                <h3 className="text-xs font-bold text-white group-hover:text-[var(--brand-primary)] transition-colors mt-0.5 line-clamp-1">
-                  {p.name}
-                </h3>
-                <p className="text-[11px] text-gray-400 mt-1 line-clamp-2">
-                  {p.material || p.description || "Premium handcrafted apparel."}
-                </p>
+              <div className="relative h-44 bg-surface-elevated/80 overflow-hidden">
+                <img
+                  src={
+                    p.image_url ||
+                    "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=800"
+                  }
+                  alt={p.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
-                <span className="text-sm font-extrabold text-white">
-                  {p.selling_price && Number(p.selling_price) > 0
-                    ? `₹${Number(p.selling_price).toLocaleString("en-IN")}`
-                    : "—"}
-                </span>
-                <span className="text-xs text-[var(--brand-primary)] flex items-center gap-1 font-semibold">
-                  <span>View</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
+              <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-[10px] font-bold text-brand-token uppercase">
+                    {p.brand || "Axinix"}
+                  </span>
+                  <h3 className="text-xs font-bold text-primary-token line-clamp-1 mt-0.5">
+                    {p.name}
+                  </h3>
+                  <p className="text-[11px] text-muted-token mt-0.5 line-clamp-1">
+                    {p.material || "Crafted with fine natural fibers"}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-token">
+                  <span className="text-sm font-extrabold text-brand-token">
+                    {p.selling_price && Number(p.selling_price) > 0
+                      ? `₹${Number(p.selling_price).toLocaleString("en-IN")}`
+                      : "—"}
+                  </span>
+
+                  <Link
+                    to={`/shopping/product-details?id=${p.id}&slug=${p.slug || ""}`}
+                    className="p-1.5 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

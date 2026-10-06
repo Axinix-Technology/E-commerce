@@ -5,13 +5,15 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Package,
-  RotateCcw,
-  Receipt,
-  ShieldCheck,
-  Plus
+  Plus,
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Badge } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function FaqPage() {
   const [search, setSearch] = useState("");
@@ -78,54 +80,45 @@ export default function FaqPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Frequently Asked Questions</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Find immediate answers regarding orders, returns, statutory invoicing, and tracking
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <HelpCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Frequently Asked Questions
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Find immediate answers regarding orders, returns, statutory invoicing, and tracking
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/help-policies/faq/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4 text-[var(--brand-primary)]" />
-          <span>Ask a Question</span>
+        <Link to="/help-policies/faq/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Ask a Question
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Knowledge Base: <strong className="text-white">{displayFaqs.length || "—"} Articles</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Support Desk: <strong className="text-emerald-400">Online & Active</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          GSTR-2B Compliance: <strong className="text-[var(--brand-primary)]">Verified</strong>
-        </span>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Knowledge Base: <strong className="text-primary-token font-medium">{formatQty(displayFaqs.length)} Articles</strong></span>
+        <span>•</span>
+        <span>Support Desk: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Online & Active</strong></span>
+        <span>•</span>
+        <span>GSTR-2B Compliance: <strong className="text-brand-token font-medium">Verified</strong></span>
       </div>
 
       {/* Search Input */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-        <input
-          type="text"
-          placeholder="Search by keywords (e.g. Return, GSTIN, Tracking, BlueDart, Refund)..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[var(--brand-primary)]"
-        />
-      </div>
+      <Input
+        placeholder="Search by keywords (e.g. Return, GSTIN, Tracking, BlueDart, Refund)..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
       {/* FAQ Accordions */}
       <div className="space-y-3">
@@ -134,7 +127,7 @@ export default function FaqPage() {
           return (
             <div
               key={faq.id || faq.question}
-              className="rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-all overflow-hidden"
+              className="rounded-2xl bg-surface-elevated/40 border border-token hover:border-brand-token/40 transition-all overflow-hidden shadow-xs"
             >
               <button
                 onClick={() => toggleItem(faq.id || faq.question)}
@@ -142,21 +135,21 @@ export default function FaqPage() {
               >
                 <div className="space-y-1 pr-4">
                   {faq.category && (
-                    <span className="text-[10px] font-bold text-[var(--brand-primary)] uppercase tracking-wider block">
+                    <span className="text-[10px] font-bold text-brand-token uppercase tracking-wider block">
                       {typeof faq.category === "object" ? faq.category?.name : faq.category}
                     </span>
                   )}
-                  <h3 className="text-xs font-bold text-white">{faq.question}</h3>
+                  <h3 className="text-xs font-bold text-primary-token">{faq.question}</h3>
                 </div>
                 {isOpen ? (
-                  <ChevronUp className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
+                  <ChevronUp className="w-4 h-4 text-brand-token shrink-0" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                  <ChevronDown className="w-4 h-4 text-muted-token shrink-0" />
                 )}
               </button>
 
               {isOpen && (
-                <div className="px-4 pb-4 pt-1 text-xs text-gray-300 leading-relaxed border-t border-white/[0.04]">
+                <div className="px-4 pb-4 pt-1 text-xs text-secondary-token leading-relaxed border-t border-token">
                   {faq.answer}
                 </div>
               )}

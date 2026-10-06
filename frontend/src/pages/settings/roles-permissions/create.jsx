@@ -6,23 +6,16 @@ import {
   Save,
   Lock,
   Key,
-  CheckSquare,
-  Square
+  ShieldAlert
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Input, Select, Textarea, Checkbox, Badge } from "../../../components/ui";
 
 // Rule 1: Zero values rendered as em-dash
 const formatQty = (val) => {
   const num = Number(val);
   return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function RoleFormPage() {
@@ -98,103 +91,106 @@ export default function RoleFormPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/settings/roles-permissions"
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
+            className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">
+            <h1 className="text-xl font-bold text-primary-token tracking-tight">
               {editId ? "Edit Role & Policies" : "Create Security Role"}
             </h1>
-            <p className="text-xs text-text-muted">Define permission envelope, administrative bypass, and business capabilities</p>
+            <p className="text-xs text-muted-token">
+              Define permission envelope, administrative bypass, and business capabilities
+            </p>
           </div>
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          {submitting ? "Saving..." : "Save Role"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/settings/roles-permissions")}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
+            onClick={handleSubmit}
+          >
+            {editId ? "Update Role" : "Save Role"}
+          </Button>
+        </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Role Identifier: <strong className="text-primary font-medium">{formData.name || "—"}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Role Identifier: <strong className="text-primary-token font-medium">{formData.name || "—"}</strong></span>
         <span>•</span>
-        <span>Privilege Mode: <strong className="text-rose-400 font-medium">{formData.is_superadmin ? "Superadmin Bypass" : "Policy Gated"}</strong></span>
+        <span>
+          Privilege Mode:{" "}
+          <strong className={formData.is_superadmin ? "text-rose-600 dark:text-rose-400 font-semibold" : "text-emerald-600 dark:text-emerald-400 font-semibold"}>
+            {formData.is_superadmin ? "Superadmin Bypass" : "Policy Gated"}
+          </strong>
+        </span>
         <span>•</span>
-        <span>Capability Pool: <strong className="text-text-primary font-medium">{formatQty(capabilities.length)} Modules</strong></span>
+        <span>Capability Pool: <strong className="text-primary-token font-medium">{formatQty(capabilities.length)} Modules</strong></span>
+        <span>•</span>
+        <span>Status: <strong className="text-primary-token font-medium">{formData.status === 1 ? "Active" : "Inactive"}</strong></span>
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-4">
-        <div className="p-5 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-          <div>
-            <label className="block text-[11px] font-medium text-text-muted mb-1">
-              Role Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g. Store Manager, Lead Cashier, Inventory Clerk"
-              className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-            />
-          </div>
+        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+          <Input
+            label="Role Name"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g. Store Manager, Lead Cashier, Inventory Clerk"
+          />
 
-          <div>
-            <label className="block text-[11px] font-medium text-text-muted mb-1">
-              Description
-            </label>
-            <textarea
-              rows="2"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="Purpose and access boundary of this role..."
-              className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
-            />
-          </div>
+          <Textarea
+            label="Description"
+            rows={3}
+            value={formData.description}
+            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+            placeholder="Purpose and access boundary of this role..."
+          />
 
-          <div className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-surface-card/40">
-            <input
-              type="checkbox"
-              id="is_superadmin"
+          <div className="p-4 rounded-xl border border-token bg-surface-elevated/60">
+            <Checkbox
+              label="Super Administrator Bypass"
               checked={formData.is_superadmin}
               onChange={(e) => setFormData((prev) => ({ ...prev, is_superadmin: e.target.checked }))}
-              className="rounded accent-rose-500 w-4 h-4"
             />
-            <label htmlFor="is_superadmin" className="text-xs text-text-primary cursor-pointer">
-              <span className="font-semibold block text-rose-400">Super Administrator Bypass</span>
-              <span className="text-[11px] text-text-muted">
-                Grants unrestricted access across all catalogue, financial reports, settings, and database endpoints.
-              </span>
-            </label>
+            <p className="text-[11px] text-muted-token mt-1 ml-6">
+              Grants unrestricted root access across all catalogue, financial reports, settings, and database endpoints.
+            </p>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-medium text-text-muted mb-1">
-              Role Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData((prev) => ({ ...prev, status: Number(e.target.value) }))}
-              className="w-full px-3 py-2 bg-surface-card border border-border/60 rounded-xl text-xs text-text-primary focus:outline-none"
+          <Select
+            label="Role Status"
+            value={formData.status}
+            onChange={(e) => setFormData((prev) => ({ ...prev, status: Number(e.target.value) }))}
+            options={[
+              { value: 1, label: "Active" },
+              { value: 0, label: "Inactive / Deprecated" },
+            ]}
+          />
+
+          <div className="pt-2">
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              loading={submitting}
+              icon={Save}
             >
-              <option value={1}>Active</option>
-              <option value={0}>Inactive / Deprecated</option>
-            </select>
+              {editId ? "Update Role" : "Create Security Role"}
+            </Button>
           </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200 disabled:opacity-50"
-          >
-            {submitting ? "Saving..." : editId ? "Update Role" : "Create Security Role"}
-          </button>
         </div>
       </form>
     </div>

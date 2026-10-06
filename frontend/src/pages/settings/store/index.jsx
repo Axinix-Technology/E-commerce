@@ -4,36 +4,25 @@ import {
   Store,
   Building2,
   Edit2,
-  Save,
-  RefreshCw,
   Phone,
   Mail,
   MapPin,
   Globe,
   Receipt,
   ShieldCheck,
-  CheckCircle2
+  RefreshCw,
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty } from "../../../utils/formatters";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function StoreSettingsPage() {
   const [company, setCompany] = useState(null);
   const [generalSettings, setGeneralSettings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState("all");
 
   const fetchData = async () => {
     setLoading(true);
@@ -43,12 +32,13 @@ export default function StoreSettingsPage() {
         populateApi.read("general_setting", { limit: 50, sort: ["group", "key"] }),
       ]);
 
-      if (compRes?.data && compRes.data.length > 0) {
-        setCompany(compRes.data[0]);
+      const compList = Array.isArray(compRes) ? compRes : compRes?.data || [];
+      const setList = Array.isArray(setRes) ? setRes : setRes?.data || [];
+
+      if (compList.length > 0) {
+        setCompany(compList[0]);
       }
-      if (setRes?.data) {
-        setGeneralSettings(setRes.data);
-      }
+      setGeneralSettings(setList);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Failed to load store settings");
     } finally {
@@ -60,205 +50,182 @@ export default function StoreSettingsPage() {
     fetchData();
   }, []);
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setGroupFilter("all");
+  };
+
+  const groups = Array.from(new Set(generalSettings.map((s) => s.group).filter(Boolean)));
+
+  const filteredSettings = generalSettings.filter((s) => {
+    const matchesSearch =
+      (s.key || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.value || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.group || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesGroup = groupFilter === "all" || s.group === groupFilter;
+    return matchesSearch && matchesGroup;
+  });
+
+  const settingColumns = [
+    {
+      key: "group",
+      header: "Category",
+      render: (val) => (
+        <Badge variant="brand" className="uppercase font-mono text-[9px]">
+          {val || "CONFIG"}
+        </Badge>
+      ),
+    },
+    {
+      key: "key",
+      header: "Configuration Key",
+      render: (val) => <span className="font-mono text-xs font-semibold text-primary-token">{val}</span>,
+    },
+    {
+      key: "value",
+      header: "Active Setting Value",
+      render: (val) => (
+        <span className="font-mono text-xs text-brand-token font-bold">{val}</span>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-            <Store className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">Store & Company Profile</h1>
-            <p className="text-xs text-text-muted">Organization identity, tax credentials, address, and localized store parameters</p>
-          </div>
+    <div className="space-y-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Store className="w-5 h-5 text-brand-token" />
+            Store & Company Profile
+          </h1>
+          <p className="text-xs text-muted-token mt-0.5">
+            Organization identity, tax credentials, address, and localized store parameters
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchData}
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
-            title="Refresh Settings"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <Link
-            to="/settings/store/create"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all duration-200"
-          >
-            <Edit2 className="w-4 h-4" />
-            Edit Store Details
+        <div className="flex items-center gap-2">
+          <Link to="/settings/store/create">
+            <Button variant="primary" size="sm" icon={Edit2}>
+              Edit Store Details
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Store Name: <strong className="text-text-primary font-medium">{company?.name || "Axinix Store"}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Store Name: <strong className="text-primary-token font-medium">{company?.name || "Axinix Store"}</strong></span>
         <span>•</span>
-        <span>GST Registered: <strong className="text-emerald-400 font-medium">{company?.gst_no ? "Yes" : "—"}</strong></span>
+        <span>GST Registered: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{company?.gst_no ? "Yes" : "—"}</strong></span>
         <span>•</span>
-        <span>Default Currency: <strong className="text-text-primary font-medium">INR (₹)</strong></span>
+        <span>Active Currency: <strong className="text-brand-token font-medium">INR (₹)</strong></span>
         <span>•</span>
-        <span>System Parameters: <strong className="text-primary font-medium">{formatQty(generalSettings.length)}</strong></span>
-        <span>•</span>
-        <span>Store Status: <strong className="text-emerald-400 font-medium">Active</strong></span>
+        <span>Config Keys: <strong className="text-primary-token font-medium">{formatQty(generalSettings.length)}</strong></span>
       </div>
 
-      {loading ? (
-        <div className="py-24 text-center text-text-muted">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
-          Loading store configurations...
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Main Organization Profile */}
-          <div className="lg:col-span-2 space-y-5">
-            <div className="p-5 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-                  <Building2 className="w-4 h-4 text-primary" />
-                  Legal & Operating Details
-                </div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <CheckCircle2 className="w-3 h-3" /> Live Operating
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-text-muted block text-[11px]">Display Brand Name</span>
-                  <span className="font-semibold text-text-primary text-sm">
-                    {company?.name || "Axinix Luxury Boutique"}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-text-muted block text-[11px]">Legal Entity Registered Name</span>
-                  <span className="font-medium text-text-primary">
-                    {company?.legal_name || company?.name || "Axinix Private Limited"}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-text-muted block text-[11px]">GST Number / Tax ID</span>
-                  <span className="font-mono font-medium text-emerald-400">
-                    {company?.gst_no || "27AADCA1122B1Z8"}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-text-muted block text-[11px]">Store Website</span>
-                  <span className="text-primary hover:underline">
-                    {company?.website_url || "https://axinix.store"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-border/40 space-y-2 text-xs">
-                <span className="text-text-muted block text-[11px]">Registered Headquarters & Counter Address</span>
-                <div className="flex items-start gap-2 text-text-primary">
-                  <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <div>{company?.address_line_1 || "101, Silk Palace, Commercial Hub"}</div>
-                    {company?.address_line_2 && <div>{company.address_line_2}</div>}
-                    <div>
-                      {company?.city || "Mumbai"}, {company?.state || "Maharashtra"} - {company?.pincode || "400001"}
-                    </div>
-                    <div>{company?.country || "India"}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* General System & Currency Configuration */}
-            <div className="p-5 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-                <Receipt className="w-4 h-4 text-primary" />
-                Store Parameters & Formatting
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-border/60 text-text-muted font-medium">
-                      <th className="pb-2">Group</th>
-                      <th className="pb-2">Key Parameter</th>
-                      <th className="pb-2">Value</th>
-                      <th className="pb-2">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/40 text-text-primary">
-                    {generalSettings.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-4 text-center text-text-muted">
-                          Default system configuration active (INR, 18% GST).
-                        </td>
-                      </tr>
-                    ) : (
-                      generalSettings.map((s) => (
-                        <tr key={s.id} className="hover:bg-white/[0.02]">
-                          <td className="py-2.5 capitalize text-text-muted">{s.group}</td>
-                          <td className="py-2.5 font-mono text-primary">{s.key}</td>
-                          <td className="py-2.5 font-semibold text-emerald-400">{s.value}</td>
-                          <td className="py-2.5 text-text-muted">{s.description || "—"}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Company Identity */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+            <Building2 className="w-4 h-4 text-brand-token" />
+            Legal Organization Profile
           </div>
 
-          {/* Right Column: Fast Contact & Social */}
-          <div className="space-y-5">
-            <div className="p-5 rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm space-y-4">
-              <div className="flex items-center gap-2 text-xs font-semibold text-text-primary uppercase tracking-wider">
-                <Globe className="w-4 h-4 text-primary" />
-                Support & Contact Outlets
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <Phone className="w-4 h-4 text-text-muted" />
-                  <div>
-                    <div className="text-[11px] text-text-muted">Counter Hotline</div>
-                    <div className="font-medium text-text-primary">+91 98765 00000</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <Mail className="w-4 h-4 text-text-muted" />
-                  <div>
-                    <div className="text-[11px] text-text-muted">Support Email</div>
-                    <div className="font-medium text-text-primary">support@axinix.store</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <Globe className="w-4 h-4 text-text-muted" />
-                  <div>
-                    <div className="text-[11px] text-text-muted">Instagram Profile</div>
-                    <div className="text-primary hover:underline">
-                      {company?.instagram_url || "@axinix.official"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-border/40">
-                <Link
-                  to="/settings/store/create"
-                  className="block text-center py-2 rounded-xl bg-surface-card hover:bg-surface-card/80 border border-border/60 text-text-primary text-xs font-medium transition-colors"
-                >
-                  Modify Store Profile
-                </Link>
-              </div>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-token">
+              <span className="text-muted-token">Store Name</span>
+              <span className="font-semibold text-primary-token">{company?.name || "Axinix Couture Pvt Ltd"}</span>
+            </div>
+            <div className="flex items-center justify-between pb-2 border-b border-token">
+              <span className="text-muted-token">GSTIN / Tax ID</span>
+              <span className="font-mono font-bold text-brand-token">{company?.gst_no || "33AAAAA0000A1Z5"}</span>
+            </div>
+            <div className="flex items-center justify-between pb-2 border-b border-token">
+              <span className="text-muted-token">Corporate Email</span>
+              <span className="text-primary-token">{company?.email || "info@axinix.com"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-token">Direct Phone</span>
+              <span className="text-primary-token">{company?.phone || "+91 98400 12345"}</span>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Operating Address */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary-token uppercase tracking-wider">
+            <MapPin className="w-4 h-4 text-brand-token" />
+            Headquarters & Dispatch Address
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-token">
+              <span className="text-muted-token">Address Line</span>
+              <span className="font-medium text-primary-token">{company?.address || "42 Khader Nawaz Khan Road"}</span>
+            </div>
+            <div className="flex items-center justify-between pb-2 border-b border-token">
+              <span className="text-muted-token">City / District</span>
+              <span className="text-primary-token">{company?.city || "Chennai, Nungambakkam"}</span>
+            </div>
+            <div className="flex items-center justify-between pb-2 border-b border-token">
+              <span className="text-muted-token">State & Pincode</span>
+              <span className="font-mono text-primary-token">Tamil Nadu - 600006</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-token">Online Storefront</span>
+              <span className="text-brand-token hover:underline cursor-pointer">{company?.website || "https://axinix.com"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* System Configurations Table */}
+      <div className="space-y-3">
+        <h2 className="text-xs font-bold text-primary-token uppercase tracking-wider flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-brand-token" />
+          Active Store Configurations ({formatQty(filteredSettings.length)})
+        </h2>
+
+        {/* FilterBar */}
+        <FilterBar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search configuration key or value..."
+          onReset={handleResetFilters}
+          filters={
+            <Select
+              size="xs"
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Config Categories" },
+                ...groups.map((g) => ({ value: g, label: g.toUpperCase() })),
+              ]}
+            />
+          }
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
+            loading={loading}
+            onClick={fetchData}
+            title="Refresh Settings"
+          >
+            Refresh
+          </Button>
+        </FilterBar>
+
+        <Table
+          columns={settingColumns}
+          data={filteredSettings}
+          loading={loading}
+          emptyMessage="No general configuration keys found matching criteria."
+        />
+      </div>
     </div>
   );
 }

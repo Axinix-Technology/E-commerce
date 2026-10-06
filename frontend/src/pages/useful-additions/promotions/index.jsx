@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Tag, Sparkles, Copy, CheckCircle2, Clock, Plus, ArrowRight } from "lucide-react";
+import { Tag, Sparkles, Copy, CheckCircle2, Plus } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Badge } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function PromotionsPage() {
   const [coupons, setCoupons] = useState([]);
@@ -67,41 +73,37 @@ export default function PromotionsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Tag className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Promotions & Coupon Vouchers</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Exclusive campaign discounts, festival vouchers, and volume wholesale rebates
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Tag className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Promotions & Coupon Vouchers
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Exclusive campaign discounts, festival vouchers, and volume wholesale rebates
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/useful-additions/promotions/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Coupon</span>
+        <Link to="/useful-additions/promotions/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Create Coupon
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Active Coupons: <strong className="text-white">{coupons.length || "—"}</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Max Savings: <strong className="text-[var(--brand-primary)]">Up to ₹2,500 Off</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Stackable: <strong className="text-emerald-400">Cart Integrated</strong>
-        </span>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Active Coupons: <strong className="text-primary-token font-medium">{formatQty(coupons.length)}</strong></span>
+        <span>•</span>
+        <span>Max Savings: <strong className="text-brand-token font-medium">Up to ₹2,500 Off</strong></span>
+        <span>•</span>
+        <span>Checkout Integration: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">Active Engine</strong></span>
       </div>
 
       {/* Coupons Grid */}
@@ -109,39 +111,39 @@ export default function PromotionsPage() {
         {coupons.map((c) => (
           <div
             key={c.id || c.code}
-            className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[rgba(0,210,210,0.3)] transition-all flex flex-col justify-between space-y-4"
+            className="p-5 rounded-2xl bg-surface-elevated/40 border border-token hover:border-brand-token/40 transition-all flex flex-col justify-between space-y-4 shadow-xs"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="px-2.5 py-1 rounded-xl bg-[rgba(0,210,210,0.15)] text-[var(--brand-primary)] border border-[rgba(0,210,210,0.3)] text-xs font-mono font-bold tracking-wider">
+                <span className="px-2.5 py-1 rounded-xl bg-surface-elevated/80 text-brand-token border border-token text-xs font-mono font-bold tracking-wider shadow-xs">
                   {c.code}
                 </span>
 
                 <button
                   onClick={() => handleCopyCode(c.code)}
-                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-token bg-surface hover:bg-surface-elevated text-secondary-token hover:text-primary-token text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
                 >
                   {copiedCode === c.code ? (
                     <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3.5 h-3.5" />
+                      <Copy className="w-3.5 h-3.5 text-muted-token" />
                       <span>Copy</span>
                     </>
                   )}
                 </button>
               </div>
 
-              <h3 className="text-sm font-bold text-white pt-1">{c.title}</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">{c.description}</p>
+              <h3 className="text-sm font-bold text-primary-token pt-1">{c.title}</h3>
+              <p className="text-xs text-secondary-token leading-relaxed">{c.description}</p>
             </div>
 
-            <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-gray-400">
-              <span>Min Order: <strong className="text-gray-200">₹{c.min_order_value?.toLocaleString("en-IN") || 0}</strong></span>
-              <span>Max Cap: <strong className="text-gray-200">₹{c.max_discount_amount?.toLocaleString("en-IN") || 0}</strong></span>
+            <div className="pt-3 border-t border-token flex items-center justify-between text-[11px] text-muted-token">
+              <span>Min Order: <strong className="text-primary-token">₹{c.min_order_value ? Number(c.min_order_value).toLocaleString("en-IN") : "—"}</strong></span>
+              <span>Max Cap: <strong className="text-primary-token">₹{c.max_discount_amount ? Number(c.max_discount_amount).toLocaleString("en-IN") : "—"}</strong></span>
             </div>
           </div>
         ))}

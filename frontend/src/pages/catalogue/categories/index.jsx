@@ -11,13 +11,15 @@ import {
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
 import { formatQty } from "../../../utils/formatters";
-import { Button, Input, Badge } from "../../../components/ui";
+import { Button, Input, Badge, FilterBar, Select } from "../../../components/ui";
 
 export default function CategoryListPage() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [hierarchyFilter, setHierarchyFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -28,6 +30,9 @@ export default function CategoryListPage() {
       const filter = {};
       if (search.trim()) {
         filter["name.icontains"] = search.trim();
+      }
+      if (statusFilter !== "all") {
+        filter.status = parseInt(statusFilter, 10);
       }
 
       const res = await populateApi.read("category_master", {
@@ -55,7 +60,7 @@ export default function CategoryListPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, [page, search]);
+  }, [page, search, statusFilter]);
 
   const handleDelete = async (item) => {
     if (!window.confirm(`Are you sure you want to delete category "${item.name}"?`)) return;
@@ -68,6 +73,12 @@ export default function CategoryListPage() {
       toast.error(err?.response?.data?.error?.message || "Failed to delete category");
     }
   };
+
+  const displayCategories = categories.filter((cat) => {
+    if (hierarchyFilter === "root" && cat.parent) return false;
+    if (hierarchyFilter === "sub" && !cat.parent) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -105,37 +116,59 @@ export default function CategoryListPage() {
         <span>Page: <strong className="text-brand-token font-medium">{page} of {totalPages}</strong></span>
       </div>
 
-      {/* Controls Bar */}
-      <div className="glass-panel p-3 rounded-2xl border border-token flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="w-full sm:w-80">
-          <Input
-            icon={Search}
-            placeholder="Search by category name..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            onClear={() => {
-              setSearch("");
-              setPage(1);
-            }}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="xs"
-            icon={RefreshCw}
-            loading={loading}
-            onClick={fetchCategories}
-            title="Refresh list"
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        searchPlaceholder="Search category by name or HSN..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Active", value: "1" },
+                { label: "Inactive", value: "0" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={hierarchyFilter}
+              onChange={(e) => setHierarchyFilter(e.target.value)}
+              options={[
+                { label: "All Hierarchy", value: "all" },
+                { label: "Root Categories Only", value: "root" },
+                { label: "Sub-Categories Only", value: "sub" },
+              ]}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setStatusFilter("all");
+          setHierarchyFilter("all");
+          setPage(1);
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchCategories}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
       {/* Data Table */}
       <div className="glass-panel rounded-2xl border border-token overflow-hidden shadow-xs">
@@ -160,11 +193,11 @@ export default function CategoryListPage() {
                     Loading categories...
                   </td>
                 </tr>
-              ) : categories.length === 0 ? (
+              ) : displayCategories.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-muted-token">
                     <p className="font-semibold text-secondary-token mb-1">No categories found</p>
-                    <p className="text-xs text-muted-token mb-3">Create your first category to build the product hierarchy.</p>
+                    <p className="text-xs text-muted-token mb-3">Create your first category or adjust your search filters.</p>
                     <Link to="/catalogue/categories/create">
                       <Button variant="primary" size="xs" icon={Plus}>
                         Add Category
@@ -173,7 +206,7 @@ export default function CategoryListPage() {
                   </td>
                 </tr>
               ) : (
-                categories.map((cat) => (
+                displayCategories.map((cat) => (
                   <tr key={cat.id} className="hover:bg-surface-elevated/40 transition-colors">
                     <td className="py-3 px-4 font-mono text-muted-token">{cat.id}</td>
                     <td className="py-3 px-4 font-semibold text-primary-token">

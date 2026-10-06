@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, CreditCard, Lock, Key } from "lucide-react";
+import { ArrowLeft, Save, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Select, Checkbox } from "../../../components/ui";
 
 export default function GatewayCreate() {
   const navigate = useNavigate();
@@ -45,138 +46,128 @@ export default function GatewayCreate() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/masters/gateways" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
+        <Link
+          to="/masters/gateways"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-brand-token" />
             Configure Payment Gateway
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Integrate merchant credentials, client tokens, and webhook secrets</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Integrate merchant credentials, client tokens, and webhook secrets
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Gateway Provider <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Razorpay Standard Checkout"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Gateway Provider"
+            required
+            placeholder="e.g. Razorpay Standard Checkout"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Provider Type</label>
-            <select
-              value={form.gateway_code}
-              onChange={(e) => setForm({ ...form, gateway_code: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="razorpay">Razorpay</option>
-              <option value="phonepe">PhonePe Payment Gateway</option>
-              <option value="stripe">Stripe</option>
-              <option value="paytm">Paytm PG</option>
-              <option value="cashfree">Cashfree Payments</option>
-            </select>
-          </div>
+          <Select
+            label="Provider Type"
+            value={form.gateway_code}
+            onChange={(e) => setForm({ ...form, gateway_code: e.target.value })}
+            options={[
+              { value: "razorpay", label: "Razorpay" },
+              { value: "phonepe", label: "PhonePe Payment Gateway" },
+              { value: "stripe", label: "Stripe" },
+              { value: "paytm", label: "Paytm PG" },
+              { value: "cashfree", label: "Cashfree Payments" },
+            ]}
+          />
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">Merchant / Account ID</label>
-            <input
-              type="text"
+            <Input
+              label="Merchant / Account ID"
               placeholder="e.g. rzp_live_Axinix01"
               value={form.merchant_id}
               onChange={(e) => setForm({ ...form, merchant_id: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              API Public Key / Client ID <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
+            <Input
+              label="API Public Key / Client ID"
               required
               placeholder="key_live_..."
               value={form.api_key}
               onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              API Secret Key <span className="text-rose-400">*</span>
-            </label>
-            <input
+            <Input
+              label="API Secret Key"
               type="password"
               required
               placeholder="••••••••••••••••"
               value={form.api_secret}
               onChange={(e) => setForm({ ...form, api_secret: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">Webhook Secret (HMAC Verification)</label>
-            <input
+            <Input
+              label="Webhook Secret (HMAC Verification)"
               type="password"
               placeholder="whsec_..."
               value={form.webhook_secret}
               onChange={(e) => setForm({ ...form, webhook_secret: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary font-mono text-[11px]"
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-3">
-            <input
-              type="checkbox"
-              id="is_test_mode"
+          <div className="sm:col-span-2 p-3.5 rounded-xl border border-token bg-surface-elevated/60 flex items-center">
+            <Checkbox
+              label="Enable Sandbox / Test Mode"
               checked={form.is_test_mode}
               onChange={(e) => setForm({ ...form, is_test_mode: e.target.checked })}
-              className="rounded border-border text-accent-primary focus:ring-0"
             />
-            <label htmlFor="is_test_mode" className="text-xs font-medium text-text-primary cursor-pointer">
-              Enable Sandbox / Test Mode
-            </label>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Status</label>
-            <select
+          <div className="sm:col-span-2">
+            <Select
+              label="Status"
               value={form.status}
               onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value={1}>Enabled / Active</option>
-              <option value={0}>Disabled / Offline</option>
-            </select>
+              options={[
+                { value: 1, label: "Enabled / Active" },
+                { value: 0, label: "Disabled / Offline" },
+              ]}
+            />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/masters/gateways" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-token">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/masters/gateways")}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Save Gateway"}
-          </button>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
+          >
+            Save Gateway
+          </Button>
         </div>
       </form>
     </div>

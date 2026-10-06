@@ -2,34 +2,22 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   BarChart3,
-  Calendar,
-  RefreshCw,
   Download,
-  Filter,
-  ShoppingBag,
-  CreditCard,
-  DollarSign
+  Calendar,
+  Eye,
+  RefreshCw,
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
-
-// Rule 1: Zero values rendered as em-dash
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
-
-const formatCurrency = (val) => {
-  const num = Number(val);
-  return !num || num === 0
-    ? "—"
-    : `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
+import { formatQty, formatCurrency } from "../../../utils/formatters";
+import { Button, Select, Table, Badge, FilterBar } from "../../../components/ui";
 
 export default function SalesSummaryReportPage() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [aggregates, setAggregates] = useState({
     totalOrders: 0,
@@ -47,37 +35,36 @@ export default function SalesSummaryReportPage() {
         sort: ["-sold_at"],
       });
 
-      if (res?.data) {
-        let filtered = res.data;
-        const now = new Date();
+      const list = Array.isArray(res) ? res : res?.data || [];
+      let filteredList = list;
+      const now = new Date();
 
-        if (period === "today") {
-          const todayStr = now.toISOString().split("T")[0];
-          filtered = filtered.filter((s) => s.sold_at?.startsWith(todayStr));
-        } else if (period === "7days") {
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          filtered = filtered.filter((s) => new Date(s.sold_at) >= weekAgo);
-        } else if (period === "30days") {
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          filtered = filtered.filter((s) => new Date(s.sold_at) >= monthAgo);
-        }
-
-        setSales(filtered);
-
-        const totalOrders = filtered.length;
-        const grossSales = filtered.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
-        const totalTax = filtered.reduce((sum, s) => sum + (Number(s.tax_amount) || 0), 0);
-        const totalDiscount = filtered.reduce((sum, s) => sum + (Number(s.discount_amount) || 0), 0);
-        const netSales = grossSales - totalTax;
-
-        setAggregates({
-          totalOrders,
-          grossSales,
-          totalTax,
-          totalDiscount,
-          netSales,
-        });
+      if (period === "today") {
+        const todayStr = now.toISOString().split("T")[0];
+        filteredList = filteredList.filter((s) => s.sold_at?.startsWith(todayStr));
+      } else if (period === "7days") {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filteredList = filteredList.filter((s) => new Date(s.sold_at) >= weekAgo);
+      } else if (period === "30days") {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        filteredList = filteredList.filter((s) => new Date(s.sold_at) >= monthAgo);
       }
+
+      setSales(filteredList);
+
+      const totalOrders = filteredList.length;
+      const grossSales = filteredList.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
+      const totalTax = filteredList.reduce((sum, s) => sum + (Number(s.tax_amount) || 0), 0);
+      const totalDiscount = filteredList.reduce((sum, s) => sum + (Number(s.discount_amount) || 0), 0);
+      const netSales = grossSales - totalTax;
+
+      setAggregates({
+        totalOrders,
+        grossSales,
+        totalTax,
+        totalDiscount,
+        netSales,
+      });
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Failed to load sales summary");
     } finally {
@@ -88,6 +75,25 @@ export default function SalesSummaryReportPage() {
   useEffect(() => {
     fetchSalesData();
   }, [period]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setPeriod("all");
+    setStatusFilter("all");
+  };
+
+  const filtered = sales.filter((s) => {
+    const matchesSearch =
+      (s.sale_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.customer_name || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      s.status === statusFilter ||
+      s.payment_status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleExportCSV = () => {
     const headers = "Sale Number,Sold At,Customer,Status,Payment Status,Subtotal,Tax,Discount,Total\n";
@@ -100,141 +106,179 @@ export default function SalesSummaryReportPage() {
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `sales_summary_${period}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `sales-summary-${period}-${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success("Sales summary CSV exported!");
   };
 
+  const columns = [
+    {
+      key: "sale_number",
+      header: "Sale Order #",
+      render: (val, row) => (
+        <span className="font-semibold text-primary-token">{val || `SO-${row.id}`}</span>
+      ),
+    },
+    {
+      key: "sold_at",
+      header: "Sold At",
+      render: (val) => (
+        <span className="text-secondary-token text-xs">
+          {val ? new Date(val).toLocaleString() : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "customer_name",
+      header: "Customer",
+      render: (val) => (
+        <span className="font-medium text-primary-token">{val || "Walk-in Guest"}</span>
+      ),
+    },
+    {
+      key: "subtotal",
+      header: "Subtotal (₹)",
+      align: "right",
+      render: (val) => <span className="font-mono">{formatCurrency(val)}</span>,
+    },
+    {
+      key: "tax_amount",
+      header: "GST Tax (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-mono text-emerald-700 dark:text-emerald-400">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+    {
+      key: "discount_amount",
+      header: "Discount",
+      align: "right",
+      render: (val) => (
+        <span className="font-mono text-rose-700 dark:text-rose-400">
+          {Number(val) > 0 ? `-${formatCurrency(val)}` : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "total_amount",
+      header: "Total (₹)",
+      align: "right",
+      render: (val) => (
+        <span className="font-bold text-primary-token font-mono">
+          {formatCurrency(val)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Details",
+      align: "right",
+      render: (_, row) => (
+        <Link to={`/sales/details?id=${row.id}`}>
+          <Button size="xs" variant="ghost" icon={Eye}>
+            View
+          </Button>
+        </Link>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-            <BarChart3 className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight">Sales Summary Report</h1>
-            <p className="text-xs text-text-muted">Aggregated store revenue, GST tax collections, and transaction velocity</p>
-          </div>
+    <div className="space-y-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-brand-token" />
+            Sales Summary Report
+          </h1>
+          <p className="text-xs text-muted-token mt-0.5">
+            Aggregated store revenue, GST tax collections, and transaction velocity
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-surface-card border border-border/60 rounded-xl px-2.5 py-1.5 text-xs">
-            <Calendar className="w-3.5 h-3.5 text-text-muted" />
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="bg-transparent text-text-primary text-xs focus:outline-none"
-            >
-              <option value="all">All-Time Cumulative</option>
-              <option value="today">Today Only</option>
-              <option value="7days">Last 7 Days</option>
-              <option value="30days">Last 30 Days</option>
-            </select>
-          </div>
-
-          <button
-            onClick={fetchSalesData}
-            className="p-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary transition-colors"
-            title="Refresh Report"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-
-          <button
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Download}
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/60 bg-surface-card hover:bg-surface-card/80 text-text-muted hover:text-text-primary text-xs font-medium transition-colors"
           >
-            <Download className="w-4 h-4" />
             Export CSV
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-card/60 border border-border/50 text-xs text-text-muted">
-        <span>Orders: <strong className="text-text-primary font-medium">{formatQty(aggregates.totalOrders)}</strong></span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Orders: <strong className="text-primary-token font-medium">{formatQty(aggregates.totalOrders)}</strong></span>
         <span>•</span>
-        <span>Gross Volume: <strong className="text-emerald-400 font-semibold">{formatCurrency(aggregates.grossSales)}</strong></span>
+        <span>Gross Volume: <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(aggregates.grossSales)}</strong></span>
         <span>•</span>
-        <span>GST Collected: <strong className="text-emerald-400 font-medium">{formatCurrency(aggregates.totalTax)}</strong></span>
+        <span>GST Collected: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{formatCurrency(aggregates.totalTax)}</strong></span>
         <span>•</span>
-        <span>Discounts Given: <strong className="text-rose-400 font-medium">{formatCurrency(aggregates.totalDiscount)}</strong></span>
+        <span>Discounts Given: <strong className="text-rose-700 dark:text-rose-400 font-medium">{formatCurrency(aggregates.totalDiscount)}</strong></span>
         <span>•</span>
-        <span>Net Revenue: <strong className="text-text-primary font-medium">{formatCurrency(aggregates.netSales)}</strong></span>
+        <span>Net Revenue: <strong className="text-primary-token font-medium">{formatCurrency(aggregates.netSales)}</strong></span>
       </div>
 
-      {/* Orders Breakdown Table */}
-      <div className="rounded-2xl border border-border/60 bg-surface-card/60 backdrop-blur-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border/60 bg-surface-card/80 text-text-muted font-medium">
-                <th className="py-3 px-4">Sale Order #</th>
-                <th className="py-3 px-4">Sold At</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4 text-right">Subtotal</th>
-                <th className="py-3 px-4 text-right">Tax (GST)</th>
-                <th className="py-3 px-4 text-right">Discount</th>
-                <th className="py-3 px-4 text-right">Total Amount</th>
-                <th className="py-3 px-4 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40 text-text-primary">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-text-muted">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                    Calculating sales metrics...
-                  </td>
-                </tr>
-              ) : sales.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-text-muted">
-                    No sales data found for the selected period.
-                  </td>
-                </tr>
-              ) : (
-                sales.map((s) => (
-                  <tr key={s.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 px-4 font-mono font-medium text-primary">
-                      <Link to={`/sales/details?id=${s.id}`} className="hover:underline">
-                        {s.sale_number}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-4 text-text-muted">
-                      {s.sold_at ? new Date(s.sold_at).toLocaleString() : "—"}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-text-primary">
-                      {s.customer_name || "Guest Customer"}
-                    </td>
-                    <td className="py-3 px-4 text-right text-text-muted">
-                      {formatCurrency(s.subtotal)}
-                    </td>
-                    <td className="py-3 px-4 text-right text-text-muted">
-                      {formatCurrency(s.tax_amount)}
-                    </td>
-                    <td className="py-3 px-4 text-right text-rose-400">
-                      {formatCurrency(s.discount_amount)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-medium text-emerald-400">
-                      {formatCurrency(s.total_amount)}
-                    </td>
-                    <td className="py-3 px-4 text-center capitalize">
-                      <span className="px-2 py-0.5 rounded text-[11px] bg-white/[0.04] text-text-muted">
-                        {s.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Filter Toolbar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by sale order # or customer..."
+        onReset={handleResetFilters}
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              options={[
+                { label: "All-Time Cumulative", value: "all" },
+                { label: "Today Only", value: "today" },
+                { label: "Last 7 Days", value: "7days" },
+                { label: "Last 30 Days", value: "30days" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Completed", value: "completed" },
+                { label: "Paid", value: "Paid" },
+                { label: "Pending", value: "pending" },
+              ]}
+            />
+          </>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchSalesData}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
+
+      {/* Reusable Data Table */}
+      <Table
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage="No sales recorded in the selected period."
+      />
     </div>
   );
 }

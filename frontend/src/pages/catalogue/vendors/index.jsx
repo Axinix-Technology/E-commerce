@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
   Plus,
-  Search,
   RefreshCw,
   Edit2,
   Trash2,
-  CheckCircle2,
-  AlertCircle,
   Phone,
   Mail,
   MapPin,
@@ -16,11 +13,20 @@ import {
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
+import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
+
+const formatQty = (val) => {
+  const num = Number(val);
+  return !num || num === 0 ? "—" : num.toLocaleString();
+};
 
 export default function VendorListPage() {
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [gstFilter, setGstFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -32,11 +38,14 @@ export default function VendorListPage() {
       if (search.trim()) {
         filter["name.icontains"] = search.trim();
       }
+      if (statusFilter !== "all") {
+        filter.status = parseInt(statusFilter, 10);
+      }
 
       const res = await populateApi.read("vendor_master", {
         filter,
         page,
-        limit: 10,
+        limit: 15,
         sort: ["-id"],
       });
 
@@ -54,7 +63,7 @@ export default function VendorListPage() {
 
   useEffect(() => {
     fetchVendors();
-  }, [page, search]);
+  }, [page, search, statusFilter]);
 
   const handleDelete = async (vendor) => {
     if (!window.confirm(`Are you sure you want to deactivate vendor "${vendor.name}"?`)) return;
@@ -68,218 +77,244 @@ export default function VendorListPage() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  const filteredVendors = vendors.filter((v) => {
+    if (gstFilter === "registered" && !v.gstin) return false;
+    if (gstFilter === "unregistered" && v.gstin) return false;
+    return true;
+  });
+
+  const activeCount = filteredVendors.filter((v) => v.status === 1).length;
+  const gstinCount = filteredVendors.filter((v) => Boolean(v.gstin)).length;
+
+  const columns = [
+    {
+      header: "# ID",
+      accessor: "id",
+      className: "font-mono text-muted-token text-xs w-16",
+    },
+    {
+      header: "Vendor / Supplier",
+      render: (v) => (
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-xl bg-[rgba(0,210,210,0.1)] border border-[rgba(0,210,210,0.25)] text-brand-token shadow-xs">
-              <Building2 className="w-5 h-5" />
+          <div className="font-semibold text-primary-token text-xs">{v.name}</div>
+          {v.vendor_code && (
+            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded font-mono text-[10px] bg-surface-elevated text-brand-token border border-token">
+              {v.vendor_code}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Contact Person",
+      accessor: "contact_person",
+      render: (v) => <span className="text-secondary-token text-xs">{v.contact_person || "—"}</span>,
+    },
+    {
+      header: "Phone & Email",
+      render: (v) => (
+        <div className="space-y-0.5 text-xs">
+          {v.phone && (
+            <div className="flex items-center gap-1 font-mono text-[11px] text-secondary-token">
+              <Phone className="w-3 h-3 text-muted-token shrink-0" />
+              {v.phone}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-primary-token">Vendor Registration</h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[rgba(0,210,210,0.12)] text-brand-token border border-[rgba(0,210,210,0.25)]">
-                  {totalCount} Suppliers
-                </span>
-              </div>
-              <p className="text-xs text-secondary-token">
-                Manage registered vendors, trade credentials, GSTIN, and procurement contact points.
-              </p>
+          )}
+          {v.email && (
+            <div className="flex items-center gap-1 text-[11px] text-muted-token">
+              <Mail className="w-3 h-3 text-muted-token shrink-0" />
+              {v.email}
             </div>
+          )}
+          {!v.phone && !v.email && <span className="text-muted-token">—</span>}
+        </div>
+      ),
+    },
+    {
+      header: "GSTIN & PAN",
+      render: (v) => (
+        <div className="space-y-0.5 text-xs">
+          {v.gstin ? (
+            <div className="flex items-center gap-1 font-mono text-[11px] text-brand-token">
+              <FileText className="w-3 h-3 text-muted-token shrink-0" />
+              {v.gstin}
+            </div>
+          ) : (
+            <span className="text-muted-token text-[11px]">—</span>
+          )}
+          {v.pan_number && (
+            <div className="text-[10px] font-mono text-muted-token">
+              PAN: {v.pan_number}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Location",
+      render: (v) => {
+        const loc = [v.city, v.state].filter(Boolean).join(", ");
+        return loc ? (
+          <div className="flex items-center gap-1 text-xs text-secondary-token">
+            <MapPin className="w-3 h-3 text-muted-token shrink-0" />
+            {loc}
+          </div>
+        ) : (
+          <span className="text-muted-token text-xs">—</span>
+        );
+      },
+    },
+    {
+      header: "Status",
+      render: (v) => (
+        <Badge variant={v.status === 1 ? "success" : "neutral"} size="sm">
+          {v.status === 1 ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      render: (v) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Edit2}
+            onClick={() => navigate(`/catalogue/vendors/create?id=${v.id}`)}
+            title="Edit Vendor"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Trash2}
+            className="hover:text-rose-600 dark:hover:text-rose-400"
+            onClick={() => handleDelete(v)}
+            title="Deactivate Vendor"
+          />
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">Vendor Registration</h1>
+            <p className="text-xs text-muted-token">
+              Manage registered vendors, trade credentials, GSTIN, and procurement contact points
+            </p>
           </div>
         </div>
 
-        <Link
-          to="/catalogue/vendors/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Register Vendor</span>
+        <Link to="/catalogue/vendors/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Register Vendor
+          </Button>
         </Link>
       </div>
 
-      {/* Controls Bar */}
-      <div className="glass-panel p-3.5 rounded-2xl border border-token flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-muted-token absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search by vendor name or code..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-surface-elevated border border-token text-xs text-primary-token focus:outline-none focus:border-[var(--brand-secondary)] transition-colors"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-secondary-token">
-          <span>Total: <strong className="text-primary-token font-mono">{totalCount}</strong></span>
-          <button
-            onClick={fetchVendors}
-            title="Refresh list"
-            className="p-1.5 rounded-lg hover:bg-surface-elevated text-muted-token hover:text-primary-token transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-brand-token" : ""}`} />
-          </button>
-        </div>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Total Registered: <strong className="text-primary-token font-medium">{formatQty(totalCount)}</strong></span>
+        <span>•</span>
+        <span>Active on Page: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatQty(activeCount)}</strong></span>
+        <span>•</span>
+        <span>GSTIN Verified: <strong className="text-brand-token font-medium">{formatQty(gstinCount)}</strong></span>
       </div>
 
-      {/* Data Table */}
-      <div className="glass-panel rounded-2xl border border-token overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-surface-elevated/60 text-secondary-token uppercase tracking-wider font-semibold border-b border-token">
-              <tr>
-                <th className="py-3 px-4"># ID</th>
-                <th className="py-3 px-4">Vendor / Supplier</th>
-                <th className="py-3 px-4">Contact Person</th>
-                <th className="py-3 px-4">Phone & Email</th>
-                <th className="py-3 px-4">GSTIN & PAN</th>
-                <th className="py-3 px-4">Location</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-token text-primary-token">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="py-12 text-center text-muted-token">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-token" />
-                    Loading vendor records...
-                  </td>
-                </tr>
-              ) : vendors.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="py-12 text-center text-muted-token">
-                    <p className="font-semibold text-secondary-token mb-1">No vendors registered</p>
-                    <p className="text-xs text-muted-token mb-3">Register your vendors before initiating Purchase and Inward entries.</p>
-                    <Link
-                      to="/catalogue/vendors/create"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--brand-primary)] text-white text-xs font-semibold"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Register Vendor
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                vendors.map((v) => (
-                  <tr key={v.id} className="hover:bg-surface-elevated/40 transition-colors">
-                    <td className="py-3 px-4 font-mono text-muted-token">{v.id}</td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-primary-token">{v.name}</div>
-                      {v.vendor_code && (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded font-mono text-[10px] bg-surface-elevated text-brand-token border border-token">
-                          {v.vendor_code}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-secondary-token">
-                      {v.contact_person || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-secondary-token space-y-0.5">
-                      {v.phone && (
-                        <div className="flex items-center gap-1 font-mono text-[11px]">
-                          <Phone className="w-3 h-3 text-muted-token" />
-                          {v.phone}
-                        </div>
-                      )}
-                      {v.email && (
-                        <div className="flex items-center gap-1 text-[11px] text-muted-token">
-                          <Mail className="w-3 h-3 text-muted-token" />
-                          {v.email}
-                        </div>
-                      )}
-                      {!v.phone && !v.email && "—"}
-                    </td>
-                    <td className="py-3 px-4 space-y-0.5">
-                      {v.gstin ? (
-                        <div className="flex items-center gap-1 font-mono text-[11px] text-brand-token">
-                          <FileText className="w-3 h-3 text-muted-token" />
-                          {v.gstin}
-                        </div>
-                      ) : (
-                        <span className="text-muted-token text-[11px]">—</span>
-                      )}
-                      {v.pan_number && (
-                        <div className="text-[10px] font-mono text-muted-token">
-                          PAN: {v.pan_number}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-secondary-token">
-                      {v.city || v.state ? (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-muted-token" />
-                          {[v.city, v.state].filter(Boolean).join(", ")}
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {v.status === 1 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold">
-                          <CheckCircle2 className="w-3 h-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-semibold">
-                          <AlertCircle className="w-3 h-3" /> Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          to={`/catalogue/vendors/create?id=${v.id}`}
-                          title="Edit Vendor"
-                          className="p-1.5 rounded-lg hover:bg-surface-elevated text-secondary-token hover:text-brand-token transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(v)}
-                          title="Deactivate Vendor"
-                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-secondary-token hover:text-rose-400 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* FilterBar */}
+      <FilterBar
+        search={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        searchPlaceholder="Search by vendor name or code..."
+        filters={
+          <>
+            <Select
+              size="xs"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Active", value: "1" },
+                { label: "Inactive", value: "0" },
+              ]}
+            />
+            <Select
+              size="xs"
+              value={gstFilter}
+              onChange={(e) => setGstFilter(e.target.value)}
+              options={[
+                { label: "All GST Profiles", value: "all" },
+                { label: "GSTIN Registered", value: "registered" },
+                { label: "Unregistered / Composition", value: "unregistered" },
+              ]}
+            />
+          </>
+        }
+        onReset={() => {
+          setSearch("");
+          setStatusFilter("all");
+          setGstFilter("all");
+          setPage(1);
+        }}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={RefreshCw}
+          loading={loading}
+          onClick={fetchVendors}
+          title="Refresh List"
+        >
+          Refresh
+        </Button>
+      </FilterBar>
 
-        {/* Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="p-3 border-t border-token flex items-center justify-between text-xs text-secondary-token">
-            <span>Page {page} of {totalPages}</span>
-            <div className="flex items-center gap-1.5">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-2.5 py-1 rounded-lg bg-surface-elevated border border-token disabled:opacity-40 cursor-pointer"
-              >
-                Previous
-              </button>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="px-2.5 py-1 rounded-lg bg-surface-elevated border border-token disabled:opacity-40 cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
+      {/* Table */}
+      <Table
+        columns={columns}
+        data={filteredVendors}
+        loading={loading}
+        emptyMessage="No vendors registered yet. Register your vendors before initiating Purchase and Inward entries."
+      />
+
+      {/* Pagination Bar */}
+      {totalPages > 1 && (
+        <div className="p-3 border-t border-token flex items-center justify-between text-xs text-secondary-token">
+          <span>Page {page} of {totalPages}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

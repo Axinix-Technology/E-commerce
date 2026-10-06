@@ -3,56 +3,50 @@ import { Link } from "react-router-dom";
 import {
   Building2,
   ShieldCheck,
-  CheckCircle2,
   TrendingUp,
   Award,
-  Users,
   Handshake,
-  ArrowRight
 } from "lucide-react";
+import { Button, Badge } from "../../../components/ui";
 
 export default function AboutUsPage() {
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>About Axinix E-Commerce</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Crafting luxury apparel with ERP-grade inventory accuracy & statutory integrity
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              About Axinix E-Commerce
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Crafting luxury apparel with ERP-grade inventory accuracy & statutory integrity
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/useful-additions/about/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Handshake className="w-4 h-4" />
-          <span>Partner with Us</span>
+        <Link to="/useful-additions/about/create">
+          <Button variant="primary" size="sm" icon={Handshake}>
+            Partner with Us
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Barcode Accuracy: <strong className="text-white">99.98%</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Statutory Compliance: <strong className="text-emerald-400">100% Audit Ready</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Fulfillment Hubs: <strong className="text-[var(--brand-primary)]">Coimbatore & Mumbai</strong>
-        </span>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Barcode Accuracy: <strong className="text-primary-token font-medium">99.98%</strong></span>
+        <span>•</span>
+        <span>Statutory Compliance: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">100% Audit Ready</strong></span>
+        <span>•</span>
+        <span>Fulfillment Hubs: <strong className="text-brand-token font-medium">Coimbatore & Mumbai</strong></span>
       </div>
 
       {/* Narrative Section */}
-      <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 text-xs text-gray-300 leading-relaxed">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+      <div className="p-5 md:p-6 rounded-2xl bg-surface-elevated/40 border border-token space-y-3 text-xs text-secondary-token leading-relaxed shadow-xs">
+        <h2 className="text-sm font-bold text-primary-token uppercase tracking-wider">
           Our Operational Heritage
         </h2>
         <p>
@@ -65,26 +59,26 @@ export default function AboutUsPage() {
 
       {/* Core Benchmarks Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-          <Award className="w-6 h-6 text-[var(--brand-primary)]" />
-          <h3 className="text-xs font-bold text-white">Artisan Weaving Standards</h3>
-          <p className="text-[11px] text-gray-400">
+        <div className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-2 shadow-xs">
+          <Award className="w-6 h-6 text-brand-token" />
+          <h3 className="text-xs font-bold text-primary-token">Artisan Weaving Standards</h3>
+          <p className="text-[11px] text-muted-token">
             Hand-selected natural fibers including European flax linen, Giza cotton, and pure Kashmir silk.
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-          <ShieldCheck className="w-6 h-6 text-emerald-400" />
-          <h3 className="text-xs font-bold text-white">Statutory GST Precision</h3>
-          <p className="text-[11px] text-gray-400">
+        <div className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-2 shadow-xs">
+          <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          <h3 className="text-xs font-bold text-primary-token">Statutory GST Precision</h3>
+          <p className="text-[11px] text-muted-token">
             Automated CGST, SGST, and IGST Place of Supply tax determination for 100% GSTR-2B compliance.
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-          <TrendingUp className="w-6 h-6 text-[var(--brand-primary)]" />
-          <h3 className="text-xs font-bold text-white">Omnichannel Scale</h3>
-          <p className="text-[11px] text-gray-400">
+        <div className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-2 shadow-xs">
+          <TrendingUp className="w-6 h-6 text-brand-token" />
+          <h3 className="text-xs font-bold text-primary-token">Omnichannel Scale</h3>
+          <p className="text-[11px] text-muted-token">
             Seamless multi-channel inventory synchronization across our storefront, Amazon, and Flipkart.
           </p>
         </div>

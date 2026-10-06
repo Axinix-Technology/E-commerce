@@ -158,29 +158,39 @@ if not DEBUG and os.getenv('MYSQL_DATABASE_LIVE'):
         }
     }
 else:
-    raw_port = os.getenv('MYSQL_PORT', '3306')
-    try:
-        mysql_port = str(int(raw_port))
-    except (ValueError, TypeError):
-        mysql_port = '3306'
+    use_sqlite = os.getenv('USE_SQLITE', 'True').lower() in ('true', '1', 't')
 
-    conn_max_age = int(os.getenv('CONN_MAX_AGE', '600'))
-
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('MYSQL_DATABASE', 'axinix_ecommerce_db'),
-            'USER': os.getenv('MYSQL_USER', 'root'),
-            'PASSWORD': os.getenv('MYSQL_PASSWORD', 'Axinix@123'),
-            'HOST': os.getenv('MYSQL_HOST', '127.0.0.1'),
-            'PORT': mysql_port,
-            'CONN_MAX_AGE': conn_max_age,
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-                'charset': 'utf8mb4',
+    if use_sqlite:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
             }
         }
-    }
+    else:
+        raw_port = os.getenv('MYSQL_PORT', '3306')
+        try:
+            mysql_port = str(int(raw_port))
+        except (ValueError, TypeError):
+            mysql_port = '3306'
+
+        conn_max_age = int(os.getenv('CONN_MAX_AGE', '600'))
+
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': os.getenv('MYSQL_DATABASE', 'axinix_ecommerce_d'),
+                'USER': os.getenv('MYSQL_USER', 'root'),
+                'PASSWORD': os.getenv('MYSQL_PASSWORD', 'Axinix@123'),
+                'HOST': os.getenv('MYSQL_HOST', '127.0.0.1'),
+                'PORT': mysql_port,
+                'CONN_MAX_AGE': conn_max_age,
+                'OPTIONS': {
+                    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                    'charset': 'utf8mb4',
+                }
+            }
+        }
 
 
 # Password Hashers (Bcrypt with SHA-256 pre-hash to avoid 72-byte truncation & CPU exhaustion)

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Building, MapPin, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Save, Building } from "lucide-react";
 import toast from "react-hot-toast";
 import populateApi from "../../../api/populate.api";
+import { Button, Input, Select, Checkbox } from "../../../components/ui";
 
 export default function BranchCreate() {
   const navigate = useNavigate();
@@ -52,167 +53,129 @@ export default function BranchCreate() {
       <div className="flex items-center gap-3">
         <Link
           to="/masters/branches"
-          className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <Building className="w-5 h-5 text-accent-primary" />
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <Building className="w-5 h-5 text-brand-token" />
             Add New Branch Location
           </h1>
-          <p className="text-xs text-text-muted mt-0.5">Configure physical outlets, warehouse facilities, and statutory GSTIN details</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Configure physical outlets, warehouse facilities, and statutory GSTIN details
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
+      <form onSubmit={handleSubmit} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Branch Name <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Flagship HQ Store"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Branch Name"
+            required
+            placeholder="e.g. Flagship HQ Store"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Branch Code <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. BR-HQ-01"
-              value={form.code}
-              onChange={(e) => setForm({ ...form, code: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary uppercase focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Branch Code"
+            required
+            placeholder="e.g. BR-HQ-01"
+            value={form.code}
+            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Phone Number</label>
-            <input
-              type="tel"
-              placeholder="e.g. +91 44 2812 3456"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Phone Number"
+            type="tel"
+            placeholder="e.g. +91 44 2812 3456"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Email Address</label>
-            <input
-              type="email"
-              placeholder="e.g. store.hq@axinix.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="Email Address"
+            type="email"
+            placeholder="e.g. store.hq@axinix.com"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-text-secondary mb-1">Street Address</label>
-            <input
-              type="text"
+            <Input
+              label="Street Address"
               placeholder="e.g. 100 Anna Salai, Mount Road"
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">City</label>
-            <input
-              type="text"
-              placeholder="e.g. Chennai"
-              value={form.city}
-              onChange={(e) => setForm({ ...form, city: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="City"
+            placeholder="e.g. Chennai"
+            value={form.city}
+            onChange={(e) => setForm({ ...form, city: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">State</label>
-            <input
-              type="text"
-              placeholder="e.g. Tamil Nadu"
-              value={form.state}
-              onChange={(e) => setForm({ ...form, state: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="State"
+            placeholder="e.g. Tamil Nadu"
+            value={form.state}
+            onChange={(e) => setForm({ ...form, state: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">PIN Code</label>
-            <input
-              type="text"
-              placeholder="e.g. 600002"
-              value={form.pincode}
-              onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="PIN Code"
+            placeholder="e.g. 600002"
+            value={form.pincode}
+            onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">GSTIN Number</label>
-            <input
-              type="text"
-              placeholder="e.g. 33AAAAA0000A1Z5"
-              value={form.gstin}
-              onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary uppercase focus:outline-none focus:border-accent-primary"
-            />
-          </div>
+          <Input
+            label="GSTIN Number"
+            placeholder="e.g. 33AAAAA0000A1Z5"
+            value={form.gstin}
+            onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
+          />
 
-          <div className="flex items-center gap-2 pt-5">
-            <input
-              type="checkbox"
-              id="is_head_office"
+          <div className="p-3.5 rounded-xl border border-token bg-surface-elevated/60 flex items-center">
+            <Checkbox
+              label="Designate as Corporate Head Office"
               checked={form.is_head_office}
               onChange={(e) => setForm({ ...form, is_head_office: e.target.checked })}
-              className="rounded border-border text-accent-primary focus:ring-0"
             />
-            <label htmlFor="is_head_office" className="text-xs font-medium text-text-primary cursor-pointer">
-              Designate as Corporate Head Office
-            </label>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Status</label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value={1}>Active / Operational</option>
-              <option value={0}>Inactive / Suspended</option>
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
+            options={[
+              { value: 1, label: "Active / Operational" },
+              { value: 0, label: "Inactive / Suspended" },
+            ]}
+          />
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link
-            to="/masters/branches"
-            className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition"
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-token">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/masters/branches")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={Save}
+            loading={submitting}
           >
-            <Save className="w-3.5 h-3.5" />
-            {submitting ? "Saving..." : "Save Branch"}
-          </button>
+            Save Branch
+          </Button>
         </div>
       </form>
     </div>

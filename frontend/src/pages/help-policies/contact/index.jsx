@@ -6,110 +6,105 @@ import {
   MapPin,
   Clock,
   ShieldCheck,
-  Send,
   MessageSquare,
   Plus,
-  ArrowRight
 } from "lucide-react";
+import { Button, Badge } from "../../../components/ui";
 
 export default function ContactSupportPage() {
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-4xl mx-auto space-y-4 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Mail className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>Contact & Customer Support</span>
-          </h1>
-          <p className="text-xs text-gray-400">
-            Dedicated enterprise support for statutory billing, transit queries, and return logistics
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-elevated/40 border border-token text-brand-token">
+            <Mail className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-primary-token">
+              Contact & Customer Support
+            </h1>
+            <p className="text-xs text-muted-token mt-0.5">
+              Dedicated enterprise support for statutory billing, transit queries, and return logistics
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/help-policies/contact/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Submit Support Ticket</span>
+        <Link to="/help-policies/contact/create">
+          <Button variant="primary" size="sm" icon={Plus}>
+            Submit Support Ticket
+          </Button>
         </Link>
       </div>
 
-      {/* Minimalist Metrics Bar */}
-      <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-mono text-gray-300 flex items-center gap-3">
-        <span>
-          Support Channels: <strong className="text-white">Email • Phone • WhatsApp</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          First Response SLA: <strong className="text-emerald-400">&lt; 2 Hours</strong>
-        </span>
-        <span className="text-gray-600">•</span>
-        <span>
-          Availability: <strong className="text-[var(--brand-primary)]">Mon-Sat (9 AM - 7 PM IST)</strong>
-        </span>
+      {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
+        <span>Support Channels: <strong className="text-primary-token font-medium">Email • Phone • WhatsApp</strong></span>
+        <span>•</span>
+        <span>First Response SLA: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">&lt; 2 Hours</strong></span>
+        <span>•</span>
+        <span>Availability: <strong className="text-brand-token font-medium">Mon-Sat (9 AM - 7 PM IST)</strong></span>
       </div>
 
       {/* Support Channels Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-          <div className="p-2.5 w-fit rounded-xl bg-[rgba(0,210,210,0.1)] text-[var(--brand-primary)]">
+        <div className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-2 shadow-xs">
+          <div className="p-2.5 w-fit rounded-xl bg-surface-elevated/80 border border-token text-brand-token">
             <Mail className="w-5 h-5" />
           </div>
-          <h3 className="text-xs font-bold text-white">Direct Email Assistance</h3>
-          <p className="text-[11px] text-gray-400">Invoicing, GSTR-2B, returns, and general inquiries</p>
+          <h3 className="text-xs font-bold text-primary-token">Direct Email Assistance</h3>
+          <p className="text-[11px] text-muted-token">Invoicing, GSTR-2B, returns, and general inquiries</p>
           <a
             href="mailto:support@axinix.com"
-            className="text-xs text-[var(--brand-primary)] hover:underline font-mono block pt-1"
+            className="text-xs text-brand-token hover:underline font-mono block pt-1"
           >
             support@axinix.com
           </a>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-          <div className="p-2.5 w-fit rounded-xl bg-[rgba(0,210,210,0.1)] text-[var(--brand-primary)]">
+        <div className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-2 shadow-xs">
+          <div className="p-2.5 w-fit rounded-xl bg-surface-elevated/80 border border-token text-brand-token">
             <Phone className="w-5 h-5" />
           </div>
-          <h3 className="text-xs font-bold text-white">Direct Toll-Free Line</h3>
-          <p className="text-[11px] text-gray-400">Immediate telephone assistance with order dispatch</p>
+          <h3 className="text-xs font-bold text-primary-token">Direct Toll-Free Line</h3>
+          <p className="text-[11px] text-muted-token">Immediate telephone assistance with order dispatch</p>
           <a
             href="tel:+918002938192"
-            className="text-xs text-[var(--brand-primary)] hover:underline font-mono block pt-1"
+            className="text-xs text-brand-token hover:underline font-mono block pt-1"
           >
             +91 (800) 293-8192
           </a>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-          <div className="p-2.5 w-fit rounded-xl bg-[rgba(0,210,210,0.1)] text-[var(--brand-primary)]">
+        <div className="p-5 rounded-2xl bg-surface-elevated/40 border border-token space-y-2 shadow-xs">
+          <div className="p-2.5 w-fit rounded-xl bg-surface-elevated/80 border border-token text-brand-token">
             <MessageSquare className="w-5 h-5" />
           </div>
-          <h3 className="text-xs font-bold text-white">WhatsApp Business</h3>
-          <p className="text-[11px] text-gray-400">Real-time parcel tracking and sizing guidance</p>
-          <span className="text-xs text-[var(--brand-primary)] font-mono block pt-1">
+          <h3 className="text-xs font-bold text-primary-token">WhatsApp Business</h3>
+          <p className="text-[11px] text-muted-token">Real-time parcel tracking and sizing guidance</p>
+          <span className="text-xs text-brand-token font-mono block pt-1">
             +91 98765 43210
           </span>
         </div>
       </div>
 
       {/* Fulfillment Center HQ */}
-      <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-        <h3 className="text-xs font-bold text-[var(--brand-primary)] uppercase tracking-wider">
+      <div className="p-5 md:p-6 rounded-2xl bg-surface-elevated/40 border border-token space-y-3 shadow-xs">
+        <h3 className="text-xs font-bold text-brand-token uppercase tracking-wider">
           Fulfillment Headquarters & Central Hub
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <span className="text-gray-500 block mb-1">Corporate & Logistics Address</span>
-            <p className="font-bold text-white">Axinix Technologies Private Limited</p>
-            <p className="text-gray-300">Phase II, Avinashi Road Tech Park, Peelamedu</p>
-            <p className="text-gray-400">Coimbatore, Tamil Nadu - 641004, India</p>
+          <div className="space-y-1">
+            <span className="font-semibold text-primary-token block">Axinix Commerce Private Limited</span>
+            <p className="text-muted-token">Plot 14-B, Avinashi Road Commercial Corridor</p>
+            <p className="text-muted-token">Peelamedu, Coimbatore, Tamil Nadu - 641004</p>
+            <p className="text-muted-token font-mono">GSTIN: 33AAAAA0000A1Z5</p>
           </div>
-          <div>
-            <span className="text-gray-500 block mb-1">Statutory Registrations</span>
-            <p className="text-gray-300">GSTIN: <strong className="text-white font-mono">33AABCA1234F1Z5</strong></p>
-            <p className="text-gray-300">State Jurisdiction: <strong className="text-white">Tamil Nadu (33)</strong></p>
-            <p className="text-gray-300">CIN: <strong className="text-white font-mono">U72900TZ2026PTC039482</strong></p>
+          <div className="space-y-1">
+            <span className="font-semibold text-primary-token block">Operating Hours</span>
+            <p className="text-muted-token">Monday to Saturday: 09:00 AM – 07:00 PM IST</p>
+            <p className="text-muted-token">Sunday: Closed for inventory physical audits</p>
+            <p className="text-brand-token font-medium">Statutory Tax Portal: 24/7 API Sync Active</p>
           </div>
         </div>
       </div>

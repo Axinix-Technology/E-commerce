@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, RotateCcw, Save } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button, Input } from "../../../components/ui";
 
 export default function CreateReorderPage() {
   const navigate = useNavigate();
@@ -24,52 +25,56 @@ export default function CreateReorderPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
           to="/shopping/order-confirmation"
-          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-all"
+          className="p-2 rounded-xl border border-token bg-surface-elevated/40 hover:bg-surface-elevated/80 text-muted-token hover:text-primary-token transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <RotateCcw className="w-5 h-5 text-[var(--brand-primary)]" />
-            <span>One-Click Reorder</span>
+          <h1 className="text-xl font-bold text-primary-token tracking-tight flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-brand-token" />
+            One-Click Reorder
           </h1>
-          <p className="text-xs text-gray-400">Clone items from a previous order into your shopping cart</p>
+          <p className="text-xs text-muted-token mt-0.5">
+            Clone items from a previous order into your active shopping cart session
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleReorder} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-        <div>
-          <label className="block text-xs font-semibold text-gray-300 mb-1">Previous Order Reference *</label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. SO-20261003-8491"
-            value={orderNumber}
-            onChange={(e) => setOrderNumber(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-[var(--brand-primary)] font-mono uppercase"
-          />
-        </div>
+      {/* Form Card */}
+      <form onSubmit={handleReorder} className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 backdrop-blur-sm space-y-4">
+        <Input
+          label="Previous Order Reference"
+          required
+          placeholder="e.g. SO-20261003-8491"
+          value={orderNumber}
+          onChange={(e) => setOrderNumber(e.target.value)}
+          className="font-mono uppercase text-xs"
+        />
 
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
-          <Link
-            to="/shopping/order-confirmation"
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold"
+        <div className="pt-3 border-t border-token flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/shopping/order-confirmation")}
           >
             Cancel
-          </Link>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white text-xs font-semibold shadow-md transition-all cursor-pointer disabled:opacity-50"
+            variant="primary"
+            size="sm"
+            icon={RotateCcw}
+            loading={submitting}
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>{submitting ? "Cloning Items..." : "Clone to Cart & Reorder"}</span>
-          </button>
+            Clone to Cart & Reorder
+          </Button>
         </div>
       </form>
     </div>
