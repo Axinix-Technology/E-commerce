@@ -225,8 +225,8 @@ export default function ProductFormPage() {
   const hasImage = Boolean(formData.image_url?.trim());
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Top Header & Breadcrumbs Bar (Top-Right Action Buttons REMOVED as requested) */}
+    <div className="space-y-6">
+      {/* Top Header & Breadcrumbs Bar */}
       <div className="flex items-center justify-between pb-4 border-b border-token">
         <div className="flex items-center gap-3">
           <Link
@@ -255,296 +255,317 @@ export default function ProductFormPage() {
         </div>
       </div>
 
-      {/* Main Form Body */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Card 1: General Information */}
-        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-5">
-          <div>
-            <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
-              <Package className="w-4 h-4 text-brand-token" />
-              General Information
-            </h2>
-            <p className="text-xs text-muted-token mt-0.5">
-              Define the core taxonomy, retail selling price (MRP), and merchandising identity.
-            </p>
-          </div>
+      {/* Main Form Body in 2-Column Responsive Grid */}
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column (2/3 width): General Info & Specifications */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Card 1: General Information */}
+            <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-5 shadow-xs">
+              <div className="border-b border-token pb-3">
+                <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
+                  <Package className="w-4 h-4 text-brand-token" />
+                  General Information
+                </h2>
+                <p className="text-xs text-muted-token mt-0.5">
+                  Define the core taxonomy, retail selling price (MRP), and merchandising identity.
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Product Name"
-              required
-              placeholder="e.g. Classic Oxford Shoes, Organic Cotton T-Shirt"
-              value={formData.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-            />
-
-            <Input
-              label="URL Slug / Key"
-              required
-              placeholder="classic-oxford-shoes"
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              helperText="Auto-generated from name. Used in clean URLs."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select
-              label="Category"
-              required
-              value={formData.category_id}
-              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-              options={[
-                { value: "", label: "— Select Category —" },
-                ...categories.map((c) => ({
-                  value: String(c.id),
-                  label: c.name,
-                })),
-              ]}
-            />
-
-            <Input
-              label="Brand / Label"
-              placeholder="e.g. Nike, Raymond, Loigmax"
-              value={formData.brand}
-              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-            />
-
-            <Input
-              label="Selling Price / M.R.P. (₹)"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="—"
-              value={formData.selling_price}
-              onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-              helperText="Benchmark retail selling price."
-            />
-          </div>
-
-          <Textarea
-            label="Description"
-            rows={3}
-            placeholder="Marketing highlights, product overview, and merchandising copy..."
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-        </div>
-
-        {/* Card 2: Attach Product Image / Visual Media */}
-        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-brand-token" />
-                Attach Product Image
-              </h2>
-              <p className="text-xs text-muted-token mt-0.5">
-                Attach product showcase image from your device or via image URL (Optional).
-              </p>
-            </div>
-            {hasImage && (
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData((prev) => ({ ...prev, image_url: "" }));
-                  setImgLoadError(false);
-                }}
-                className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1 font-medium transition-colors"
-                title="Remove attached image"
-              >
-                <X className="w-3.5 h-3.5" />
-                Remove Image
-              </button>
-            )}
-          </div>
-
-          {/* Hidden File Input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            className="hidden"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-            {/* Interactive Image Preview / Drop Zone Box */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              className={`md:col-span-5 h-48 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden relative ${
-                isDragging
-                  ? "border-brand-token bg-brand-token/10 scale-[1.01]"
-                  : "border-token bg-surface-elevated/20"
-              }`}
-            >
-              {hasImage && !imgLoadError ? (
-                <>
-                  <img
-                    src={formData.image_url}
-                    alt={formData.name || "Attached preview"}
-                    className="w-full h-full object-cover"
-                    onError={() => setImgLoadError(true)}
-                    onLoad={() => setImgLoadError(false)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Product Name"
+                    required
+                    placeholder="e.g. Classic Oxford Shoes, Organic Cotton T-Shirt"
+                    value={formData.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    helperText="Primary article display name for catalogue & POS"
                   />
-                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-medium text-emerald-300 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Attached Cover
-                  </div>
-                  <div className="absolute bottom-2 right-2 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-2 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-white text-[11px] flex items-center gap-1"
-                    >
-                      <Upload className="w-3 h-3" />
-                      Change
-                    </button>
-                  </div>
-                </>
-              ) : hasImage && imgLoadError ? (
-                <div className="p-4 text-center space-y-1.5">
-                  <AlertCircle className="w-6 h-6 text-amber-500 mx-auto" />
-                  <p className="text-xs font-medium text-primary-token">Unable to load image</p>
-                  <p className="text-[11px] text-muted-token">Check if the URL or file format is valid.</p>
                 </div>
-              ) : (
-                <div className="p-5 text-center space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-surface-elevated/80 border border-token flex items-center justify-center mx-auto text-muted-token">
-                    <FileImage className="w-5 h-5 text-brand-token" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-primary-token">No Image Attached</p>
-                    <p className="text-[11px] text-muted-token mt-0.5">
-                      Drag & drop an image here or browse your device
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    icon={Upload}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Attach Image File
-                  </Button>
+
+                <Input
+                  label="URL Slug / Key"
+                  required
+                  placeholder="classic-oxford-shoes"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  helperText="Auto-generated clean URL identifier"
+                />
+
+                <Select
+                  label="Category"
+                  required
+                  value={formData.category_id}
+                  onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                  options={[
+                    { value: "", label: "— Select Category —" },
+                    ...categories.map((c) => ({
+                      value: String(c.id),
+                      label: c.name,
+                    })),
+                  ]}
+                  helperText="Merchandise hierarchy classification"
+                />
+
+                <Input
+                  label="Brand / Label"
+                  placeholder="e.g. Nike, Raymond, Loigmax"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  helperText="Brand or manufacturing label"
+                />
+
+                <Input
+                  label="Selling Price / M.R.P. (₹)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="—"
+                  value={formData.selling_price}
+                  onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+                  helperText="Benchmark retail selling price"
+                />
+
+                <div className="sm:col-span-2">
+                  <Textarea
+                    label="Description"
+                    rows={3}
+                    placeholder="Marketing highlights, product overview, and merchandising copy..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    helperText="Optional merchandise description & selling points"
+                  />
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Direct URL Input Option */}
-            <div className="md:col-span-7 space-y-3">
-              <Input
-                label="Or Enter Image Web URL"
-                placeholder="https://images.unsplash.com/photo-..."
-                value={formData.image_url}
-                onChange={(e) => {
-                  setFormData({ ...formData, image_url: e.target.value });
-                  setImgLoadError(false);
-                }}
-                helperText="Paste any hosted CDN / web image URL directly."
-              />
+            {/* Card 2: Specifications & Style Attributes */}
+            <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-5 shadow-xs">
+              <div className="border-b border-token pb-3">
+                <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-brand-token" />
+                  Specifications & Style Attributes
+                </h2>
+                <p className="text-xs text-muted-token mt-0.5">
+                  Fabric composition, demographic classification, and handling instructions.
+                </p>
+              </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  icon={Upload}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Browse Device File
-                </Button>
-                {hasImage && (
-                  <span className="text-xs text-emerald-500 flex items-center gap-1 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Image ready to save
-                  </span>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Material Composition"
+                  placeholder="e.g. 100% Genuine Leather, Pure Cotton"
+                  value={formData.material}
+                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                  helperText="Fabric or base raw materials"
+                />
+
+                <Input
+                  label="Care Instructions"
+                  placeholder="e.g. Machine wash cold, dry clean only"
+                  value={formData.care_instructions}
+                  onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })}
+                  helperText="Washing & maintenance directions"
+                />
+
+                <Input
+                  label="Gender Label"
+                  placeholder="e.g. Men, Women, Unisex, Boys, Girls"
+                  value={formData.gender_label}
+                  onChange={(e) => setFormData({ ...formData, gender_label: e.target.value })}
+                  helperText="Target gender demographic"
+                />
+
+                <Input
+                  label="Age Group"
+                  placeholder="e.g. Adult, Teens, Kids, Infant"
+                  value={formData.age_group}
+                  onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
+                  helperText="Target demographic age cohort"
+                />
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Card 3: Specifications & Style Attributes */}
-        <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-5">
-          <div>
-            <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
-              <Tag className="w-4 h-4 text-brand-token" />
-              Specifications & Style Attributes
-            </h2>
-            <p className="text-xs text-muted-token mt-0.5">
-              Fabric composition, demographic, and product publishing status.
-            </p>
+          {/* Right Column (1/3 width): Media & Status/Actions */}
+          <div className="space-y-6">
+            {/* Card 3: Attach Product Image / Visual Media */}
+            <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-token pb-3">
+                <div>
+                  <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-brand-token" />
+                    Product Image
+                  </h2>
+                  <p className="text-xs text-muted-token mt-0.5">
+                    Showcase photo (Optional)
+                  </p>
+                </div>
+                {hasImage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({ ...prev, image_url: "" }));
+                      setImgLoadError(false);
+                    }}
+                    className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                    title="Remove attached image"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+              />
+
+              {/* Interactive Image Preview / Drop Zone Box */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={`w-full h-52 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center overflow-hidden relative ${
+                  isDragging
+                    ? "border-brand-token bg-brand-token/10 scale-[1.01]"
+                    : "border-token bg-surface-elevated/20"
+                }`}
+              >
+                {hasImage && !imgLoadError ? (
+                  <>
+                    <img
+                      src={formData.image_url}
+                      alt={formData.name || "Attached preview"}
+                      className="w-full h-full object-cover"
+                      onError={() => setImgLoadError(true)}
+                      onLoad={() => setImgLoadError(false)}
+                    />
+                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[10px] font-medium text-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Cover Image
+                    </div>
+                    <div className="absolute bottom-2 right-2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1 rounded-lg bg-black/75 hover:bg-black/90 text-white text-[11px] font-medium flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                      >
+                        <Upload className="w-3 h-3" />
+                        Change
+                      </button>
+                    </div>
+                  </>
+                ) : hasImage && imgLoadError ? (
+                  <div className="p-4 text-center space-y-2">
+                    <AlertCircle className="w-6 h-6 text-amber-500 mx-auto" />
+                    <p className="text-xs font-semibold text-primary-token">Unable to load image</p>
+                    <p className="text-[11px] text-muted-token">Check if the URL or file format is valid.</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      icon={Upload}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Try Another File
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-4 text-center space-y-2.5">
+                    <div className="w-10 h-10 rounded-full bg-surface-elevated/80 border border-token flex items-center justify-center mx-auto text-muted-token">
+                      <FileImage className="w-5 h-5 text-brand-token" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-primary-token">No Image Attached</p>
+                      <p className="text-[11px] text-muted-token mt-0.5">
+                        Drag & drop here or browse files
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      icon={Upload}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Attach Image File
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Direct URL Input Option */}
+              <div className="space-y-1.5 pt-1">
+                <Input
+                  label="Or Image Web URL"
+                  placeholder="https://images.unsplash.com/photo-..."
+                  value={formData.image_url}
+                  onChange={(e) => {
+                    setFormData({ ...formData, image_url: e.target.value });
+                    setImgLoadError(false);
+                  }}
+                  helperText="Paste hosted CDN or direct web image URL"
+                />
+              </div>
+            </div>
+
+            {/* Card 4: Status & Form Submission */}
+            <div className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 space-y-4 shadow-xs">
+              <div className="border-b border-token pb-3">
+                <h2 className="text-sm font-bold text-primary-token flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-token" />
+                  Status & Publishing
+                </h2>
+                <p className="text-xs text-muted-token mt-0.5">
+                  Catalogue availability & save actions
+                </p>
+              </div>
+
+              <Select
+                label="Catalog Status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
+                options={[
+                  { value: 1, label: "Active (Available for Catalogue)" },
+                  { value: 0, label: "Inactive (Archived)" },
+                ]}
+                helperText="Active products appear in POS & Storefront"
+              />
+
+              <div className="space-y-2.5 pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  icon={Save}
+                  loading={submitting}
+                  className="w-full justify-center text-xs font-semibold"
+                >
+                  {isEditing ? "Save Changes" : "Create Product"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate("/catalogue/products")}
+                  className="w-full justify-center text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input
-              label="Material Composition"
-              placeholder="e.g. 100% Genuine Leather, Pure Cotton"
-              value={formData.material}
-              onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-            />
-
-            <Input
-              label="Gender Label"
-              placeholder="e.g. Men, Women, Unisex, Boys"
-              value={formData.gender_label}
-              onChange={(e) => setFormData({ ...formData, gender_label: e.target.value })}
-            />
-
-            <Input
-              label="Age Group"
-              placeholder="e.g. Adult, Teens, Kids, Infant"
-              value={formData.age_group}
-              onChange={(e) => setFormData({ ...formData, age_group: e.target.value })}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Care Instructions"
-              placeholder="e.g. Machine wash cold, dry clean only"
-              value={formData.care_instructions}
-              onChange={(e) => setFormData({ ...formData, care_instructions: e.target.value })}
-            />
-
-            <Select
-              label="Catalog Status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: parseInt(e.target.value, 10) })}
-              options={[
-                { value: 1, label: "Active (Available for Catalogue)" },
-                { value: 0, label: "Inactive (Archived)" },
-              ]}
-            />
-          </div>
-        </div>
-
-        {/* Bottom Actions: The ONLY Create Product button on the screen */}
-        <div className="flex items-center justify-end gap-3 pt-3 pb-8">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate("/catalogue/products")}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            size="sm"
-            icon={Save}
-            loading={submitting}
-          >
-            {isEditing ? "Save Changes" : "Create Product"}
-          </Button>
         </div>
       </form>
     </div>
