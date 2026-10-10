@@ -22,19 +22,15 @@ export default function EmployeesIndex() {
       const res = await populateApi.read("user", {
         limit: 100,
         fields: ["id", "username", "first_name", "last_name", "email", "phone", "role_id", "status", "is_superuser"],
+        populate: {
+          role: ["id", "name"],
+        },
       });
-      const data = Array.isArray(res) ? res : res.data || [];
-      if (data && data.length > 0) {
-        setEmployees(data);
-      } else {
-        throw new Error("No user records");
-      }
-    } catch {
-      setEmployees([
-        { id: 1, username: "admin", first_name: "Super", last_name: "Admin", email: "admin@axinix.com", phone: "+91 98765 43210", role_id: 1, status: 1, is_superuser: true },
-        { id: 2, username: "sarah.mgr", first_name: "Sarah", last_name: "Connor", email: "sarah@axinix.com", phone: "+91 98765 43211", role_id: 2, status: 1, is_superuser: false },
-        { id: 3, username: "john.cashier", first_name: "John", last_name: "Doe", email: "john@axinix.com", phone: "+91 98765 43212", role_id: 3, status: 1, is_superuser: false },
-      ]);
+      const data = Array.isArray(res) ? res : res?.data || [];
+      setEmployees(data);
+    } catch (err) {
+      toast.error(err?.response?.data?.error?.message || "Failed to load employee records from database");
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
