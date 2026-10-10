@@ -142,10 +142,10 @@ export default function Login() {
               
               <div>
                 <input 
-                  type={tab === 'email' ? "email" : "tel"}
+                  type={tab === 'email' ? "text" : "tel"}
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder={tab === 'email' ? "Enter your email" : "Enter phone number"}
+                  placeholder={tab === 'email' ? "Enter your email or username" : "Enter phone number"}
                   className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-900 text-sm placeholder-gray-400 transition-colors" 
                   required
                 />

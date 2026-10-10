@@ -32,6 +32,7 @@ export default function Input({
   icon: Icon,
   leftIcon: LeftIcon,
   rightIcon: RightIcon,
+  rightElement,
   prefix,
   suffix,
   disabled = false,
@@ -113,7 +114,7 @@ export default function Input({
             sizeStyles[size] || sizeStyles.sm
           } ${activeError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30" : "border-slate-300 dark:border-token"} ${
             ActiveLeftIcon ? "pl-9" : prefix ? "pl-7" : ""
-          } ${onClear && value ? "pr-8" : suffix || RightIcon || activeError ? "pr-9" : ""} ${className}`}
+           ${onClear && value ? "pr-8" : suffix || RightIcon || rightElement || activeError ? "pr-9" : ""} ${className}`}
           {...props}
         />
 
@@ -133,13 +134,19 @@ export default function Input({
           </div>
         )}
 
-        {!onClear && !activeError && RightIcon && (
+        {!onClear && !activeError && rightElement && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center z-10">
+            {rightElement}
+          </div>
+        )}
+
+        {!onClear && !activeError && !rightElement && RightIcon && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-token pointer-events-none">
             <RightIcon className="w-3.5 h-3.5" />
           </div>
         )}
 
-        {!onClear && !activeError && suffix && (
+        {!onClear && !activeError && !rightElement && suffix && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-secondary-token pointer-events-none">
             {suffix}
           </span>

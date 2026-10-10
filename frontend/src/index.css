@@ -366,3 +366,9 @@ html.dark textarea::placeholder {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 210, 210, 0.45);
 }
+
+/* Suppress Edge / Chromium native password reveal button to prevent duplicate collapsed eye icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}

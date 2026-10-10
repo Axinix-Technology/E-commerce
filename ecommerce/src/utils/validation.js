@@ -18,6 +18,7 @@ export const FIELD_PATTERNS = {
   hsn: /^\d{2,8}$/,
   phone: /^\+?[0-9]{7,15}$/,
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  usernameOrEmail: /^([a-zA-Z0-9_.-]+|[^\s@]+@[^\s@]+\.[^\s@]+)$/,
   pincode: /^\d{6}$/,
   gstin: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i,
   url: /^https?:\/\/.+/i,
@@ -39,6 +40,7 @@ export const ERROR_MESSAGES = {
   hsn: "HSN code must be 2 to 8 numeric digits with no letters or special characters.",
   phone: "Please enter a valid phone number (7 to 15 digits).",
   email: "Please enter a valid email address.",
+  usernameOrEmail: "Please enter a valid username or email address.",
   pincode: "PIN code must be exactly 6 numeric digits.",
   gstin: "Please enter a valid 15-character GSTIN (e.g. 33AAAAA0000A1Z5).",
   url: "URL must start with http:// or https://.",
@@ -86,6 +88,7 @@ export const sanitizeInput = (fieldType, val) => {
  */
 export const inferFieldType = (label, name, type) => {
   const identifier = `${label || ""} ${name || ""}`.toLowerCase();
+  if (identifier.includes("username") || identifier.includes("user or email") || identifier.includes("username or email")) return "usernameOrEmail";
   if (identifier.includes("hsn")) return "hsn";
   if (identifier.includes("gstin")) return "gstin";
   if (identifier.includes("pincode") || identifier.includes("postal")) return "pincode";
