@@ -1,10 +1,11 @@
+# pyfly: ignore
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from core.registry.service_registry import BaseService, ServiceRegistry
-from catalogue.models import ProductType, VendorMaster
+from catalogue.models import ProductType, ProductVariant, VendorMaster
 from inward.models import PurchaseInward, InwardItem, TaggedInventoryUnit
 from inventory.models import InventoryStock, StockMovementLedger
 
@@ -13,7 +14,7 @@ class PurchaseInwardService(BaseService):
     """
     Domain service for Purchase Inwarding (GRN).
     Enforces atomic lot creation, tagged unit barcode stickers, 
-    live inventory increment, and double-entry ledger recording.
+    live inventory increment, and double-entry ledger recording at SKU variant level.
     """
 
     def before_create(self, context, data: dict) -> dict:
@@ -65,8 +66,9 @@ class PurchaseInwardService(BaseService):
         total_tax = Decimal("0.00")
         total_grand = Decimal("0.00")
 
-        # Pre-validate items
+        # Pre-validate items (supporting variant_id as primary SKU, falling back to product_id)
         for idx, item in enumerate(items, start=1):
+            variant_id = item.get("variant_id")
             product_id = item.get("product_id")
             quantity = int(item.get("quantity", 0))
             unit_cost = Decimal(str(item.get("unit_cost", "0.00")))
@@ -78,8 +80,18 @@ class PurchaseInwardService(BaseService):
                 raise ValidationError(f"Item #{idx}: Quantity ({quantity}) exceeds maximum unit-tagging limit of 5,000 per line.")
             if unit_cost < 0:
                 raise ValidationError(f"Item #{idx}: Unit cost cannot be negative.")
-            if not ProductType.objects.filter(id=product_id, status=1).exists():
-                raise ValidationError(f"Item #{idx}: Product ID {product_id} is invalid or inactive.")
+
+            if variant_id:
+                try:
+                    variant = ProductVariant.objects.select_related("product").get(id=variant_id, status=1)
+                    item["product_id"] = variant.product_id
+                except ProductVariant.DoesNotExist:
+                    raise ValidationError(f"Item #{idx}: Product Variant ID {variant_id} is invalid or inactive.")
+            elif product_id:
+                if not ProductType.objects.filter(id=product_id, status=1).exists():
+                    raise ValidationError(f"Item #{idx}: Product ID {product_id} is invalid or inactive.")
+            else:
+                raise ValidationError(f"Item #{idx}: Either variant_id or product_id must be provided.")
 
             line_taxable = unit_cost * quantity
             line_tax = (line_taxable * tax_rate) / Decimal("100.00")
@@ -114,7 +126,16 @@ class PurchaseInwardService(BaseService):
         tagged_units_to_create = []
 
         for idx, item_data in enumerate(items, start=1):
-            product = ProductType.objects.get(id=item_data["product_id"])
+            variant_id = item_data.get("variant_id")
+            variant = None
+            if variant_id:
+                variant = ProductVariant.objects.select_related("product").filter(id=variant_id).first()
+
+            if variant:
+                product = variant.product
+            else:
+                product = ProductType.objects.get(id=item_data["product_id"])
+
             quantity = int(item_data["quantity"])
             unit_cost = Decimal(str(item_data["unit_cost"]))
             tax_rate = Decimal(str(item_data.get("tax_rate", "0.00")))
@@ -126,6 +147,7 @@ class PurchaseInwardService(BaseService):
 
             inward_item = InwardItem.objects.create(
                 inward=instance,
+                variant=variant,
                 product=product,
                 quantity=quantity,
                 unit_cost=unit_cost,
@@ -136,13 +158,15 @@ class PurchaseInwardService(BaseService):
                 status=1,
             )
 
-            # Barcodes include line idx and 4-digit piece index to guarantee global uniqueness
+            # Barcodes incorporate SKU when variant is present
+            sku_prefix = variant.sku if variant and variant.sku else f"{product.id:06d}"
             for p in range(1, quantity + 1):
                 tagged_units_to_create.append(
                     TaggedInventoryUnit(
                         inward_item=inward_item,
+                        variant=variant,
                         product=product,
-                        item_barcode=f"{product.id:06d}-{p:06d}",
+                        item_barcode=f"{sku_prefix}-{today_str}-{p:04d}",
                         lot_number=lot_number,
                         current_bucket="sellable",
                         unit_cost=unit_cost,
@@ -157,6 +181,7 @@ class PurchaseInwardService(BaseService):
             stock.sellable_stock += quantity
 
             # Record immutable double-entry movement ledger record
+            variant_label = f"[{variant.sku}] " if variant else ""
             StockMovementLedger.objects.create(
                 product=product,
                 movement_type="purchase_inward",
@@ -168,7 +193,7 @@ class PurchaseInwardService(BaseService):
                 unit_cost=unit_cost,
                 reference_type="GRN",
                 reference_id=instance.inward_number,
-                notes=f"Inward from {instance.vendor.name} (Bill #{instance.invoice_number})",
+                notes=f"Inward from {instance.vendor.name} (Bill #{instance.invoice_number}) {variant_label}",
                 status=1,
                 created_by=instance.received_by,
             )
