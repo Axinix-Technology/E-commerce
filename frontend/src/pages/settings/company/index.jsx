@@ -1,23 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Edit, FileText, Landmark, MapPin, Phone, Mail } from "lucide-react";
+import { Building2, Edit, FileText, Landmark, MapPin, Globe, RefreshCw } from "lucide-react";
 import { Button, Badge } from "../../../components/ui";
+import populateApi from "../../../api/populate.api";
 
 export default function CompanySettingsIndex() {
-  const [company] = useState({
-    legal_name: "Axinix Silk & Handlooms Private Limited",
-    trade_name: "Axinix Textiles",
-    gstin: "33AAACA1234F1Z8",
-    pan: "AAACA1234F",
-    cin: "U17111TN2026PTC109922",
-    email: "corporate@axinixtextiles.com",
-    phone: "+91 44 2815 9900",
-    registered_address: "No. 42, Usman Road, T. Nagar, Chennai - 600017, Tamil Nadu, India",
-    bank_name: "HDFC Bank Ltd",
-    bank_account: "50200088991122",
-    ifsc: "HDFC0000128",
-    branch: "T. Nagar Branch, Chennai",
-  });
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCompany = async () => {
+    setLoading(true);
+    try {
+      const res = await populateApi.read("company", { limit: 1 });
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) {
+        setCompany(list[0]);
+      } else {
+        setCompany(null);
+      }
+    } catch (err) {
+      console.warn("Could not fetch company master record:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompany();
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -29,25 +39,32 @@ export default function CompanySettingsIndex() {
             Company & Legal Entity Profile
           </h1>
           <p className="text-xs text-muted-token mt-0.5">
-            Statutory tax registrations, corporate credentials, and banking information for invoices
+            Statutory tax registrations, corporate credentials, and corporate location
           </p>
         </div>
-        <Link to="/settings/company/create">
-          <Button variant="primary" size="sm" icon={Edit}>
-            Edit Profile
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" icon={RefreshCw} loading={loading} onClick={fetchCompany}>
+            Sync
           </Button>
-        </Link>
+          <Link to="/settings/company/create">
+            <Button variant="primary" size="sm" icon={Edit}>
+              Edit Profile
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
-        <span>GSTIN: <strong className="text-primary-token font-mono font-medium">{company.gstin}</strong></span>
+        <span>Company Name: <strong className="text-primary-token font-medium">{company?.name || "—"}</strong></span>
         <span>•</span>
-        <span>PAN: <strong className="text-primary-token font-mono font-medium">{company.pan}</strong></span>
+        <span>GST No: <strong className="text-primary-token font-mono font-medium">{company?.gst_no || "—"}</strong></span>
         <span>•</span>
-        <span>CIN: <strong className="text-brand-token font-mono font-medium">{company.cin}</strong></span>
+        <span>City: <strong className="text-brand-token font-medium">{company?.city || "—"}</strong></span>
         <span>•</span>
-        <span>KYC Status: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">Verified</strong></span>
+        <span>State: <strong className="text-primary-token font-medium">{company?.state || "—"}</strong></span>
+        <span>•</span>
+        <span>Status: <strong className="text-emerald-700 dark:text-emerald-400 font-medium">{company ? "Active" : "Not Configured"}</strong></span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -59,50 +76,50 @@ export default function CompanySettingsIndex() {
           </h2>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">Legal Name:</span>
-              <span className="font-semibold text-primary-token">{company.legal_name}</span>
+              <span className="text-muted-token">Company Name</span>
+              <span className="font-semibold text-primary-token">{company?.name || "—"}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">Trade / Brand Name:</span>
-              <span className="font-semibold text-primary-token">{company.trade_name}</span>
+              <span className="text-muted-token">Legal Registered Name</span>
+              <span className="font-medium text-primary-token">{company?.legal_name || "—"}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">GSTIN:</span>
-              <span className="font-mono font-bold text-brand-token">{company.gstin}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">PAN:</span>
-              <span className="font-mono text-primary-token">{company.pan}</span>
+              <span className="text-muted-token">Short Brand Name</span>
+              <span className="font-medium text-brand-token">{company?.short_name || "—"}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-muted-token">CIN:</span>
-              <span className="font-mono text-primary-token">{company.cin}</span>
+              <span className="text-muted-token">GSTIN / Tax ID</span>
+              <span className="font-mono font-bold text-primary-token">{company?.gst_no || "—"}</span>
             </div>
           </div>
         </div>
 
-        {/* Banking & Settlement Details */}
+        {/* Operating Address */}
         <div className="p-4 sm:p-5 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-3 shadow-xs">
           <h2 className="text-xs font-bold text-primary-token uppercase tracking-wider flex items-center gap-2 border-b border-token pb-2">
-            <Landmark className="w-4 h-4 text-brand-token" />
-            Primary Bank Account (For Invoices)
+            <MapPin className="w-4 h-4 text-brand-token" />
+            Registered Business Address
           </h2>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">Bank Name:</span>
-              <span className="font-semibold text-primary-token">{company.bank_name}</span>
+              <span className="text-muted-token">Address Line 1</span>
+              <span className="text-primary-token">{company?.address_line_1 || "—"}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">Account Number:</span>
-              <span className="font-mono text-primary-token">{company.bank_account}</span>
+              <span className="text-muted-token">Address Line 2</span>
+              <span className="text-primary-token">{company?.address_line_2 || "—"}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-token">
-              <span className="text-muted-token">IFSC Code:</span>
-              <span className="font-mono text-brand-token font-bold">{company.ifsc}</span>
+              <span className="text-muted-token">City & State</span>
+              <span className="text-primary-token">
+                {company?.city ? `${company.city}, ${company.state}` : "—"}
+              </span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-muted-token">Branch:</span>
-              <span className="text-primary-token">{company.branch}</span>
+              <span className="text-muted-token">Postal Code / Country</span>
+              <span className="font-mono text-primary-token">
+                {company?.pincode ? `${company.pincode} (${company.country || "India"})` : "—"}
+              </span>
             </div>
           </div>
         </div>
