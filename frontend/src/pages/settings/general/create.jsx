@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Sliders } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button, Input, Select, Checkbox } from "../../../components/ui";
+import populateApi from "../../../api/populate.api";
 
 export default function GeneralSettingsCreate() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     currency: "INR (₹)",
     timezone: "Asia/Kolkata",
@@ -14,18 +16,60 @@ export default function GeneralSettingsCreate() {
     barcode_prefix: "BC-",
     stock_memo_validity_days: 14,
     low_stock_threshold: 5,
-    auto_backup: true,
-    whatsapp_receipts: true,
+    auto_backup: "Daily 02:00 AM",
+    sms_notifications: "Enabled",
+    whatsapp_receipts: "Enabled",
   });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true);
+      try {
+        const res = await populateApi.read("general_setting", { limit: 100 });
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const map = {};
+          list.forEach((item) => {
+            if (item.key) map[item.key] = item.value;
+          });
+          setForm((prev) => ({ ...prev, ...map }));
+        }
+      } catch (err) {
+        console.warn("Could not prefetch general settings:", err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      toast.success("General settings successfully saved and deployed!");
+    try {
+      const entries = Object.entries(form);
+      for (const [k, v] of entries) {
+        const payload = {
+          key: k,
+          value: String(v),
+          value_type: typeof v === "boolean" ? "boolean" : typeof v === "number" ? "number" : "string",
+          group: "general",
+          status: 1,
+        };
+        try {
+          await populateApi.create("general_setting", payload);
+        } catch {
+          // If already existing, update
+          await populateApi.update("general_setting", null, payload, { key: k });
+        }
+      }
+      toast.success("General settings successfully saved to database!");
       navigate("/settings/general");
-    }, 400);
+    } catch (err) {
+      toast.error(err?.response?.data?.error?.message || "Failed to save settings");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -62,12 +106,14 @@ export default function GeneralSettingsCreate() {
           />
 
           <Select
-            label="Timezone"
+            label="System Timezone"
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
             options={[
-              { label: "Asia/Kolkata (IST +5:30)", value: "Asia/Kolkata" },
-              { label: "UTC (Universal Coordinated Time)", value: "UTC" },
+              { value: "Asia/Kolkata", label: "Asia/Kolkata (IST +5:30)" },
+              { value: "UTC", label: "UTC (Coordinated Universal Time)" },
+              { value: "Asia/Dubai", label: "Asia/Dubai (GST +4:00)" },
+              { value: "America/New_York", label: "America/New_York (EST -5:00)" },
             ]}
           />
         </div>
@@ -76,68 +122,53 @@ export default function GeneralSettingsCreate() {
           <Input
             label="Invoice Prefix"
             required
-            fieldType="code"
             value={form.invoice_prefix}
-            onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value.toUpperCase() })}
+            onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value })}
           />
 
           <Input
-            label="Barcode Tag Prefix"
+            label="Barcode Prefix"
             required
-            fieldType="code"
             value={form.barcode_prefix}
-            onChange={(e) => setForm({ ...form, barcode_prefix: e.target.value.toUpperCase() })}
+            onChange={(e) => setForm({ ...form, barcode_prefix: e.target.value })}
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Stock Memo Validity (Days)"
+            label="Memo Validity (Days)"
             type="number"
-            min="1"
             value={form.stock_memo_validity_days}
             onChange={(e) => setForm({ ...form, stock_memo_validity_days: Number(e.target.value) })}
           />
 
           <Input
-            label="Low Stock Warning Threshold (Pcs)"
+            label="Low Stock Warning Limit"
             type="number"
-            min="1"
             value={form.low_stock_threshold}
             onChange={(e) => setForm({ ...form, low_stock_threshold: Number(e.target.value) })}
           />
         </div>
 
-        <div className="pt-2 border-t border-token space-y-3">
-          <Checkbox
-            label="Automated Database Backup"
-            description="Run automatic compressed database dump at 02:00 AM IST daily"
-            checked={form.auto_backup}
-            onChange={(e) => setForm({ ...form, auto_backup: e.target.checked })}
-          />
-
-          <Checkbox
-            label="Instant WhatsApp Digital Receipts"
-            description="Send e-invoice PDF link to customer mobile phone after checkout"
-            checked={form.whatsapp_receipts}
-            onChange={(e) => setForm({ ...form, whatsapp_receipts: e.target.checked })}
-          />
+        <div className="p-3 rounded-xl border border-token bg-surface-elevated/60 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-secondary-token font-medium">Automated Database Backups</span>
+            <Badge variant="brand">Daily 02:00 AM</Badge>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-secondary-token font-medium">WhatsApp / SMS Receipt Dispatch</span>
+            <Badge variant="brand">Active</Badge>
+          </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-token">
+        <div className="pt-2 flex justify-end gap-2">
           <Link to="/settings/general">
             <Button variant="outline" size="sm">
               Cancel
             </Button>
           </Link>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Save}
-            loading={submitting}
-            onClick={handleSubmit}
-          >
-            Save Defaults
+          <Button variant="primary" size="sm" icon={Save} loading={submitting} type="submit">
+            Save System Defaults
           </Button>
         </div>
       </form>

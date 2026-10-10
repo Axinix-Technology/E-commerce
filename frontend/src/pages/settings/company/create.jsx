@@ -1,35 +1,78 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button, Input } from "../../../components/ui";
+import populateApi from "../../../api/populate.api";
 
 export default function CompanySettingsCreate() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [companyId, setCompanyId] = useState(null);
   const [form, setForm] = useState({
-    legal_name: "Axinix Silk & Handlooms Private Limited",
-    trade_name: "Axinix Textiles",
-    gstin: "33AAACA1234F1Z8",
-    pan: "AAACA1234F",
-    cin: "U17111TN2026PTC109922",
-    email: "corporate@axinixtextiles.com",
-    phone: "+91 44 2815 9900",
-    registered_address: "No. 42, Usman Road, T. Nagar, Chennai - 600017, Tamil Nadu, India",
-    bank_name: "HDFC Bank Ltd",
-    bank_account: "50200088991122",
-    ifsc: "HDFC0000128",
-    branch: "T. Nagar Branch, Chennai",
+    name: "",
+    legal_name: "",
+    short_name: "",
+    gst_no: "",
+    address_line_1: "",
+    address_line_2: "",
+    city: "",
+    state: "",
+    country: "India",
+    pincode: "",
+    website_url: "",
   });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const loadCompany = async () => {
+      try {
+        const res = await populateApi.read("company", { limit: 1 });
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const comp = list[0];
+          setCompanyId(comp.id);
+          setForm({
+            name: comp.name || "",
+            legal_name: comp.legal_name || "",
+            short_name: comp.short_name || "",
+            gst_no: comp.gst_no || "",
+            address_line_1: comp.address_line_1 || "",
+            address_line_2: comp.address_line_2 || "",
+            city: comp.city || "",
+            state: comp.state || "",
+            country: comp.country || "India",
+            pincode: comp.pincode || "",
+            website_url: comp.website_url || "",
+          });
+        }
+      } catch (err) {
+        console.warn("Could not prefetch company master:", err.message);
+      }
+    };
+    loadCompany();
+  }, []);
+
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (!form.name.trim() || !form.legal_name.trim() || !form.city.trim() || !form.state.trim() || !form.pincode.trim()) {
+      toast.error("Please fill in required fields (Name, Legal Name, City, State, Pincode)");
+      return;
+    }
+
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      toast.success("Company profile and statutory tax credentials updated!");
+    try {
+      if (companyId) {
+        await populateApi.update("company", companyId, form);
+      } else {
+        await populateApi.create("company", { ...form, status: 1 });
+      }
+      toast.success("Company master profile successfully saved to database!");
       navigate("/settings/company");
-    }, 400);
+    } catch (err) {
+      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to save company profile");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -48,7 +91,7 @@ export default function CompanySettingsCreate() {
             Update Company Legal Profile
           </h1>
           <p className="text-xs text-muted-token mt-0.5">
-            Edit tax registration details, corporate billing credentials, and bank payout coordinates
+            Configure statutory tax registration details, corporate billing credentials, and headquarters address
           </p>
         </div>
       </div>
@@ -59,110 +102,89 @@ export default function CompanySettingsCreate() {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
+            label="Company Brand Name"
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="e.g. Axinix Textiles"
+          />
+
+          <Input
             label="Legal Registered Name"
             required
-            fieldType="name"
             value={form.legal_name}
             onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
-          />
-
-          <Input
-            label="Trade / Brand Name"
-            required
-            fieldType="name"
-            value={form.trade_name}
-            onChange={(e) => setForm({ ...form, trade_name: e.target.value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Input
-            label="GSTIN"
-            required
-            fieldType="gstin"
-            value={form.gstin}
-            onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
-          />
-
-          <Input
-            label="PAN Number"
-            fieldType="code"
-            value={form.pan}
-            onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase() })}
-          />
-
-          <Input
-            label="CIN Number"
-            fieldType="code"
-            value={form.cin}
-            onChange={(e) => setForm({ ...form, cin: e.target.value.toUpperCase() })}
+            placeholder="e.g. Axinix Handlooms Private Limited"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Official Corporate Email"
-            type="email"
-            fieldType="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            label="Short Brand Identifier"
+            value={form.short_name}
+            onChange={(e) => setForm({ ...form, short_name: e.target.value })}
+            placeholder="e.g. Axinix"
           />
 
           <Input
-            label="Corporate Phone"
-            fieldType="phone"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            label="GSTIN / Tax ID"
+            value={form.gst_no}
+            onChange={(e) => setForm({ ...form, gst_no: e.target.value.toUpperCase() })}
+            placeholder="e.g. 33AAAAA0000A1Z5"
           />
         </div>
 
-        <Input
-          label="Registered Business Address"
-          value={form.registered_address}
-          onChange={(e) => setForm({ ...form, registered_address: e.target.value })}
-        />
-
-        <div className="pt-2 border-t border-token grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Bank Name"
-            value={form.bank_name}
-            onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+            label="Address Line 1"
+            required
+            value={form.address_line_1}
+            onChange={(e) => setForm({ ...form, address_line_1: e.target.value })}
+            placeholder="Street address / Building"
           />
 
           <Input
-            label="Bank Account Number"
-            value={form.bank_account}
-            onChange={(e) => setForm({ ...form, bank_account: e.target.value })}
-          />
-
-          <Input
-            label="IFSC Code"
-            fieldType="code"
-            value={form.ifsc}
-            onChange={(e) => setForm({ ...form, ifsc: e.target.value.toUpperCase() })}
-          />
-
-          <Input
-            label="Bank Branch"
-            value={form.branch}
-            onChange={(e) => setForm({ ...form, branch: e.target.value })}
+            label="Address Line 2"
+            value={form.address_line_2}
+            onChange={(e) => setForm({ ...form, address_line_2: e.target.value })}
+            placeholder="Area / Landmark"
           />
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-token">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input
+            label="City"
+            required
+            value={form.city}
+            onChange={(e) => setForm({ ...form, city: e.target.value })}
+            placeholder="e.g. Chennai"
+          />
+
+          <Input
+            label="State"
+            required
+            value={form.state}
+            onChange={(e) => setForm({ ...form, state: e.target.value })}
+            placeholder="e.g. Tamil Nadu"
+          />
+
+          <Input
+            label="Postal Pincode"
+            required
+            value={form.pincode}
+            onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+            placeholder="600017"
+          />
+        </div>
+
+        <div className="pt-2 flex justify-end gap-2">
           <Link to="/settings/company">
             <Button variant="outline" size="sm">
               Cancel
             </Button>
           </Link>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Save}
-            loading={submitting}
-            onClick={handleSubmit}
-          >
-            Save Profile
+          <Button variant="primary" size="sm" icon={Save} loading={submitting} type="submit">
+            Save Company Master
           </Button>
         </div>
       </form>

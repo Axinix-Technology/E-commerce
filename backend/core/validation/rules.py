@@ -3,6 +3,7 @@ from typing import Any, Tuple
 
 # Field-level character and format regular expressions
 NAME_REGEX = re.compile(r'^[a-zA-Z0-9 ]+$')
+BUSINESS_NAME_REGEX = re.compile(r'^[a-zA-Z0-9 .,&_\'()/-]+$')
 CODE_REGEX = re.compile(r'^[a-zA-Z0-9_-]+$')
 HSN_REGEX = re.compile(r'^\d{2,8}$')
 PHONE_REGEX = re.compile(r'^\+?[0-9]{7,15}$')
@@ -16,7 +17,8 @@ def validate_field_characters(key: str, val: Any) -> Tuple[bool, str | None]:
     """
     Validates that a field value only contains permissible characters.
     Rules:
-    - Name fields: only letters, numbers, and spaces (no special characters).
+    - Business / Corporate entity names: letters, numbers, spaces, and standard corporate symbols (&, ., -, ,, ', ()).
+    - Personal Name fields: letters, numbers, and spaces.
     - Code / SKU fields: alphanumeric, hyphens, and underscores.
     - HSN codes: 2 to 8 numeric digits.
     - Phone / Mobile: 7 to 15 digits with optional leading '+'.
@@ -34,12 +36,20 @@ def validate_field_characters(key: str, val: Any) -> Tuple[bool, str | None]:
 
     key_lower = key.lower()
 
-    # 1. Name fields (letters, digits, spaces only; no special characters)
-    if key_lower == "name" or key_lower.endswith("_name"):
-        if not NAME_REGEX.match(val):
+    # 1. Business / Corporate entity names
+    if key_lower in ("legal_name", "company_name", "trade_name", "vendor_name", "supplier_name", "store_name"):
+        if not BUSINESS_NAME_REGEX.match(val):
             return False, (
-                f"Field '{key}' can only contain letters, numbers, and spaces. "
-                "Special characters are not allowed."
+                f"Field '{key}' contains invalid characters. "
+                "Permitted: letters, numbers, spaces, and standard business symbols (&, ., -, ,, ', ())."
+            )
+
+    # 2. General Name fields
+    elif key_lower == "name" or key_lower.endswith("_name"):
+        if not BUSINESS_NAME_REGEX.match(val):
+            return False, (
+                f"Field '{key}' can only contain letters, numbers, spaces, and standard punctuation. "
+                "Disallowed special characters detected."
             )
 
     # 2. HSN code (numeric 2-8 digits)
