@@ -39,9 +39,8 @@ export default function EmployeeCreate() {
       });
       toast.success("Employee created successfully!");
       navigate("/masters/employees");
-    } catch {
-      toast.success("Employee saved to master directory!");
-      navigate("/masters/employees");
+    } catch (err) {
+      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to create employee account");
     } finally {
       setSubmitting(false);
     }
