@@ -11,7 +11,16 @@ import {
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import { formatQty } from "../../../utils/formatters";
-import { Button, Table, FilterBar, Select, Badge } from "../../../components/ui";
+import {
+  Button,
+  Table,
+  FilterBar,
+  Select,
+  Badge,
+  Modal,
+  MetricBar,
+  PageHeader,
+} from "../../../components/ui";
 
 const SOURCE_OPTIONS = [
   { value: "ALL", label: "All Sources" },
@@ -207,70 +216,41 @@ export default function BranchTransferListingPage() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2.5 rounded-xl bg-[rgba(0,210,210,0.1)] border border-[rgba(0,210,210,0.25)] text-brand-token shadow-xs">
-            <Network className="w-5 h-5" />
+      <PageHeader
+        title="Inter-Branch Stock Transfers"
+        subtitle="Audit log and dispatch records for inventory moving between warehouses, distribution hubs, and retail stores."
+        icon={Network}
+        actions={
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              loading={loading}
+              onClick={fetchTransfers}
+              title="Refresh List"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={() => navigate("/inventory/branch-transfer/create")}
+            >
+              Dispatch New Transfer
+            </Button>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-primary-token">
-                Inter-Branch Stock Transfers
-              </h1>
-              <Badge variant="brand" size="xs">
-                Multi-Location Logistics
-              </Badge>
-            </div>
-            <p className="text-xs text-secondary-token">
-              Audit log and dispatch records for inventory moving between warehouses, distribution hubs, and retail stores.
-            </p>
-          </div>
-        </div>
+        }
+      />
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={RefreshCw}
-            loading={loading}
-            onClick={fetchTransfers}
-            title="Refresh List"
-          />
-
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Plus}
-            onClick={() => navigate("/inventory/branch-transfer/create")}
-          >
-            Dispatch New Transfer
-          </Button>
-        </div>
-      </div>
-
-      {/* Sleek Single-Line Summary Metric Bar (Rule 15: Zero as Dash) */}
-      <div className="glass-panel px-4 py-3 rounded-2xl border border-token flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-secondary-token font-medium">Total Transfers:</span>
-            <span className="font-mono font-bold text-primary-token">{formatQty(transfers.length)}</span>
-          </div>
-          <div className="h-3.5 w-[1px] bg-border-token hidden sm:block" />
-          <div className="flex items-center gap-2">
-            <span className="text-secondary-token font-medium">Total Dispatched Units:</span>
-            <span className="font-mono font-bold text-cyan-400">{formatQty(totalUnits)}</span>
-          </div>
-          <div className="h-3.5 w-[1px] bg-border-token hidden sm:block" />
-          <div className="flex items-center gap-2">
-            <span className="text-secondary-token font-medium">Products Moving:</span>
-            <span className="font-mono font-bold text-brand-token">{formatQty(uniqueProducts)}</span>
-          </div>
-        </div>
-        <div className="text-[11px] text-muted-token">
-          Rule 55 GST Compliant E-Way Logs
-        </div>
-      </div>
+      {/* Sleek Single-Line Summary Metric Bar (Rule 2) */}
+      <MetricBar
+        items={[
+          { label: "Total Transfers", value: transfers.length, isQty: true },
+          { label: "Total Dispatched Units", value: totalUnits, isQty: true, variant: "brand" },
+          { label: "Products Moving", value: uniqueProducts, isQty: true, variant: "emerald" },
+          { label: "Regulatory Standard", value: "Rule 55 GST Compliant" },
+        ]}
+      />
 
       {/* Standard Unified FilterBar */}
       <FilterBar
@@ -318,94 +298,81 @@ export default function BranchTransferListingPage() {
       />
 
       {/* Delivery Challan Modal Preview */}
-      {activeChallan && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-2xl rounded-2xl border border-token overflow-hidden shadow-2xl animate-fade-in">
-            <div className="p-4 bg-surface-elevated/70 border-b border-token flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-brand-token" />
-                <h3 className="text-sm font-bold text-primary-token">
-                  Statutory GST Delivery Challan #{activeChallan.dcNumber}
-                </h3>
+      <Modal
+        isOpen={Boolean(activeChallan)}
+        onClose={() => setActiveChallan(null)}
+        title={`Statutory GST Delivery Challan #${activeChallan?.dcNumber || ""}`}
+        icon={FileText}
+        size="lg"
+        headerAction={
+          <Button
+            variant="secondary"
+            size="xs"
+            icon={Printer}
+            onClick={() => window.print()}
+          >
+            Print
+          </Button>
+        }
+      >
+        {activeChallan && (
+          <div className="p-4 sm:p-5 rounded-xl bg-white text-black font-sans text-xs space-y-4 border border-slate-300">
+            <div className="flex justify-between items-start border-b border-black/20 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-black tracking-tight">AXINIX COMMERCE LTD.</h3>
+                <p className="text-[11px] text-gray-700">Central Logistics & Distribution Network</p>
+                <p className="text-[10px] text-gray-600">GSTIN: 33AAAAA0000A1Z5</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  icon={Printer}
-                  onClick={() => window.print()}
-                >
-                  Print
-                </Button>
-                <button
-                  onClick={() => setActiveChallan(null)}
-                  className="p-1.5 rounded-lg text-muted-token hover:text-primary-token hover:bg-surface transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <div className="text-right">
+                <span className="inline-block px-2 py-1 rounded bg-black text-white font-bold text-[10px] uppercase">
+                  GST Delivery Challan (Rule 55)
+                </span>
+                <p className="text-[11px] font-mono mt-1 text-black font-bold">DC No: {activeChallan.dcNumber}</p>
+                <p className="text-[10px] text-gray-600">Date: {activeChallan.date}</p>
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="p-6 rounded-xl bg-white text-black font-sans text-xs space-y-4 border border-slate-300">
-                <div className="flex justify-between items-start border-b border-black/20 pb-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-black tracking-tight">AXINIX COMMERCE LTD.</h3>
-                    <p className="text-[11px] text-gray-700">Central Logistics & Distribution Network</p>
-                    <p className="text-[10px] text-gray-600">GSTIN: 33AAAAA0000A1Z5</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="inline-block px-2 py-1 rounded bg-black text-white font-bold text-[10px] uppercase">
-                      GST Delivery Challan (Rule 55)
-                    </span>
-                    <p className="text-[11px] font-mono mt-1 text-black font-bold">DC No: {activeChallan.dcNumber}</p>
-                    <p className="text-[10px] text-gray-600">Date: {activeChallan.date}</p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 gap-4 border-b border-black/20 pb-3">
+              <div>
+                <span className="font-bold text-gray-700 block">Transfer Route:</span>
+                <span className="font-semibold text-black">{activeChallan.route}</span>
+                <p className="text-[11px] text-gray-600 mt-1">{activeChallan.vehicle}</p>
+              </div>
+              <div>
+                <span className="font-bold text-gray-700 block">Driver / Handler:</span>
+                <span className="font-semibold text-black">{activeChallan.contact}</span>
+                <p className="text-[11px] text-gray-600 mt-1">Nature: Stock Transfer Without Sale</p>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4 border-b border-black/20 pb-3">
-                  <div>
-                    <span className="font-bold text-gray-700 block">Transfer Route:</span>
-                    <span className="font-semibold text-black">{activeChallan.route}</span>
-                    <p className="text-[11px] text-gray-600 mt-1">{activeChallan.vehicle}</p>
-                  </div>
-                  <div>
-                    <span className="font-bold text-gray-700 block">Driver / Handler:</span>
-                    <span className="font-semibold text-black">{activeChallan.contact}</span>
-                    <p className="text-[11px] text-gray-600 mt-1">Nature: Stock Transfer Without Sale</p>
-                  </div>
-                </div>
+            <table className="w-full border border-black/20 text-left text-xs">
+              <thead className="bg-gray-100 border-b border-black/20 text-gray-800 font-bold">
+                <tr>
+                  <th className="p-2">Item Description</th>
+                  <th className="p-2 text-center">Quantity</th>
+                  <th className="p-2 text-center">Movement Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-2 font-medium">{activeChallan.productName}</td>
+                  <td className="p-2 text-center font-bold font-mono">{activeChallan.quantity} Units</td>
+                  <td className="p-2 text-center">Inter-Branch Outward</td>
+                </tr>
+              </tbody>
+            </table>
 
-                <table className="w-full border border-black/20 text-left text-xs">
-                  <thead className="bg-gray-100 border-b border-black/20 text-gray-800 font-bold">
-                    <tr>
-                      <th className="p-2">Item Description</th>
-                      <th className="p-2 text-center">Quantity</th>
-                      <th className="p-2 text-center">Movement Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-medium">{activeChallan.productName}</td>
-                      <td className="p-2 text-center font-bold font-mono">{activeChallan.quantity} Units</td>
-                      <td className="p-2 text-center">Inter-Branch Outward</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <div className="flex justify-between pt-8 text-[11px] text-gray-700">
-                  <div className="border-t border-black/40 pt-1 w-44 text-center">
-                    Authorized Signatory
-                  </div>
-                  <div className="border-t border-black/40 pt-1 w-44 text-center">
-                    Receiving Warehouse Incharge
-                  </div>
-                </div>
+            <div className="flex justify-between pt-8 text-[11px] text-gray-700">
+              <div className="border-t border-black/40 pt-1 w-44 text-center">
+                Authorized Signatory
+              </div>
+              <div className="border-t border-black/40 pt-1 w-44 text-center">
+                Receiving Warehouse Incharge
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

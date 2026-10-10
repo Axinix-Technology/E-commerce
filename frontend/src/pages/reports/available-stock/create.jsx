@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, PackageCheck, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { PackageCheck, Download } from "lucide-react";
 import toast from "react-hot-toast";
+import { PageHeader, Input, Select, Button } from "../../../components/ui";
 
 export default function AvailableStockCreate() {
   const navigate = useNavigate();
@@ -26,102 +27,92 @@ export default function AvailableStockCreate() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <div className="flex items-center gap-3">
-        <Link to="/reports/available-stock" className="p-1.5 rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-            <PackageCheck className="w-5 h-5 text-accent-primary" />
-            Capture Available Stock Audit Snapshot
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">Export physical sellable inventory counts with barcode serial breakdowns</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Capture Available Stock Audit Snapshot"
+        subtitle="Export physical sellable inventory counts with barcode serial breakdowns"
+        icon={PackageCheck}
+        backTo="/reports/available-stock"
+      />
 
-      <form onSubmit={handleSubmit} className="p-5 rounded-xl border border-border/50 bg-surface-card space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Audit Snapshot Title</label>
-          <input
-            type="text"
-            required
-            value={form.audit_title}
-            onChange={(e) => setForm({ ...form, audit_title: e.target.value })}
-            className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 md:p-6 rounded-2xl border border-token bg-surface-elevated/40 glass-panel space-y-4 shadow-xs"
+      >
+        <Input
+          label="Audit Snapshot Title"
+          required
+          value={form.audit_title}
+          onChange={(e) => setForm({ ...form, audit_title: e.target.value })}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="Branch / Location"
+            value={form.branch}
+            onChange={(e) => setForm({ ...form, branch: e.target.value })}
+            options={[
+              { value: "all", label: "All Branches & Central Warehouse" },
+              { value: "chennai", label: "Chennai Flagship" },
+              { value: "tnagar", label: "T. Nagar Showroom" },
+              { value: "central", label: "Central Warehouse" },
+              { value: "coimbatore", label: "Coimbatore Branch" },
+            ]}
+          />
+
+          <Select
+            label="Category Filter"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            options={[
+              { value: "all", label: "All Categories" },
+              { value: "sarees", label: "Sarees" },
+              { value: "dupattas", label: "Dupattas" },
+              { value: "kurtis", label: "Kurtis" },
+              { value: "accessories", label: "Accessories" },
+            ]}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Branch / Location</label>
-            <select
-              value={form.branch}
-              onChange={(e) => setForm({ ...form, branch: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="all">All Branches & Central Warehouse</option>
-              <option value="chennai">Chennai Flagship</option>
-              <option value="tnagar">T. Nagar Showroom</option>
-              <option value="central">Central Warehouse</option>
-              <option value="coimbatore">Coimbatore Branch</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select
+            label="Zero Stock Items"
+            value={form.zero_stock_filter}
+            onChange={(e) => setForm({ ...form, zero_stock_filter: e.target.value })}
+            options={[
+              { value: "exclude", label: "Exclude Zero Stock Items" },
+              { value: "include", label: "Include Out-of-Stock Items" },
+            ]}
+          />
 
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Category Filter</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="all">All Categories</option>
-              <option value="sarees">Sarees</option>
-              <option value="dupattas">Dupattas</option>
-              <option value="kurtis">Kurtis</option>
-              <option value="accessories">Accessories</option>
-            </select>
-          </div>
+          <Select
+            label="Export File Type"
+            value={form.format}
+            onChange={(e) => setForm({ ...form, format: e.target.value })}
+            options={[
+              { value: "excel", label: "Excel Sheet (.xlsx)" },
+              { value: "csv", label: "CSV Flat File (.csv)" },
+              { value: "pdf", label: "Formatted PDF Document" },
+            ]}
+          />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Zero Stock Items</label>
-            <select
-              value={form.zero_stock_filter}
-              onChange={(e) => setForm({ ...form, zero_stock_filter: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="exclude">Exclude Zero Stock Items</option>
-              <option value="include">Include Out-of-Stock Items</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Export File Type</label>
-            <select
-              value={form.format}
-              onChange={(e) => setForm({ ...form, format: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-ground border border-border/50 text-text-primary focus:outline-none focus:border-accent-primary"
-            >
-              <option value="excel">Excel Sheet (.xlsx)</option>
-              <option value="csv">CSV Flat File (.csv)</option>
-              <option value="pdf">Formatted PDF Document</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-          <Link to="/reports/available-stock" className="px-3 py-1.5 text-xs rounded-lg border border-border/50 text-text-muted hover:text-text-primary transition">
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 transition shadow-sm disabled:opacity-50"
+        <div className="flex justify-end gap-2 pt-3 border-t border-token">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/reports/available-stock")}
           >
-            <Download className="w-3.5 h-3.5" />
-            {submitting ? "Compiling..." : "Export Snapshot"}
-          </button>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={Download}
+            loading={submitting}
+          >
+            Export Snapshot
+          </Button>
         </div>
       </form>
     </div>

@@ -4,6 +4,7 @@ import { useAuth } from "../context/authProvider";
 import axiosInstance from "../api/axiosInstance";
 import { Building2, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
+import { Input, Button } from "../components/ui";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -125,76 +126,54 @@ export default function Login() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-secondary-token mb-1.5">
-                Username or Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-token">
-                  <User className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username or email"
-                  required
-                  autoComplete="username"
-                  disabled={loading}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl glass-input text-sm text-primary-token placeholder:text-muted-token focus:outline-none focus:ring-1 focus:ring-[var(--brand-secondary)]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-secondary-token">
-                  Password
-                </label>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-token">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  autoComplete="current-password"
-                  disabled={loading}
-                  className="w-full pl-9 pr-10 py-2.5 rounded-xl glass-input text-sm text-primary-token placeholder:text-muted-token focus:outline-none focus:ring-1 focus:ring-[var(--brand-secondary)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-token hover:text-primary-token transition-colors cursor-pointer"
-                  tabIndex={-1}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
+            <Input
+              label="Username or Email"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username or email"
+              required
+              autoComplete="username"
               disabled={loading}
-              className="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[var(--brand-secondary)] to-[var(--brand-secondary-bright)] hover:brightness-110 text-[#081C2C] text-sm font-bold shadow-lg shadow-[rgba(0,210,210,0.25)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              icon={User}
+              size="md"
+            />
+
+            <div className="relative">
+              <Input
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+                disabled={loading}
+                icon={Lock}
+                size="md"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-[34px] text-muted-token hover:text-primary-token transition-colors cursor-pointer"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={loading}
+              rightIcon={ArrowRight}
+              className="mt-2"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-[#081C2C]" />
-                  <span>Signing In...</span>
-                </>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4 text-[#081C2C]" />
-                </>
-              )}
-            </button>
+              Sign In
+            </Button>
           </form>
         </div>
 

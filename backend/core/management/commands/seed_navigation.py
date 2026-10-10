@@ -414,11 +414,7 @@ class Command(BaseCommand):
         # 14. Settings Submenus
         settings_submenus = [
             {"title": "Store Profile", "icon": "Building2", "main_route": "/settings/store", "order": 1, "parent": settings_root, "caps": []},
-            {"title": "Staff Personnel", "icon": "Users", "main_route": "/settings/staff", "order": 2, "parent": settings_root, "caps": []},
-            {"title": "Roles & Permissions", "icon": "ShieldCheck", "main_route": "/settings/roles-permissions", "order": 3, "parent": settings_root, "caps": []},
-            {"title": "System Capabilities", "icon": "Key", "main_route": "/settings/capabilities", "order": 4, "parent": settings_root, "caps": []},
-            {"title": "General Settings", "icon": "Sliders", "main_route": "/settings/general", "order": 5, "parent": settings_root, "caps": []},
-            {"title": "Company Profile", "icon": "Building2", "main_route": "/settings/company", "order": 6, "parent": settings_root, "caps": []},
+            {"title": "Roles & Permissions", "icon": "ShieldCheck", "main_route": "/settings/roles-permissions", "order": 2, "parent": settings_root, "caps": []},
         ]
 
         # 15. Consumer Storefront Roots & Submenus

@@ -11,7 +11,16 @@ import {
 import populateApi from "../../../api/populate.api";
 import toast from "react-hot-toast";
 import { formatQty } from "../../../utils/formatters";
-import { Button, Input, Badge, FilterBar, Select } from "../../../components/ui";
+import {
+  Button,
+  Input,
+  Badge,
+  FilterBar,
+  Select,
+  Table,
+  MetricBar,
+  PageHeader,
+} from "../../../components/ui";
 
 export default function CategoryListPage() {
   const navigate = useNavigate();
@@ -80,41 +89,111 @@ export default function CategoryListPage() {
     return true;
   });
 
+  const columns = [
+    {
+      key: "id",
+      header: "# ID",
+      width: "80px",
+      render: (id) => <span className="font-mono text-muted-token">{id}</span>,
+    },
+    {
+      key: "name",
+      header: "Category Name",
+      render: (_, cat) => (
+        <div>
+          <span className="font-semibold text-primary-token">{cat.name}</span>
+          {cat.description && (
+            <p className="text-[10px] text-muted-token font-normal truncate max-w-xs">{cat.description}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "parent",
+      header: "Parent Category",
+      render: (_, cat) =>
+        cat.parent ? (
+          <Badge variant="neutral">{cat.parent.name}</Badge>
+        ) : (
+          <span className="text-muted-token text-[11px]">— Root —</span>
+        ),
+    },
+    {
+      key: "hsn_code",
+      header: "HSN Code",
+      render: (hsn) => <span className="font-mono text-secondary-token">{hsn || "—"}</span>,
+    },
+    {
+      key: "tax_group",
+      header: "GST Slab",
+      render: (_, cat) =>
+        cat.tax_group ? (
+          <Badge variant="amber">
+            {cat.tax_group.name} ({cat.tax_group.rate}%)
+          </Badge>
+        ) : (
+          <span className="text-muted-token text-[11px]">—</span>
+        ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (status) => (
+        <Badge variant={status === 1 ? "emerald" : "rose"} dot>
+          {status === 1 ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: (_, cat) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <Link to={`/catalogue/categories/create?id=${cat.id}`} title="Edit Category">
+            <Button size="xs" variant="ghost" icon={Edit2} />
+          </Link>
+          <Button
+            size="xs"
+            variant="danger"
+            icon={Trash2}
+            onClick={() => handleDelete(cat)}
+            title="Delete Category"
+          />
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-xl bg-[rgba(0,210,210,0.1)] border border-[rgba(0,210,210,0.25)] text-brand-token shadow-xs">
-              <FolderTree className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-primary-token">Category Master</h1>
-              </div>
-              <p className="text-xs text-secondary-token">
-                Manage product taxonomy, nested hierarchies, and HSN tax codes.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <Link to="/catalogue/categories/create">
-          <Button variant="primary" size="sm" icon={Plus}>
-            Add Category
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Category Master"
+        subtitle="Manage product taxonomy, nested hierarchies, and HSN tax codes."
+        icon={FolderTree}
+        actions={
+          <Link to="/catalogue/categories/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Add Category
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 rounded-xl bg-surface-elevated/40 border border-token text-xs text-muted-token">
-        <span>Total Categories: <strong className="text-primary-token font-medium">{formatQty(totalCount)}</strong></span>
-        <span>•</span>
-        <span>Active Categories: <strong className="text-emerald-400 font-medium">{formatQty(categories.filter(c => c.status !== 0).length)}</strong></span>
-        <span>•</span>
-        <span>Page: <strong className="text-brand-token font-medium">{page} of {totalPages}</strong></span>
-      </div>
+      <MetricBar
+        items={[
+          { label: "Total Categories", value: totalCount, isQty: true },
+          {
+            label: "Active Categories",
+            value: categories.filter((c) => c.status !== 0).length,
+            isQty: true,
+            variant: "emerald",
+          },
+          { label: "Page", value: `${page} of ${totalPages}`, variant: "brand" },
+        ]}
+      />
 
       {/* FilterBar */}
       <FilterBar
@@ -144,7 +223,7 @@ export default function CategoryListPage() {
               value={hierarchyFilter}
               onChange={(e) => setHierarchyFilter(e.target.value)}
               options={[
-                { label: "All Hierarchy", value: "all" },
+                { label: "All Levels", value: "all" },
                 { label: "Root Categories Only", value: "root" },
                 { label: "Sub-Categories Only", value: "sub" },
               ]}
@@ -171,116 +250,18 @@ export default function CategoryListPage() {
       </FilterBar>
 
       {/* Data Table */}
-      <div className="glass-panel rounded-2xl border border-token overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-surface-elevated/60 text-secondary-token uppercase tracking-wider font-semibold border-b border-token">
-              <tr>
-                <th className="py-3 px-4"># ID</th>
-                <th className="py-3 px-4">Category Name</th>
-                <th className="py-3 px-4">Parent Category</th>
-                <th className="py-3 px-4">HSN Code</th>
-                <th className="py-3 px-4">GST Slab</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-token text-primary-token">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="py-12 text-center text-muted-token">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-token" />
-                    Loading categories...
-                  </td>
-                </tr>
-              ) : displayCategories.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="py-12 text-center text-muted-token">
-                    <p className="font-semibold text-secondary-token mb-1">No categories found</p>
-                    <p className="text-xs text-muted-token mb-3">Create your first category or adjust your search filters.</p>
-                    <Link to="/catalogue/categories/create">
-                      <Button variant="primary" size="xs" icon={Plus}>
-                        Add Category
-                      </Button>
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                displayCategories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-surface-elevated/40 transition-colors">
-                    <td className="py-3 px-4 font-mono text-muted-token">{cat.id}</td>
-                    <td className="py-3 px-4 font-semibold text-primary-token">
-                      {cat.name}
-                      {cat.description && (
-                        <p className="text-[10px] text-muted-token font-normal truncate max-w-xs">{cat.description}</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-secondary-token">
-                      {cat.parent ? (
-                        <Badge variant="neutral">{cat.parent.name}</Badge>
-                      ) : (
-                        <span className="text-muted-token text-[11px]">— Root —</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-secondary-token">{cat.hsn_code || "—"}</td>
-                    <td className="py-3 px-4 text-secondary-token">
-                      {cat.tax_group ? (
-                        <Badge variant="amber">{cat.tax_group.name} ({cat.tax_group.rate}%)</Badge>
-                      ) : (
-                        <span className="text-muted-token text-[11px]">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant={cat.status === 1 ? "emerald" : "rose"} dot>
-                        {cat.status === 1 ? "Active" : "Inactive"}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link to={`/catalogue/categories/create?id=${cat.id}`} title="Edit Category">
-                          <Button size="xs" variant="ghost" icon={Edit2} />
-                        </Link>
-                        <Button
-                          size="xs"
-                          variant="danger"
-                          icon={Trash2}
-                          onClick={() => handleDelete(cat)}
-                          title="Delete Category"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="p-3 border-t border-token flex items-center justify-between text-xs text-secondary-token">
-            <span>Page {page} of {totalPages}</span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="xs"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="xs"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+      <Table
+        columns={columns}
+        data={displayCategories}
+        loading={loading}
+        emptyMessage="No categories found matching your search filters."
+        pagination={{
+          page,
+          totalPages,
+          onPageChange: setPage,
+          totalItems: totalCount,
+        }}
+      />
     </div>
   );
 }

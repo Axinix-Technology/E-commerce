@@ -7,3 +7,7 @@ export { default as Table } from "./Table";
 export { default as FilterBar } from "./FilterBar";
 export { default as ImageRenderer } from "./ImageRenderer";
 export { default as Badge } from "./Badge";
+export { default as MetricBar } from "./MetricBar";
+export { default as Modal } from "./Modal";
+export { default as PageHeader } from "./PageHeader";
+export { default as Pagination } from "./Pagination";

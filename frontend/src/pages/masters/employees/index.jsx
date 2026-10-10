@@ -2,12 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Users, Plus, Mail, Phone, ShieldCheck, RefreshCw } from "lucide-react";
 import populateApi from "../../../api/populate.api";
-import { Button, Table, Badge, FilterBar, Select } from "../../../components/ui";
-
-const formatQty = (val) => {
-  const num = Number(val);
-  return !num || num === 0 ? "—" : num.toLocaleString();
-};
+import { Button, Table, Badge, FilterBar, Select, MetricBar, PageHeader } from "../../../components/ui";
+import { formatQty } from "../../../utils/formatters";
 
 export default function EmployeesIndex() {
   const [employees, setEmployees] = useState([]);
@@ -128,37 +124,28 @@ export default function EmployeesIndex() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-surface-elevated/40 border border-teal-200/80 dark:border-token text-brand-token shadow-xs">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-primary-token tracking-tight">
-              Employees & Personnel Master
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-muted-token mt-0.5">
-              Manage enterprise staff accounts, roles, and branch assignments
-            </p>
-          </div>
-        </div>
-        <Link to="/masters/employees/create">
-          <Button variant="primary" size="sm" icon={Plus}>
-            Add Employee
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Employees & Personnel Master"
+        subtitle="Manage enterprise staff accounts, roles, and branch assignments"
+        icon={Users}
+        actions={
+          <Link to="/masters/employees/create">
+            <Button variant="primary" size="sm" icon={Plus}>
+              Add Employee
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Rule 2: Minimalist Single-Line Metric Summary Bar */}
-      <div className="glass-panel flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 rounded-xl text-xs text-secondary-token shadow-xs">
-        <span>Total Staff: <strong className="text-primary-token font-bold">{formatQty(totalStaff)}</strong></span>
-        <span>•</span>
-        <span>Active Accounts: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{formatQty(activeStaff)}</strong></span>
-        <span>•</span>
-        <span>Administrators: <strong className="text-teal-600 dark:text-cyan-400 font-bold">{formatQty(adminCount)}</strong></span>
-        <span>•</span>
-        <span>Security Tier: <strong className="text-primary-token font-bold">RBAC Scoped</strong></span>
-      </div>
+      <MetricBar
+        items={[
+          { label: "Total Staff", value: totalStaff, isQty: true },
+          { label: "Active Accounts", value: activeStaff, isQty: true, variant: "emerald" },
+          { label: "Administrators", value: adminCount, isQty: true, variant: "brand" },
+          { label: "Security Tier", value: "RBAC Scoped" },
+        ]}
+      />
 
       {/* FilterBar */}
       <FilterBar

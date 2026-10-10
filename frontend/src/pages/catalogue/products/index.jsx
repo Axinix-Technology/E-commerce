@@ -37,7 +37,7 @@ export default function ProductListPage() {
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    populateApi.read("category", { limit: 100 })
+    populateApi.read("category_master", { limit: 100 })
       .then((res) => {
         const data = Array.isArray(res) ? res : res?.data || [];
         setCategories(data);
@@ -65,6 +65,7 @@ export default function ProductListPage() {
         limit: 15,
         populate: {
           category: ["id", "name"],
+          images: ["id", "image_url", "is_primary"],
         },
         sort: ["-id"],
       });
@@ -107,16 +108,35 @@ export default function ProductListPage() {
     },
     {
       header: "Product Item",
-      render: (p) => (
-        <div>
-          <div className="font-semibold text-primary-token text-xs">{p.name}</div>
-          {p.slug && (
-            <span className="font-mono text-[11px] text-muted-token">
-              /{p.slug}
-            </span>
-          )}
-        </div>
-      ),
+      render: (p) => {
+        const coverImg = p.images?.find((img) => img.is_primary)?.image_url || p.images?.[0]?.image_url;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-surface-elevated/80 border border-token flex items-center justify-center overflow-hidden shrink-0">
+              {coverImg ? (
+                <img
+                  src={coverImg}
+                  alt={p.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <Package className="w-4 h-4 text-muted-token/50" />
+              )}
+            </div>
+            <div>
+              <div className="font-semibold text-primary-token text-xs">{p.name}</div>
+              {p.slug && (
+                <span className="font-mono text-[11px] text-muted-token">
+                  /{p.slug}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       header: "Category",

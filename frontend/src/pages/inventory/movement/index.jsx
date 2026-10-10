@@ -10,7 +10,16 @@ import {
 } from "lucide-react";
 import populateApi from "../../../api/populate.api";
 import { formatQty } from "../../../utils/formatters";
-import { Button, Table, FilterBar, Select, Badge } from "../../../components/ui";
+import {
+  Button,
+  Table,
+  FilterBar,
+  Select,
+  Badge,
+  Modal,
+  MetricBar,
+  PageHeader,
+} from "../../../components/ui";
 
 const OPERATION_OPTIONS = [
   { value: "ALL", label: "All Operations" },
@@ -227,75 +236,42 @@ export default function StockMovementListingPage() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2.5 rounded-xl bg-[rgba(0,210,210,0.1)] border border-[rgba(0,210,210,0.25)] text-brand-token shadow-xs">
-            <ArrowRightLeft className="w-5 h-5" />
+      <PageHeader
+        title="Stock Movements & Approval Memo"
+        subtitle="Audit trail and movement ledger across Photoshoots, PR Memos, Repair Workshops, Quarantine, and Scrap."
+        icon={ArrowRightLeft}
+        actions={
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              loading={loading}
+              onClick={fetchMovements}
+              title="Refresh List"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={() => navigate("/inventory/movement/create")}
+            >
+              New Stock Movement
+            </Button>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-primary-token">
-                Stock Movements & Approval Memo
-              </h1>
-              <Badge variant="brand" size="xs">
-                Bucket Operations
-              </Badge>
-            </div>
-            <p className="text-xs text-secondary-token">
-              Audit trail and movement ledger across Photoshoots, PR Memos, Repair Workshops, Quarantine, and Scrap.
-            </p>
-          </div>
-        </div>
+        }
+      />
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={RefreshCw}
-            loading={loading}
-            onClick={fetchMovements}
-            title="Refresh List"
-          />
-
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Plus}
-            onClick={() => navigate("/inventory/movement/create")}
-          >
-            New Stock Movement
-          </Button>
-        </div>
-      </div>
-
-      {/* Sleek Single-Line Summary Metric Bar (Rule 15: Zero as Dash) */}
-      <div className="glass-panel px-4 py-3 rounded-2xl border border-token flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-secondary-token font-medium">Total Ledger Records:</span>
-            <span className="font-mono font-bold text-primary-token">{formatQty(movements.length)}</span>
-          </div>
-          <div className="h-3.5 w-[1px] bg-border-token hidden sm:block" />
-          <div className="flex items-center gap-2">
-            <span className="text-amber-400 font-medium">In Approval Memo:</span>
-            <span className="font-mono font-bold text-amber-400">{formatQty(approvalCount)}</span>
-          </div>
-          <div className="h-3.5 w-[1px] bg-border-token hidden sm:block" />
-          <div className="flex items-center gap-2">
-            <span className="text-cyan-400 font-medium">In Repair Workshop:</span>
-            <span className="font-mono font-bold text-cyan-400">{formatQty(repairCount)}</span>
-          </div>
-          <div className="h-3.5 w-[1px] bg-border-token hidden sm:block" />
-          <div className="flex items-center gap-2">
-            <span className="text-blue-400 font-medium">In Quarantine Hold:</span>
-            <span className="font-mono font-bold text-blue-400">{formatQty(quarantineCount)}</span>
-          </div>
-        </div>
-        <div className="text-[11px] text-muted-token">
-          Double-Entry Ledger Audit
-        </div>
-      </div>
+      {/* Sleek Single-Line Summary Metric Bar (Rule 2) */}
+      <MetricBar
+        items={[
+          { label: "Total Ledger Records", value: movements.length, isQty: true },
+          { label: "In Approval Memo", value: approvalCount, isQty: true, variant: "amber" },
+          { label: "In Repair Workshop", value: repairCount, isQty: true, variant: "brand" },
+          { label: "In Quarantine Hold", value: quarantineCount, isQty: true, variant: "primary" },
+          { label: "Audit Standard", value: "Double-Entry Ledger" },
+        ]}
+      />
 
       {/* Standard Unified FilterBar */}
       <FilterBar
@@ -343,96 +319,83 @@ export default function StockMovementListingPage() {
       />
 
       {/* Returnable Gate Pass Modal Preview */}
-      {activeGatePass && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-2xl rounded-2xl border border-token overflow-hidden shadow-2xl animate-fade-in">
-            <div className="p-4 bg-surface-elevated/70 border-b border-token flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-brand-token" />
-                <h3 className="text-sm font-bold text-primary-token">
-                  Returnable Delivery Gate Pass #{activeGatePass.movementId}
-                </h3>
+      <Modal
+        isOpen={Boolean(activeGatePass)}
+        onClose={() => setActiveGatePass(null)}
+        title={`Returnable Delivery Gate Pass #${activeGatePass?.movementId || ""}`}
+        icon={FileText}
+        size="lg"
+        headerAction={
+          <Button
+            variant="secondary"
+            size="xs"
+            icon={Printer}
+            onClick={() => window.print()}
+          >
+            Print
+          </Button>
+        }
+      >
+        {activeGatePass && (
+          <div className="p-4 sm:p-5 rounded-xl bg-white text-black font-sans text-xs space-y-4 border border-slate-300">
+            <div className="flex justify-between items-start border-b border-black/20 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-black tracking-tight">AXINIX COMMERCE LTD.</h3>
+                <p className="text-[11px] text-gray-700">Central Warehouse & Fulfillment Hub</p>
+                <p className="text-[10px] text-gray-600">GSTIN: 33AAAAA0000A1Z5</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  icon={Printer}
-                  onClick={() => window.print()}
-                >
-                  Print
-                </Button>
-                <button
-                  onClick={() => setActiveGatePass(null)}
-                  className="p-1.5 rounded-lg text-muted-token hover:text-primary-token hover:bg-surface transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <div className="text-right">
+                <span className="inline-block px-2 py-1 rounded bg-black text-white font-bold text-[10px] uppercase">
+                  Returnable Gate Pass
+                </span>
+                <p className="text-[11px] font-mono mt-1 text-black font-bold">Doc: {activeGatePass.movementId}</p>
+                <p className="text-[10px] text-gray-600">Date: {activeGatePass.date}</p>
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="p-6 rounded-xl bg-white text-black font-sans text-xs space-y-4 border border-slate-300">
-                <div className="flex justify-between items-start border-b border-black/20 pb-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-black tracking-tight">AXINIX COMMERCE LTD.</h3>
-                    <p className="text-[11px] text-gray-700">Central Warehouse & Fulfillment Hub</p>
-                    <p className="text-[10px] text-gray-600">GSTIN: 33AAAAA0000A1Z5</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="inline-block px-2 py-1 rounded bg-black text-white font-bold text-[10px] uppercase">
-                      Returnable Gate Pass
-                    </span>
-                    <p className="text-[11px] font-mono mt-1 text-black font-bold">Doc: {activeGatePass.movementId}</p>
-                    <p className="text-[10px] text-gray-600">Date: {activeGatePass.date}</p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 gap-4 border-b border-black/20 pb-3">
+              <div>
+                <span className="font-bold text-gray-700 block">Issued To (Recipient):</span>
+                <span className="font-semibold text-black">{activeGatePass.recipient}</span>
+                {activeGatePass.remarks && (
+                  <p className="text-[11px] text-gray-600 mt-1">Ref: {activeGatePass.remarks}</p>
+                )}
+              </div>
+              <div>
+                <span className="font-bold text-gray-700 block">Operation:</span>
+                <span className="font-semibold text-black">{activeGatePass.movementType}</span>
+                <p className="text-[11px] text-gray-600 mt-1">Status: Logged to double-entry ledger</p>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4 border-b border-black/20 pb-3">
-                  <div>
-                    <span className="font-bold text-gray-700 block">Issued To (Recipient):</span>
-                    <span className="font-semibold text-black">{activeGatePass.recipient}</span>
-                    {activeGatePass.remarks && (
-                      <p className="text-[11px] text-gray-600 mt-1">Ref: {activeGatePass.remarks}</p>
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-bold text-gray-700 block">Operation:</span>
-                    <span className="font-semibold text-black">{activeGatePass.movementType}</span>
-                    <p className="text-[11px] text-gray-600 mt-1">Status: Logged to double-entry ledger</p>
-                  </div>
-                </div>
+            <table className="w-full border border-black/20 text-left text-xs">
+              <thead className="bg-gray-100 border-b border-black/20 text-gray-800 font-bold">
+                <tr>
+                  <th className="p-2">Item Description</th>
+                  <th className="p-2 text-center">Quantity</th>
+                  <th className="p-2 text-center">Policy Nature</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-2 font-medium">{activeGatePass.productName}</td>
+                  <td className="p-2 text-center font-bold font-mono">{activeGatePass.quantity} Units</td>
+                  <td className="p-2 text-center">Returnable Internal Movement</td>
+                </tr>
+              </tbody>
+            </table>
 
-                <table className="w-full border border-black/20 text-left text-xs">
-                  <thead className="bg-gray-100 border-b border-black/20 text-gray-800 font-bold">
-                    <tr>
-                      <th className="p-2">Item Description</th>
-                      <th className="p-2 text-center">Quantity</th>
-                      <th className="p-2 text-center">Policy Nature</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="p-2 font-medium">{activeGatePass.productName}</td>
-                      <td className="p-2 text-center font-bold font-mono">{activeGatePass.quantity} Units</td>
-                      <td className="p-2 text-center">Returnable Internal Movement</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <div className="flex justify-between pt-8 text-[11px] text-gray-700">
-                  <div className="border-t border-black/40 pt-1 w-44 text-center">
-                    Authorized Store Incharge
-                  </div>
-                  <div className="border-t border-black/40 pt-1 w-44 text-center">
-                    Recipient Signature
-                  </div>
-                </div>
+            <div className="flex justify-between pt-8 text-[11px] text-gray-700">
+              <div className="border-t border-black/40 pt-1 w-44 text-center">
+                Authorized Store Incharge
+              </div>
+              <div className="border-t border-black/40 pt-1 w-44 text-center">
+                Recipient Signature
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

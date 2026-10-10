@@ -1,6 +1,7 @@
 import React from "react";
 import { RefreshCw, Inbox } from "lucide-react";
 import { formatQty } from "../../utils/formatters";
+import Pagination from "./Pagination";
 
 /**
  * Standard Configurable Data Table
@@ -14,6 +15,7 @@ import { formatQty } from "../../utils/formatters";
  * - emptyIcon: Lucide icon component
  * - onRowClick: (row, index) => void
  * - headerAction: ReactNode
+ * - pagination?: { page: number, totalPages: number, onPageChange: (p) => void, totalItems?: number }
  */
 export default function Table({
   columns = [],
@@ -27,6 +29,7 @@ export default function Table({
   headerTitle,
   headerAction,
   striped = false,
+  pagination,
 }) {
   const cellSizes = {
     sm: "py-2 px-3 text-xs",
@@ -136,6 +139,15 @@ export default function Table({
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={pagination.onPageChange}
+          totalItems={pagination.totalItems}
+        />
+      )}
     </div>
   );
 }

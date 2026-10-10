@@ -253,7 +253,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed = false, onToggle
               has_children: true,
               children: [
                 { id: 91, title: "Store Profile", main_route: "/settings/store", icon: "Building2" },
-                { id: 92, title: "Staff Directory", main_route: "/settings/staff", icon: "Users" },
                 { id: 93, title: "Roles & Permissions", main_route: "/settings/roles-permissions", icon: "ShieldCheck" },
               ],
             },
