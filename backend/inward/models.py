@@ -57,9 +57,17 @@ class PurchaseInward(models.Model):
         return f"{self.inward_number} - {self.vendor.name}"
 
 
-@register_model("inward_item", table_type="transaction", status_field="status")
+@register_model("inward_item", table_type="transaction", status_field="status", aliases=["purchase_inward_item"])
 class InwardItem(models.Model):
     inward = models.ForeignKey(PurchaseInward, on_delete=models.CASCADE, related_name="items")
+    variant = models.ForeignKey(
+        "catalogue.ProductVariant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="inward_items",
+        verbose_name="Product Variant (SKU)"
+    )
     product = models.ForeignKey("catalogue.ProductType", on_delete=models.PROTECT, related_name="inward_items")
     quantity = models.PositiveIntegerField(verbose_name="Inward Quantity")
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Purchase Cost Price")
@@ -84,7 +92,8 @@ class InwardItem(models.Model):
         ordering = ["id"]
 
     def __str__(self):
-        return f"{self.inward.inward_number} | {self.product.name} × {self.quantity}"
+        sku_label = f"[{self.variant.sku}] " if self.variant else ""
+        return f"{self.inward.inward_number} | {sku_label}{self.product.name} × {self.quantity}"
 
 
 @register_model("tagged_unit", table_type="master", status_field="status", aliases=["tagged_inventory_unit"])
@@ -100,6 +109,14 @@ class TaggedInventoryUnit(models.Model):
     ]
 
     inward_item = models.ForeignKey(InwardItem, on_delete=models.CASCADE, related_name="tagged_units")
+    variant = models.ForeignKey(
+        "catalogue.ProductVariant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="tagged_units",
+        verbose_name="Product Variant (SKU)"
+    )
     product = models.ForeignKey("catalogue.ProductType", on_delete=models.PROTECT, related_name="tagged_units")
     item_barcode = models.CharField(max_length=64, unique=True, db_index=True, verbose_name="Physical Barcode Sticker")
     lot_number = models.CharField(max_length=50, db_index=True)

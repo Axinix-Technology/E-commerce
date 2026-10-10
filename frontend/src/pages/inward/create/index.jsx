@@ -169,29 +169,17 @@ export default function CreateInwardPage() {
         invoice_number: formData.invoice_number || `INV-${Date.now().toString().slice(-5)}`,
         invoice_date: formData.invoice_date,
         inward_status: formData.inward_status,
-        total_quantity: totalQty,
-        taxable_amount: totalTaxable,
-        tax_amount: totalTax,
-        total_amount: grandTotal,
         remarks: formData.remarks,
+        items: validItems.map((item) => ({
+          variant_id: item.variant_id,
+          quantity: Number(item.quantity) || 1,
+          unit_cost: Number(item.taxable_amount) || 0,
+          tax_rate: Number(item.tax_rate) || 0,
+        })),
       };
 
       const res = await populateApi.create("purchase_inward", payload);
       const createdInward = res?.data || res;
-
-      if (createdInward?.id) {
-        for (const item of validItems) {
-          await populateApi.create("purchase_inward_item", {
-            inward_id: createdInward.id,
-            variant_id: item.variant_id,
-            quantity: Number(item.quantity) || 1,
-            taxable_amount: Number(item.taxable_amount) || 0,
-            tax_rate: Number(item.tax_rate) || 0,
-            tax_amount: Number(item.tax_amount) || 0,
-            total_amount: Number(item.total_amount) || 0,
-          });
-        }
-      }
 
       toast.success(`Inward consignment ${grnNumber} generated successfully!`);
       navigate(`/inward/details?id=${createdInward?.id || ""}`);
