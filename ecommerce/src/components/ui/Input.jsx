@@ -114,7 +114,7 @@ export default function Input({
             sizeStyles[size] || sizeStyles.sm
           } ${activeError ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30" : "border-slate-300 dark:border-token"} ${
             ActiveLeftIcon ? "pl-9" : prefix ? "pl-7" : ""
-           ${onClear && value ? "pr-8" : suffix || RightIcon || rightElement || activeError ? "pr-9" : ""} ${className}`}
+          } ${onClear && value ? "pr-8" : suffix || RightIcon || rightElement || activeError ? "pr-9" : ""} ${className}`}
           {...props}
         />
 
